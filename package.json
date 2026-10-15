@@ -47,6 +47,16 @@
         "nsis"
       ],
       "icon": "resources/icon.png"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "kristofferkjelde",
+      "repo": "poe-item-checker",
+      "releaseType": "release"
+    },
+    "nsis": {
+      "oneClick": true,
+      "artifactName": "PoE-Item-Checker-Setup-${version}.${ext}"
     }
   },
   "engines": {
