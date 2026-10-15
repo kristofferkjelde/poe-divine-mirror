@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseItem } from '../item/parse'
-import { compareItems } from './compare'
+import { compareItems, formatPercent } from './compare'
 import { chooseEquipSlot, compareWithGear } from './gear'
 import { extractStats } from './stats'
 
@@ -38,6 +38,9 @@ describe('extractStats', () => {
   it('ignores "Can roll ... modifiers" notes on bases', () => {
     const base = item(['Can roll Destruction modifiers', '+20 to maximum Life'], 'Spears')
     expect(base.mods.map((mod) => mod.text)).toEqual(['+20 to maximum Life'])
+
+    const advanced = item(['{ Implicit Modifier }', 'Can roll Destruction modifiers', '--------', '+20 to maximum Life'], 'Spears')
+    expect(advanced.mods.map((mod) => mod.text)).toEqual(['+20 to maximum Life'])
   })
 
   it('ignores local defence mods on armour because the property already includes them', () => {
@@ -73,6 +76,7 @@ describe('compareItems', () => {
 
     expect(result.verdict).toBe('upgrade')
     expect(result.score).toBeCloseTo(30 + 15 * 1.5)
+    expect(result.percent).toBeCloseTo(((30 + 22.5) / (40 + 30)) * 100)
     expect(result.rows.map((row) => [row.stat, row.deltaDisplay])).toEqual([
       ['+# to maximum Life', '+30'],
       ['+#% to Cold Resistance', '+15'],
@@ -91,8 +95,43 @@ describe('compareItems', () => {
   })
 
   it('treats near-identical items as a sidegrade', () => {
-    const result = compareItems(item(['+41 to maximum Life']), item(['+40 to maximum Life']))
+    const result = compareItems(item(['+80 to maximum Life']), item(['+79 to maximum Life']))
     expect(result.verdict).toBe('sidegrade')
+    expect(formatPercent(result.percent!)).toBe('+1.3%')
+  })
+
+  it('falls back to the raw score when the equipped item has nothing scored', () => {
+    const result = compareItems(item(['+20 to maximum Life']), item(['Cannot be Frozen']))
+    expect(result.percent).toBeNull()
+    expect(result.verdict).toBe('upgrade')
+  })
+
+  it('reports the Skysliver to Beast Edge swap as a percentage', () => {
+    const beastEdge = parseItem(
+      [
+        'Item Class: Spears',
+        'Rarity: Rare',
+        'Beast Edge',
+        'Soaring Spear',
+        '--------',
+        'Spear',
+        'Quality: +20% (augmented)',
+        'Physical Damage: 111-207 (augmented)',
+        'Critical Hit Chance: 5.00%',
+        'Attacks per Second: 1.86 (augmented)',
+        '--------',
+        'Item Level: 80',
+        '--------',
+        '165% increased Physical Damage',
+        '+153 to Accuracy Rating',
+        '9% increased Attack Speed',
+        '+2 to Level of all Projectile Skills',
+      ].join('\n'),
+    )
+    const result = compareItems(beastEdge, fixture('unique-spear-min-max'))
+
+    expect(result.rows[0]).toMatchObject({ stat: 'Total DPS', deltaDisplay: '+90' })
+    expect(formatPercent(result.percent!)).toBe('+57%')
   })
 })
 

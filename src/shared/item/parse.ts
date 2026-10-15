@@ -216,6 +216,7 @@ function parseAdvancedMods(section: string[]): Mod[] {
       continue
     }
     if (line.startsWith('(') && line.endsWith(')')) continue
+    if (INSTRUCTION.test(line)) continue
 
     const mod = parseModLine(line, header.type)
     if (MOD_SUFFIX.test(line)) {

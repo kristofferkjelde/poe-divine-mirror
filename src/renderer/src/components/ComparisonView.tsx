@@ -1,4 +1,4 @@
-import type { ComparisonRow, Verdict } from '../../../shared/compare/compare'
+import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared/compare/compare'
 import type { GearComparison } from '../../../shared/compare/gear'
 import { GEAR_SLOT_LABELS } from '../../../shared/gear'
 import { formatNumber } from '../../../shared/compare/stats'
@@ -18,9 +18,10 @@ export function ComparisonView({ result }: { result: GearComparison }) {
     <section className="compare" data-verdict={comparison.verdict}>
       <header className="compare-verdict">
         <strong>{VERDICT_LABELS[comparison.verdict]}</strong>
-        <span className="compare-score">
-          {comparison.score > 0 ? '+' : ''}
-          {formatNumber(comparison.score)}
+        <span className="compare-score" title={`Weighted score ${formatNumber(comparison.score)}`}>
+          {comparison.percent === null
+            ? `${comparison.score > 0 ? '+' : ''}${formatNumber(comparison.score)}`
+            : formatPercent(comparison.percent)}
         </span>
       </header>
       <p className="compare-against">
