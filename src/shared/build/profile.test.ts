@@ -31,6 +31,7 @@ describe('parsePobXml', () => {
     const weapon = build.items[0].item
     expect(weapon.mods.map((mod) => mod.text)).toContain('Adds 22 to 37 Physical Damage')
     expect(weapon.mods[0].type).toBe('rune')
+    expect(weapon.mods.some((mod) => mod.text.includes('<') || mod.text.startsWith('Grants Skill'))).toBe(false)
     expect(build.items[3].item.mods.map((mod) => mod.text)).toEqual([
       '+20 to Dexterity',
       '+5 to maximum Mana',

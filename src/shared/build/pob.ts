@@ -115,7 +115,7 @@ function mainSkill(xml: string, group: number): string | undefined {
 
 function equippedItems(xml: string): PobItem[] {
   const items = section(xml, 'Items')
-  const byId = new Map(elements(items, 'Item').map(({ attrs, body }) => [attrs.id, decodeEntities(body)]))
+  const byId = new Map(elements(items, 'Item').map(({ attrs, body }) => [attrs.id, decodeEntities(body.replace(/<[^>]*>/g, ''))]))
   const active = attributes(/<Items\b([^>]*)>/.exec(xml)?.[1] ?? '').activeItemSet ?? '1'
   const sets = elements(items, 'ItemSet')
   const set = sets.find((entry) => entry.attrs.id === active) ?? sets[0]
@@ -197,7 +197,7 @@ function parsePobMods(lines: string[], variant: string | undefined): Mod[] {
       for (const [, key, value] of prefix.matchAll(/\{(\w+)(?::([^}]*))?\}/g)) tags.set(key, value ?? '')
       return ''
     })
-    if (!line || tags.has('disabled')) continue
+    if (!line || tags.has('disabled') || line.startsWith('Grants Skill:')) continue
     if (tags.has('variant') && variant && !tags.get('variant')!.split(',').includes(variant)) continue
 
     const range = Number(tags.get('range') ?? 0.5)
