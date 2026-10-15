@@ -1,16 +1,19 @@
-import { BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
+import { BrowserWindow, globalShortcut, ipcMain, screen, type Rectangle } from 'electron'
+import { uIOhook } from 'uiohook-napi'
 import { IPC, type CapturedItem } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 import type { SettingsStore } from './settingsStore'
 
 const WIDTH = 440
 const SCREEN_MARGIN = 24
+const ESCAPE = 'Escape'
 
 export class Overlay {
   private readonly window: BrowserWindow
   private height = 600
   private anchor = { x: 0, y: 0 }
   private placed: Rectangle | null = null
+  private shown: CapturedItem | null = null
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -32,6 +35,9 @@ export class Overlay {
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
     this.window.on('blur', () => this.hide())
+    uIOhook.on('mousedown', () => {
+      if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
+    })
     this.window.on('moved', () => this.rememberPosition())
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
@@ -54,18 +60,50 @@ export class Overlay {
     void loadRenderer(this.window)
   }
 
+  get visible(): boolean {
+    return this.window.isVisible()
+  }
+
+  get focused(): boolean {
+    return this.window.isFocused()
+  }
+
+  get hovered(): boolean {
+    return this.window.isVisible() && this.contains(screen.getCursorScreenPoint())
+  }
+
   show(item: CapturedItem): void {
+    this.shown = item.missed ? null : item
     this.window.webContents.send(IPC.itemCaptured, item)
     this.anchor = screen.getCursorScreenPoint()
     this.reposition()
-    this.window.show()
-    this.window.focus()
+    this.reveal()
   }
 
-  hide(): boolean {
-    if (!this.window.isVisible()) return false
-    this.window.hide()
+  evaluateShown(): boolean {
+    if (!this.shown) return false
+    this.window.webContents.send(IPC.evaluateShown)
+    this.reveal()
     return true
+  }
+
+  private reveal(): void {
+    if (!this.window.isVisible()) this.window.showInactive()
+    if (!globalShortcut.isRegistered(ESCAPE)) {
+      try {
+        globalShortcut.register(ESCAPE, () => this.hide())
+      } catch {}
+    }
+  }
+
+  hide(): void {
+    if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
+    if (this.window.isVisible()) this.window.hide()
+  }
+
+  private contains({ x, y }: { x: number; y: number }): boolean {
+    const bounds = this.window.getBounds()
+    return x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height
   }
 
   private rememberPosition(): void {

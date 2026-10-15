@@ -6,6 +6,7 @@ import type { ItemSearch } from './trade/query'
 
 export const IPC = {
   itemCaptured: 'item:captured',
+  evaluateShown: 'item:evaluate-shown',
   overlayResize: 'overlay:resize',
   overlayHide: 'overlay:hide',
   settingsGet: 'settings:get',
@@ -36,6 +37,7 @@ export interface CapturedItem {
   build: BuildProfile | null
   equippedTo?: GearSlot
   priceCheck?: boolean
+  missed?: string
 }
 
 export interface SettingsState {
@@ -49,6 +51,7 @@ export type SettingsResponse = { ok: true; state: SettingsState } | { ok: false;
 
 export interface OverlayApi {
   onItemCaptured: (listener: (item: CapturedItem) => void) => () => void
+  onEvaluateShown: (listener: () => void) => () => void
   resize: (height: number) => void
   hide: () => void
   openSettings: () => void
