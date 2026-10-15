@@ -7,16 +7,24 @@ import {
   rateLimitWait,
   TRADE_ORIGIN,
   tradeUrl,
+  type Listing,
+  type PrepareResult,
   type PriceCheckResult,
 } from '../shared/trade/price'
-import { buildSearch, PriceCheckUnsupported, type SearchPlan, type TradeStatGroup } from '../shared/trade/query'
+import {
+  defaultSearch,
+  PriceCheckUnsupported,
+  sanitizeSearch,
+  toTradeQuery,
+  type TradeStatGroup,
+} from '../shared/trade/query'
 import { jsonFile } from './jsonFile'
 
 const TIMEOUT_MS = 15_000
 const STATS_MAX_AGE_MS = 24 * 60 * 60 * 1000
 const RESULT_CACHE_MS = 60_000
-const FETCH_COUNT = 10
-const RELAX_BELOW = 5
+const FETCH_COUNT = 20
+const FETCH_BATCH = 10
 
 class TradeError extends Error {}
 
@@ -41,49 +49,49 @@ export class TradeClient {
     })
   }
 
-  async priceCheck(text: string, league: string | null): Promise<PriceCheckResult> {
-    const cached = this.cache.get(`${league}\n${text}`)
+  async prepare(text: string): Promise<PrepareResult> {
+    try {
+      return { ok: true, search: defaultSearch(parseItem(text), await this.loadStats()) }
+    } catch (error) {
+      if (error instanceof TradeError || error instanceof PriceCheckUnsupported || error instanceof ItemParseError) {
+        return { ok: false, error: error.message }
+      }
+      console.error('Preparing the price check failed', error)
+      return { ok: false, error: 'Could not reach the trade site' }
+    }
+  }
+
+  async search(input: unknown, league: string | null): Promise<PriceCheckResult> {
+    const search = sanitizeSearch(input)
+    if (!search) return { ok: false, error: 'Nothing to search for' }
+    const query = toTradeQuery(search)
+    const cacheKey = `${league}\n${JSON.stringify(query)}`
+    const cached = this.cache.get(cacheKey)
     if (cached && Date.now() - cached.at < RESULT_CACHE_MS) return cached.result
 
     let url: string | undefined
     try {
-      const item = parseItem(text)
       const leagueId = league ?? (await this.defaultLeague())
-      const stats = await this.loadStats()
+      const response = (await this.request(
+        `/api/trade2/search/poe2/${encodeURIComponent(leagueId)}`,
+        query,
+      )) as SearchResponse
+      url = tradeUrl(leagueId, response.id)
 
-      let plan = buildSearch(item, stats)
-      let search = await this.search(leagueId, plan)
-      if (search.total < RELAX_BELOW) {
-        const relaxed = buildSearch(item, stats, true)
-        if (relaxed.relaxed) {
-          plan = relaxed
-          search = await this.search(leagueId, plan)
-        }
+      const listings: Listing[] = []
+      const ids = response.result.slice(0, FETCH_COUNT)
+      for (let start = 0; start < ids.length; start += FETCH_BATCH) {
+        const batch = ids.slice(start, start + FETCH_BATCH)
+        listings.push(
+          ...parseListings(await this.request(`/api/trade2/fetch/${batch.join(',')}?query=${encodeURIComponent(response.id)}`)),
+        )
       }
-      url = tradeUrl(leagueId, search.id)
 
-      const ids = search.result.slice(0, FETCH_COUNT)
-      const listings =
-        ids.length === 0
-          ? []
-          : parseListings(await this.request(`/api/trade2/fetch/${ids.join(',')}?query=${encodeURIComponent(search.id)}`))
-
-      const result: PriceCheckResult = {
-        ok: true,
-        league: leagueId,
-        url,
-        total: search.total,
-        listings,
-        matched: plan.matched,
-        unmatched: plan.unmatched,
-        relaxed: plan.relaxed,
-      }
-      this.cache.set(`${league}\n${text}`, { at: Date.now(), result })
+      const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings }
+      this.cache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
-      if (error instanceof TradeError || error instanceof PriceCheckUnsupported || error instanceof ItemParseError) {
-        return { ok: false, error: error.message, url }
-      }
+      if (error instanceof TradeError) return { ok: false, error: error.message, url }
       console.error('Price check failed', error)
       return { ok: false, error: 'Could not reach the trade site', url }
     }
@@ -91,10 +99,6 @@ export class TradeClient {
 
   private async defaultLeague(): Promise<string> {
     return pickLeague(await this.listLeagues())
-  }
-
-  private search(league: string, plan: SearchPlan): Promise<SearchResponse> {
-    return this.request(`/api/trade2/search/poe2/${encodeURIComponent(league)}`, plan.query) as Promise<SearchResponse>
   }
 
   private async loadStats(): Promise<TradeStatGroup[]> {

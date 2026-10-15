@@ -32,9 +32,10 @@ function start(): void {
   const gearStore = new GearStore()
   const builds = new BuildStore()
   const trade = new TradeClient()
-  ipcMain.handle(IPC.priceCheck, (_event, text: unknown) =>
-    typeof text === 'string' ? trade.priceCheck(text, store.current.league) : { ok: false, error: 'No item to price' },
+  ipcMain.handle(IPC.tradePrepare, (_event, text: unknown) =>
+    typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
   )
+  ipcMain.handle(IPC.tradeSearch, (_event, search: unknown) => trade.search(search, store.current.league))
   ipcMain.on(IPC.openTrade, (_event, url: unknown) => {
     if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
   })

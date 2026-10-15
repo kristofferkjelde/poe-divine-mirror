@@ -1,21 +1,31 @@
-export interface Listing {
+import type { ItemSearch } from './query'
+
+export interface Price {
   amount: number
   currency: string
+}
+
+export interface Listing extends Price {
   indexed?: string
+  account?: string
+  itemLevel?: number
+  quality?: number
 }
 
 export type PriceCheckResult =
-  | {
-      ok: true
-      league: string
-      url: string
-      total: number
-      listings: Listing[]
-      matched: string[]
-      unmatched: string[]
-      relaxed: boolean
-    }
+  | { ok: true; league: string; url: string; total: number; listings: Listing[] }
   | { ok: false; error: string; url?: string }
+
+export type PrepareResult = { ok: true; search: ItemSearch } | { ok: false; error: string }
+
+export type Reliability = 'Very low' | 'Low' | 'Medium' | 'High'
+
+export interface Estimate {
+  value: Price
+  low: Price
+  high: Price
+  reliability: Reliability
+}
 
 export const TRADE_ORIGIN = 'https://www.pathofexile.com'
 
@@ -36,12 +46,21 @@ const CURRENCY_LABELS: Record<string, string> = {
   chance: 'chance',
 }
 
-export function formatPrice({ amount, currency }: Listing): string {
+export function formatPrice({ amount, currency }: Price): string {
   return `${Number(amount.toFixed(2))} ${CURRENCY_LABELS[currency] ?? currency}`
 }
 
-export function typicalListing(listings: Listing[]): Listing | undefined {
-  return listings[Math.floor((listings.length - 1) / 2)]
+export function estimate(listings: Listing[], total: number): Estimate | null {
+  if (listings.length === 0) return null
+  const sample = listings.slice(0, 10)
+  const reliability: Reliability =
+    sample.length < 3 ? 'Very low' : total < 10 ? 'Low' : total < 40 ? 'Medium' : 'High'
+  return {
+    value: sample[Math.floor((sample.length - 1) / 2)],
+    low: sample[0],
+    high: sample[sample.length - 1],
+    reliability,
+  }
 }
 
 export function formatAge(indexed: string | undefined, now: number): string | undefined {
@@ -55,7 +74,19 @@ export function formatAge(indexed: string | undefined, now: number): string | un
 }
 
 interface FetchedResult {
-  listing?: { indexed?: string; price?: { amount?: unknown; currency?: unknown } | null }
+  listing?: {
+    indexed?: string
+    account?: { name?: unknown }
+    price?: { amount?: unknown; currency?: unknown } | null
+  }
+  item?: { ilvl?: unknown; properties?: Array<{ name?: unknown; values?: unknown }> }
+}
+
+function qualityOf(item: FetchedResult['item']): number | undefined {
+  const property = item?.properties?.find((entry) => typeof entry.name === 'string' && /Quality/.test(entry.name))
+  const raw = Array.isArray(property?.values) ? (property.values as unknown[][])[0]?.[0] : undefined
+  const match = typeof raw === 'string' ? /\d+/.exec(raw) : null
+  return match ? Number(match[0]) : undefined
 }
 
 export function parseListings(body: unknown): Listing[] {
@@ -63,7 +94,13 @@ export function parseListings(body: unknown): Listing[] {
   return results.flatMap((result) => {
     const price = result?.listing?.price
     if (!price || typeof price.amount !== 'number' || typeof price.currency !== 'string') return []
-    return [{ amount: price.amount, currency: price.currency, indexed: result?.listing?.indexed }]
+    const listing: Listing = { amount: price.amount, currency: price.currency, indexed: result?.listing?.indexed }
+    const account = result?.listing?.account?.name
+    if (typeof account === 'string') listing.account = account
+    if (typeof result?.item?.ilvl === 'number') listing.itemLevel = result.item.ilvl
+    const quality = qualityOf(result?.item)
+    if (quality !== undefined) listing.quality = quality
+    return [listing]
   })
 }
 

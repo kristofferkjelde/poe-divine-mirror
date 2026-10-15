@@ -32,7 +32,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | --- | --- |
 | Hover an item you're **wearing** and press **Alt+Shift+D** | It's saved as your equipped item for that slot (do this once per slot) |
 | Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
-| Hover an item and press **Ctrl+D** | The popup searches the official trade site for similar items and shows what they sell for |
+| Hover an item and press **Ctrl+D** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
 | Press **Esc** or click the game | The popup closes |
 | Drag the popup anywhere | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, or change the hotkeys: click one and press the new keys |
@@ -51,13 +51,14 @@ With a build added, **Alt+D** always compares the item against your build's item
 
 **Check the price**
 
-Press **Ctrl+D** on an item, or click **⚖ Check trade price** at the bottom of any popup. The app searches the trade site in the current league for the same base with every mod at 80% or more of your rolls. If fewer than 5 are listed, it allows one mod to miss. You'll see:
+Press **Ctrl+D** on an item, or click **⚖ Evaluate price** at the bottom of any popup. The popup switches to an Evaluate view, like PoE Overlay's:
 
-- the **cheapest** and the **typical** price (the middle of the 10 cheapest listings, since the very cheapest are often price-fixers),
-- the cheapest listings with how long ago each was listed,
-- **Open on trade ↗** to open the same search in your browser and fine-tune it.
+- Every property (DPS, defences, item level, quality, rune sockets) and mod gets a row with a checkbox and **min**/**max** boxes. Tick the ones that matter and adjust the numbers. Mods the trade site can't search for are shown in italics.
+- **Exact match** uses your item's own values as the minimum. **Broad (−10%)** lowers every minimum by 10%.
+- Pick the rarity, corrupted state, currency, **Instant buyout** or **In person** listings, and how recently they were listed.
+- Press **Search** (or Enter). You get an **estimated value** (the middle of the cheapest listings, with the range and how reliable it is), the cheapest listings with item level, quality, seller and when they were listed, and **Open on trade ↗** to continue in your browser.
 
-Uniques are searched by name. Pick another league under **Settings → Trade**. The trade site limits how often anyone can search, so if you check many items quickly the popup asks you to wait a few seconds.
+The first search runs automatically with sensible defaults. Weapons are matched on DPS and armour on its defences, so their local mods start unticked. Normal items are priced as crafting bases by item level. Uniques are searched by name. Pick another league under **Settings → Trade**. The trade site limits how often anyone can search, so if you search a lot in a row, the popup asks you to wait a few seconds.
 
 **Reading the popup**
 
