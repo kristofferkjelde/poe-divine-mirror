@@ -1,4 +1,5 @@
 import type { HotkeyAction } from '../../../shared/settings'
+import { BuildSettings } from './BuildSettings'
 import { HotkeyField } from './HotkeyField'
 import { OverlaySettings } from './OverlaySettings'
 import { setSettingsState, useSettingsState } from './settingsStore'
@@ -11,6 +12,12 @@ export function SettingsApp() {
   return (
     <main className="settings">
       <h1>Settings</h1>
+      {state && (
+        <section className="settings-section">
+          <h2>Build</h2>
+          <BuildSettings build={state.build} />
+        </section>
+      )}
       <section className="settings-section">
         <h2>Hotkeys</h2>
         <p className="settings-help">Click a hotkey, then press the new combination. Esc cancels.</p>

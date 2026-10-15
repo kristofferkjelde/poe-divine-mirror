@@ -11,6 +11,7 @@ const overlay: OverlayApi = {
   hide: () => ipcRenderer.send(IPC.overlayHide),
   openSettings: () => ipcRenderer.send(IPC.settingsOpen),
   setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
+  forgetGear: (slot) => ipcRenderer.invoke(IPC.gearForget, slot),
 }
 
 const settings: SettingsApi = {
@@ -20,6 +21,10 @@ const settings: SettingsApi = {
   resetPosition: () => ipcRenderer.invoke(IPC.settingsResetPosition),
   setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
   setRecording: (recording) => ipcRenderer.send(IPC.settingsRecording, recording),
+  importBuild: (input) => ipcRenderer.invoke(IPC.buildImport, input),
+  removeBuild: () => ipcRenderer.invoke(IPC.buildRemove),
+  setBuildWeight: (stat, weight) => ipcRenderer.invoke(IPC.buildSetWeight, stat, weight),
+  resetBuildWeights: () => ipcRenderer.invoke(IPC.buildResetWeights),
 }
 
 contextBridge.exposeInMainWorld('overlay', overlay)

@@ -16,14 +16,14 @@ const item = (mods: string[], itemClass = 'Rings', extra = '') =>
   )
 
 describe('extractStats', () => {
-  it('computes weapon DPS from properties and ignores local weapon mods', () => {
+  it('computes weapon DPS from properties and marks local weapon mods', () => {
     const stats = extractStats(fixture('unique-spear-ingame'))
 
     expect(stats.get('Physical DPS')?.value).toBeCloseTo(((37 + 96) / 2) * 1.55)
     expect(stats.get('Total DPS')?.value).toBeCloseTo(103.075)
     expect(stats.get('Critical Hit Chance')?.value).toBe(10.84)
-    expect(stats.has('Adds # to # Physical Damage')).toBe(false)
-    expect(stats.has('+#% to Critical Hit Chance')).toBe(false)
+    expect(stats.get('Adds # to # Physical Damage')?.local).toBe(true)
+    expect(stats.get('+#% to Critical Hit Chance')?.local).toBe(true)
     expect(stats.get('+# to Intelligence')?.value).toBe(22)
   })
 
@@ -32,7 +32,7 @@ describe('extractStats', () => {
 
     expect(stats.get('Elemental DPS')?.value).toBeCloseTo(97.5 * 2.11)
     expect(stats.get('Total DPS')?.value).toBeCloseTo(97.5 * 2.11)
-    expect(stats.has('Adds # to # Lightning Damage')).toBe(false)
+    expect(stats.get('Adds # to # Lightning Damage')?.local).toBe(true)
   })
 
   it('ignores "Can roll ... modifiers" notes on bases', () => {
@@ -43,11 +43,11 @@ describe('extractStats', () => {
     expect(advanced.mods.map((mod) => mod.text)).toEqual(['+20 to maximum Life'])
   })
 
-  it('ignores local defence mods on armour because the property already includes them', () => {
+  it('marks local defence mods on armour because the property already includes them', () => {
     const stats = extractStats(fixture('rare-body-armour'))
 
     expect(stats.get('Armour')?.value).toBe(512)
-    expect(stats.has('#% increased Armour')).toBe(false)
+    expect(stats.get('#% increased Armour')?.local).toBe(true)
   })
 
   it('splits multi-element resistances and turns reduced into negative increased', () => {
@@ -137,6 +137,19 @@ describe('compareItems', () => {
 
     expect(result.rows[0]).toMatchObject({ stat: 'Total DPS', deltaDisplay: '+90' })
     expect(formatPercent(result.percent!)).toBe('+57%')
+  })
+
+  it('lists weapon mods like attack speed as their own rows without scoring them twice', () => {
+    const plain = parseItem(
+      'Item Class: Spears\nRarity: Rare\nPlain\nSoaring Spear\n--------\nSpear\nPhysical Damage: 42-78\nCritical Hit Chance: 5.00%\nAttacks per Second: 1.70\n--------\nItem Level: 80\n--------\n+10 to Accuracy Rating',
+    )
+    const fast = parseItem(
+      'Item Class: Spears\nRarity: Rare\nFast\nSoaring Spear\n--------\nSpear\nPhysical Damage: 42-78\nCritical Hit Chance: 5.00%\nAttacks per Second: 1.87 (augmented)\n--------\nItem Level: 80\n--------\n+10 to Accuracy Rating\n10% increased Attack Speed',
+    )
+    const result = compareItems(fast, plain)
+    const row = result.rows.find((entry) => entry.stat === '#% increased Attack Speed')
+    expect(row).toMatchObject({ local: true, weight: 0, deltaDisplay: '+10' })
+    expect(result.score).toBeCloseTo(result.rows.find((entry) => entry.stat === 'Total DPS')!.contribution)
   })
 })
 

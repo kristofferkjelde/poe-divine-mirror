@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true
+    "noEmit": true,
+    "resolveJsonModule": true
   },
   "include": ["src/renderer/src/**/*", "src/shared/**/*"],
   "exclude": ["src/shared/**/*.test.ts"]

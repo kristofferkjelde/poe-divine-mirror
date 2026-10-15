@@ -314,7 +314,8 @@ tr[data-direction='down'] .compare-delta {
 }
 
 .settings {
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   padding: 20px 24px;
   background: var(--panel-bg);
   user-select: none;
@@ -430,4 +431,83 @@ tr[data-direction='down'] .compare-delta {
   width: 18px;
   height: 18px;
   accent-color: var(--gold);
+}
+
+.compare-build {
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--gold);
+  opacity: 0.7;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.build-import textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font: 12px/1.4 ui-monospace, Consolas, monospace;
+  color: var(--text-value);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  resize: vertical;
+  user-select: text;
+}
+
+.build-import textarea:focus {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.build-import .hotkey-status {
+  margin-bottom: 8px;
+}
+
+.build-weights {
+  list-style: none;
+  margin-bottom: 10px;
+}
+
+.build-weight {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--text-magic);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.build-weight input {
+  width: 100%;
+  padding: 2px 6px;
+  font: inherit;
+  text-align: right;
+  color: var(--text-value);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+}
+
+.build-weight[data-custom='true'] input {
+  border-color: var(--gold);
+}
+
+.build-star {
+  color: var(--gold);
+}
+
+
+.compare-forget {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
 }

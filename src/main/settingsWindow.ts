@@ -1,8 +1,10 @@
-import { BrowserWindow, ipcMain } from 'electron'
-import { IPC, type SetHotkeyResponse, type SettingsState } from '../shared/ipc'
+import { BrowserWindow, ipcMain, net } from 'electron'
+import { IPC, type SettingsResponse, type SettingsState } from '../shared/ipc'
 import type { HotkeyAction } from '../shared/settings'
+import { BuildImportError, importBuild } from './buildImport'
+import type { BuildStore } from './buildStore'
 import type { Hotkeys } from './hotkeys'
-import { loadRenderer, PRELOAD_PATH } from './renderer'
+import { ICON_PATH, loadRenderer, PRELOAD_PATH } from './renderer'
 import type { SettingsStore } from './settingsStore'
 
 const ACTIONS = new Set<HotkeyAction>(['compare', 'equip'])
@@ -13,6 +15,7 @@ export class SettingsWindow {
   constructor(
     private readonly store: SettingsStore,
     private readonly hotkeys: Hotkeys,
+    private readonly builds: BuildStore,
   ) {
     ipcMain.handle(IPC.settingsGet, () => this.state)
     ipcMain.handle(IPC.settingsReset, async () => {
@@ -30,7 +33,7 @@ export class SettingsWindow {
     })
     ipcMain.handle(
       IPC.settingsSetHotkey,
-      async (_event, action: unknown, accelerator: unknown): Promise<SetHotkeyResponse> => {
+      async (_event, action: unknown, accelerator: unknown): Promise<SettingsResponse> => {
         if (!ACTIONS.has(action as HotkeyAction) || typeof accelerator !== 'string') {
           return { ok: false, error: 'Invalid hotkey' }
         }
@@ -43,10 +46,35 @@ export class SettingsWindow {
       else hotkeys.resume()
     })
     ipcMain.on(IPC.settingsOpen, () => this.open())
+
+    ipcMain.handle(IPC.buildImport, async (_event, input: unknown): Promise<SettingsResponse> => {
+      if (typeof input !== 'string' || input.trim() === '') return { ok: false, error: 'Paste a build code or link first' }
+      try {
+        await builds.set(await importBuild(input, download))
+        return { ok: true, state: this.state }
+      } catch (error) {
+        if (error instanceof BuildImportError) return { ok: false, error: error.message }
+        console.error('Build import failed', error)
+        return { ok: false, error: 'Could not read that build' }
+      }
+    })
+    ipcMain.handle(IPC.buildRemove, async () => {
+      await builds.set(null)
+      return this.state
+    })
+    ipcMain.handle(IPC.buildSetWeight, async (_event, stat: unknown, weight: unknown) => {
+      const valid = weight === null || (typeof weight === 'number' && Number.isFinite(weight) && Math.abs(weight) <= 1000)
+      if (typeof stat === 'string' && valid) await builds.setWeight(stat, weight as number | null)
+      return this.state
+    })
+    ipcMain.handle(IPC.buildResetWeights, async () => {
+      if (builds.current) await builds.set({ ...builds.current, custom: {} })
+      return this.state
+    })
   }
 
   private get state(): SettingsState {
-    return { settings: this.store.current, unavailable: this.hotkeys.unavailableActions }
+    return { settings: this.store.current, unavailable: this.hotkeys.unavailableActions, build: this.builds.current }
   }
 
   open(): void {
@@ -58,13 +86,15 @@ export class SettingsWindow {
 
     this.window = new BrowserWindow({
       width: 460,
-      height: 580,
-      resizable: false,
+      icon: ICON_PATH,
+      height: 720,
+      minHeight: 480,
+      resizable: true,
       maximizable: false,
       minimizable: false,
       fullscreenable: false,
       autoHideMenuBar: true,
-      title: 'PoE Item Checker Settings',
+      title: 'Divine Mirror Settings',
       backgroundColor: '#0b0907',
       webPreferences: { preload: PRELOAD_PATH, sandbox: true },
     })
@@ -75,4 +105,12 @@ export class SettingsWindow {
     })
     void loadRenderer(this.window, 'settings')
   }
+}
+
+const DOWNLOAD_TIMEOUT_MS = 15_000
+
+async function download(url: string): Promise<string> {
+  const response = await net.fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.text()
 }

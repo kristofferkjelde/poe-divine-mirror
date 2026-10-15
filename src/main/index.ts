@@ -1,10 +1,13 @@
-import { app, globalShortcut, Menu, nativeImage, Tray } from 'electron'
-import { join } from 'node:path'
+import { app, globalShortcut, ipcMain, Menu, nativeImage, Tray } from 'electron'
+import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
+import { IPC } from '../shared/ipc'
 import { HOTKEY_LABELS } from '../shared/settings'
+import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
 import { Overlay } from './overlay'
+import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
 
@@ -21,9 +24,14 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 function start(): void {
+  app.setAppUserModelId('io.kjelde.poe-item-checker')
   const store = new SettingsStore()
   const overlay = new Overlay(store)
   const gearStore = new GearStore()
+  const builds = new BuildStore()
+  ipcMain.handle(IPC.gearForget, async (_event, slot: unknown) => {
+    if (typeof slot === 'string' && slot in GEAR_SLOT_LABELS) await gearStore.forget(slot as GearSlot)
+  })
   let busy = false
 
   const capture = async (equip: boolean) => {
@@ -33,13 +41,14 @@ function start(): void {
       if (overlay.hide()) await delay(FOCUS_RETURN_MS)
       const text = await copyHoveredItem()
       if (!text) return
-      const equippedTo = equip ? await gearStore.equip(text).catch(() => undefined) : undefined
+      const equippedTo = equip ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
       overlay.show({
         text,
         capturedAt: Date.now(),
         gear: gearStore.current,
         hotkeys: hotkeys.current,
         locked: store.current.overlayLocked,
+        build: builds.current,
         equippedTo,
       })
     } finally {
@@ -51,16 +60,16 @@ function start(): void {
     compare: () => void capture(false),
     equip: () => void capture(true),
   })
-  const settingsWindow = new SettingsWindow(store, hotkeys)
+  const settingsWindow = new SettingsWindow(store, hotkeys, builds)
 
-  tray = new Tray(nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')))
+  tray = new Tray(nativeImage.createFromPath(ICON_PATH))
   const refreshTray = () => {
     const settings = store.current
     const unavailable = hotkeys.unavailableActions
     tray?.setToolTip(
       unavailable.length === 0
-        ? `PoE Item Checker: hover an item and press ${settings.hotkeys.compare}`
-        : 'PoE Item Checker: a hotkey is taken by another app. Open Settings to change it.',
+        ? `Divine Mirror: hover an item and press ${settings.hotkeys.compare}`
+        : 'Divine Mirror: a hotkey is taken by another app. Open Settings to change it.',
     )
     tray?.setContextMenu(
       Menu.buildFromTemplate([

@@ -4,6 +4,7 @@ export interface StatValue {
   value: number
   display: string
   range?: [number, number]
+  local?: boolean
 }
 
 export type StatMap = Map<string, StatValue>
@@ -42,13 +43,17 @@ export function extractStats(item: ParsedItem): StatMap {
   addProperties(item, stats)
 
   for (const mod of item.mods) {
-    if (isLocal(mod.template, item.slot)) continue
-    for (const [key, value] of expandMod(mod)) {
-      add(stats, key, value, mod)
-    }
+    const local = isLocal(mod.template, item.slot)
+    const entries: Array<[string, number]> = local ? [[mod.template, modValue(mod)]] : expandMod(mod)
+    for (const [key, value] of entries) add(stats, key, value, mod, local)
   }
 
   return stats
+}
+
+export function statKeys(mod: Mod, slot: Slot | undefined): string[] {
+  if (isLocal(mod.template, slot)) return []
+  return expandMod(mod).map(([key]) => key)
 }
 
 function isLocal(template: string, slot: Slot | undefined): boolean {
@@ -88,20 +93,20 @@ function expandMod(mod: Mod): Array<[string, number]> {
   return [[template, value]]
 }
 
-function add(stats: StatMap, key: string, value: number, mod: Mod): void {
+function add(stats: StatMap, key: string, value: number, mod: Mod, local: boolean): void {
   const existing = stats.get(key)
   const total = (existing?.value ?? 0) + value
 
   if (mod.values.length === 0) {
-    stats.set(key, { value: total, display: 'Yes' })
+    stats.set(key, { value: total, display: 'Yes', ...(local && { local }) })
   } else if (mod.values.length === 2 && mod.template.startsWith('Adds')) {
     const range: [number, number] = [
       (existing?.range?.[0] ?? 0) + mod.values[0],
       (existing?.range?.[1] ?? 0) + mod.values[1],
     ]
-    stats.set(key, { value: total, display: `${formatNumber(range[0])}–${formatNumber(range[1])}`, range })
+    stats.set(key, { value: total, display: `${formatNumber(range[0])}–${formatNumber(range[1])}`, range, ...(local && { local }) })
   } else {
-    stats.set(key, { value: total, display: formatNumber(total) })
+    stats.set(key, { value: total, display: formatNumber(total), ...(local && { local }) })
   }
 }
 

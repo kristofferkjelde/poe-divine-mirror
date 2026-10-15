@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding2>
+	<Build level="92" targetVersion="0_1" className="Huntress" ascendClassName="Spirit Walker" mainSocketGroup="2" viewMode="ITEMS" characterLevelAutoMode="false">
+		<PlayerStat stat="AverageHit" value="5321.4"/>
+		<PlayerStat stat="AverageDamage" value="5110.2"/>
+		<PlayerStat stat="Speed" value="3.21"/>
+		<PlayerStat stat="HitChance" value="96"/>
+		<PlayerStat stat="TotalDPS" value="16403.7"/>
+		<PlayerStat stat="Life" value="3412"/>
+		<PlayerStat stat="Mana" value="512"/>
+		<PlayerStat stat="EnergyShield" value="0"/>
+		<PlayerStat stat="Evasion" value="9120"/>
+		<PlayerStat stat="Armour" value="1210"/>
+		<PlayerStat stat="Spirit" value="100"/>
+		<PlayerStat stat="FireResist" value="75"/>
+		<PlayerStat stat="ActiveMinionLimit" value="0"/>
+	</Build>
+	<Tree activeSpec="1"/>
+	<Skills activeSkillSet="1" sortGemsByDPS="true">
+		<SkillSet id="1">
+			<Skill mainActiveSkillCalcs="1" includeInFullDPS="false" label="" enabled="true" slot="Weapon 1" mainActiveSkill="1">
+				<Gem enableGlobal2="true" level="1" gemId="Metadata/Items/Gems/SkillGemWhirlingSlash" skillId="WhirlingSlashPlayer" nameSpec="Whirling Slash" enabled="true" quality="0"/>
+			</Skill>
+			<Skill mainActiveSkillCalcs="1" includeInFullDPS="true" label="" enabled="true" mainActiveSkill="1">
+				<Gem enableGlobal2="true" level="20" gemId="Metadata/Items/Gems/SkillGemTwister" skillId="TwisterPlayer" nameSpec="Twister" enabled="true" quality="20"/>
+				<Gem enableGlobal2="true" level="20" gemId="Metadata/Items/Gems/SupportGemMartialTempo" skillId="SupportMartialTempoPlayer" nameSpec="Martial Tempo" enabled="true" quality="0"/>
+			</Skill>
+		</SkillSet>
+	</Skills>
+	<Items activeItemSet="1" useSecondWeaponSet="false">
+		<Item id="1">
+Rarity: RARE
+Storm Impaler
+Hunting Spear
+Unique ID: 0f5c1d
+Item Level: 81
+Quality: 20
+Sockets: S S
+Rune: Iron Rune
+Rune: Iron Rune
+LevelReq: 67
+Implicits: 3
+Grants Skill: Spear Throw
+{rune}20% increased Physical Damage
+{rune}20% increased Physical Damage
+{range:0.6}Adds (18-24) to (32-40) Physical Damage
+{range:1}Adds (5-8) to (90-105) Lightning Damage
+{crafted}{range:0.5}+(3-4) to Level of all Melee Skills
+{range:0.2}(14-16)% increased Attack Speed
+{range:0.4}+(130-160) to Accuracy Rating
+			<ModRange range="0.5" id="1"/>
+		</Item>
+		<Item id="2">
+Rarity: RARE
+Gale Cowl
+Elite Helm
+Evasion: 412
+Item Level: 79
+LevelReq: 65
+Implicits: 0
+{range:0.5}+(80-89) to maximum Life
+{range:0.5}+(36-40)% to Lightning Resistance
+{range:0.5}+(16-20)% to Cold Resistance
+{range:0.5}(60-70)% increased Evasion Rating
+		</Item>
+		<Item id="3">
+Rarity: RARE
+Doom Coil
+Iron Ring
+Item Level: 82
+LevelReq: 60
+Implicits: 1
+Adds 1 to 4 Physical Damage to Attacks
+{range:0.5}Adds (8-11) to (14-18) Physical Damage to Attacks
+{range:0.5}Adds (6-8) to (11-13) Cold Damage to Attacks
+{range:0.5}+(60-69) to maximum Life
+{range:0.5}+(31-35)% to Fire Resistance
+		</Item>
+		<Item id="4">
+Rarity: UNIQUE
+Wanderlust
+Wrapped Sandals
+Evasion: 34
+Variant: Pre 0.2
+Variant: Current
+Selected Variant: 2
+Item Level: 80
+LevelReq: 5
+Implicits: 0
+{variant:1}+10 to Dexterity
+{variant:2}+20 to Dexterity
++5 to maximum Mana
+20% increased Movement Speed
+		</Item>
+		<Item id="5">
+Rarity: MAGIC
+Life Flask of the Doctor
+Ultimate Life Flask
+Implicits: 0
+Recovers 25% of Life
+		</Item>
+		<ItemSet useSecondWeaponSet="false" id="1">
+			<Slot itemPbURL="" name="Weapon 1" itemId="1"/>
+			<Slot itemPbURL="" name="Helmet" itemId="2"/>
+			<Slot itemPbURL="" name="Ring 1" itemId="3"/>
+			<Slot itemPbURL="" name="Ring 2" itemId="0"/>
+			<Slot itemPbURL="" name="Boots" itemId="4"/>
+			<Slot itemPbURL="" name="Flask 1" itemId="5"/>
+		</ItemSet>
+	</Items>
+</PathOfBuilding2>
