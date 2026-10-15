@@ -1,6 +1,6 @@
-import { BrowserWindow, globalShortcut, ipcMain, screen, type Rectangle } from 'electron'
+import { BrowserWindow, globalShortcut, screen, type Rectangle } from 'electron'
 import { uIOhook } from 'uiohook-napi'
-import { IPC, type CapturedItem } from '../shared/ipc'
+import { messageChannel, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 import type { SettingsStore } from './settingsStore'
 
@@ -13,7 +13,6 @@ export class Overlay {
   private height = 600
   private anchor = { x: 0, y: 0 }
   private placed: Rectangle | null = null
-  private shown: CapturedItem | null = null
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -50,13 +49,6 @@ export class Overlay {
       if (this.window.isVisible()) this.reposition()
     })
 
-    ipcMain.on(IPC.overlayHide, () => this.hide())
-    ipcMain.on(IPC.overlayResize, (_event, height: unknown) => {
-      if (typeof height !== 'number' || !Number.isFinite(height)) return
-      this.height = Math.ceil(height)
-      this.reposition()
-    })
-
     void loadRenderer(this.window)
   }
 
@@ -72,19 +64,24 @@ export class Overlay {
     return this.window.isVisible() && this.contains(screen.getCursorScreenPoint())
   }
 
-  show(item: CapturedItem): void {
-    this.shown = item.missed ? null : item
-    this.window.webContents.send(IPC.itemCaptured, item)
+  onLoad(listener: () => void): void {
+    this.window.webContents.on('did-finish-load', listener)
+  }
+
+  send<K extends keyof OverlayMessages>(name: K, payload: OverlayMessages[K]): void {
+    this.window.webContents.send(messageChannel(name), payload)
+  }
+
+  show(event: OverlayEvent): void {
+    this.send('event', event)
     this.anchor = screen.getCursorScreenPoint()
     this.reposition()
     this.reveal()
   }
 
-  evaluateShown(): boolean {
-    if (!this.shown) return false
-    this.window.webContents.send(IPC.evaluateShown)
-    this.reveal()
-    return true
+  resize(height: number): void {
+    this.height = Math.ceil(height)
+    this.reposition()
   }
 
   private reveal(): void {

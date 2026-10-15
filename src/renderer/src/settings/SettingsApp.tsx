@@ -1,11 +1,9 @@
-import type { HotkeyAction } from '../../../shared/settings'
+import { HOTKEY_ACTIONS } from '../../../shared/settings'
 import { BuildSettings } from './BuildSettings'
 import { HotkeyField } from './HotkeyField'
 import { OverlaySettings } from './OverlaySettings'
 import { TradeSettings } from './TradeSettings'
 import { setSettingsState, useSettingsState } from './settingsStore'
-
-const ACTIONS: HotkeyAction[] = ['compare', 'equip', 'price']
 
 export function SettingsApp() {
   const state = useSettingsState()
@@ -23,7 +21,7 @@ export function SettingsApp() {
         <h2>Hotkeys</h2>
         <p className="settings-help">Click a hotkey, then press the new combination. Esc cancels.</p>
         {state ? (
-          ACTIONS.map((action) => (
+          HOTKEY_ACTIONS.map((action) => (
             <HotkeyField
               key={action}
               action={action}

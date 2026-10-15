@@ -184,8 +184,12 @@ export function profileWeights(profile: BuildProfile): ProfileWeight[] {
 
 const round = (value: number) => Math.round(value * 100) / 100
 
-export function isBuildProfile(value: unknown): value is BuildProfile {
-  const profile = value as BuildProfile | null
+export type StoredProfile = Omit<BuildProfile, 'items'> & { items?: ParsedGear }
+
+export const hasItems = (profile: StoredProfile): profile is BuildProfile => profile.items !== undefined
+
+export function isStoredProfile(value: unknown): value is StoredProfile {
+  const profile = value as StoredProfile | null
   return (
     typeof profile === 'object' &&
     profile !== null &&

@@ -1,3 +1,4 @@
+import { UserFacingError } from '../errors'
 import { itemClass as lookupItemClass } from './slots'
 import type { Affix, DamageRange, Mod, ModType, ParsedItem, Property, Rarity, Requirements, WeaponStats } from './types'
 
@@ -10,7 +11,7 @@ const ADVANCED_NOTE = /\s+—\s+Unscalable Value$/
 const PROPERTY = /^([^:{}]+): (.+)$/
 const INSTRUCTION = /^(Right click|Place into|Can only|Used when|Shift click|Travel to|Stack Size|Can roll .+ modifiers$)/
 
-export class ItemParseError extends Error {}
+export class ItemParseError extends UserFacingError {}
 
 export function parseItem(raw: string): ParsedItem {
   const sections = splitSections(raw)

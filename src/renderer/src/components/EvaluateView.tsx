@@ -2,19 +2,15 @@ import type { ChangeEvent } from 'react'
 import { formatNumber } from '../../../shared/compare/stats'
 import { estimate, formatAge, formatPrice, type PriceCheckResult } from '../../../shared/trade/price'
 import {
-  SCALE_LIMIT,
-  SCALE_STEP,
+  CORRUPTED_OPTIONS,
   CURRENCY_OPTIONS,
   LISTED_OPTIONS,
   RARITY_OPTIONS,
+  SCALE_LIMIT,
+  SCALE_STEP,
   STATUS_OPTIONS,
-  type Corrupted,
   type ItemSearch,
-  type ListedWithin,
-  type PriceCurrency,
-  type SaleStatus,
   type SearchFilter,
-  type SearchRarity,
 } from '../../../shared/trade/query'
 import {
   closeEvaluate,
@@ -24,8 +20,6 @@ import {
   updateSearch,
   type EvaluateState,
 } from '../overlayStore'
-
-const CORRUPTED_OPTIONS: Record<Corrupted, string> = { any: 'Corrupted: any', yes: 'Corrupted', no: 'Not corrupted' }
 
 export function EvaluateView({ evaluate }: { evaluate: Exclude<EvaluateState, { status: 'closed' }> }) {
   return (
@@ -54,6 +48,7 @@ interface FormProps {
 function SearchForm({ search, searching, result }: FormProps) {
   const properties = search.filters.filter((filter) => filter.kind === 'property')
   const mods = search.filters.filter((filter) => filter.kind !== 'property')
+  const tradeUrl = result?.url
 
   return (
     <form
@@ -67,12 +62,12 @@ function SearchForm({ search, searching, result }: FormProps) {
         <Select
           value={search.rarity}
           options={RARITY_OPTIONS}
-          onChange={(rarity) => updateSearch({ rarity: rarity as SearchRarity })}
+          onChange={(rarity) => updateSearch({ rarity })}
         />
         <Select
           value={search.corrupted}
           options={CORRUPTED_OPTIONS}
-          onChange={(corrupted) => updateSearch({ corrupted: corrupted as Corrupted })}
+          onChange={(corrupted) => updateSearch({ corrupted })}
         />
       </div>
       <ul className="evaluate-filters">
@@ -116,25 +111,25 @@ function SearchForm({ search, searching, result }: FormProps) {
         <Select
           value={search.currency}
           options={CURRENCY_OPTIONS}
-          onChange={(currency) => updateSearch({ currency: currency as PriceCurrency })}
+          onChange={(currency) => updateSearch({ currency })}
         />
         <Select
           value={search.status}
           options={STATUS_OPTIONS}
-          onChange={(status) => updateSearch({ status: status as SaleStatus })}
+          onChange={(status) => updateSearch({ status })}
         />
         <Select
           value={search.listed}
           options={LISTED_OPTIONS}
-          onChange={(listed) => updateSearch({ listed: listed as ListedWithin })}
+          onChange={(listed) => updateSearch({ listed })}
         />
       </div>
       <div className="evaluate-actions">
         <button type="submit" className="evaluate-search" disabled={searching}>
           {searching ? 'Searching…' : 'Search'}
         </button>
-        {result?.url && (
-          <button type="button" className="panel-link" onClick={() => window.overlay.openTrade(result.url!)}>
+        {tradeUrl && (
+          <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(tradeUrl)}>
             Open on trade ↗
           </button>
         )}
@@ -158,7 +153,7 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
     <li
       className="evaluate-filter"
       data-kind={filter.kind}
-      data-type={filter.modType}
+      data-type={filter.kind === 'property' ? undefined : filter.modType}
       data-enabled={filter.enabled}
       title={searchable ? undefined : 'The trade site has no filter for this mod'}
     >
@@ -171,9 +166,7 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
         />
         <span>
           {filter.label}
-          {filter.kind === 'property' && filter.value !== undefined && (
-            <span className="evaluate-value"> {formatNumber(filter.value)}</span>
-          )}
+          {filter.kind === 'property' && <span className="evaluate-value"> {formatNumber(filter.value)}</span>}
         </span>
       </label>
       {searchable && (
@@ -218,7 +211,7 @@ function EstimateBox({ searching, result }: { searching: boolean; result: PriceC
   if (!value) {
     return (
       <div className="evaluate-estimate evaluate-note">
-        Nothing listed. Untick some filters or try Broad.
+        Nothing listed. Untick some filters or lower the minimums.
       </div>
     )
   }
@@ -269,10 +262,16 @@ function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> 
   )
 }
 
-function Select({ value, options, onChange }: { value: string; options: Record<string, string>; onChange: (value: string) => void }) {
+interface SelectProps<T extends string> {
+  value: T
+  options: Record<T, string>
+  onChange: (value: T) => void
+}
+
+function Select<T extends string>({ value, options, onChange }: SelectProps<T>) {
   return (
-    <select className="evaluate-select" value={value} onChange={(event) => onChange(event.target.value)}>
-      {Object.entries(options).map(([key, label]) => (
+    <select className="evaluate-select" value={value} onChange={(event) => onChange(event.target.value as T)}>
+      {(Object.entries(options) as Array<[T, string]>).map(([key, label]) => (
         <option key={key} value={key}>
           {label}
         </option>

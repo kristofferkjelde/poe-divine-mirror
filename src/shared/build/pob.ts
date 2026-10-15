@@ -1,3 +1,4 @@
+import { UserFacingError } from '../errors'
 import { GEAR_SLOTS, gearSlotForPob, type GearSlot } from '../gear'
 import { parseModLine } from '../item/parse'
 import type { DamageRange, Mod, ModType, ParsedItem, Property, Rarity, Slot, WeaponStats } from '../item/types'
@@ -28,7 +29,7 @@ export interface PobBuild {
   items: PobItem[]
 }
 
-export class PobParseError extends Error {}
+export class PobParseError extends UserFacingError {}
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 

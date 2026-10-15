@@ -1,39 +1,51 @@
 import { rulesForProfile, type BuildProfile } from '../shared/build/profile'
 import { chooseEquipSlot, parseGear } from '../shared/compare/gear'
-import type { Gear, GearSlot } from '../shared/gear'
+import { isGear, type Gear, type GearSlot } from '../shared/gear'
 import { parseItem } from '../shared/item/parse'
 import { jsonFile } from './jsonFile'
+import { Listeners } from './listeners'
 
 export class GearStore {
   private readonly file = jsonFile('gear.json')
   private gear: Gear = this.load()
+  private readonly listeners = new Listeners()
 
   get current(): Gear {
     return { ...this.gear }
+  }
+
+  onChange(listener: () => void): void {
+    this.listeners.add(listener)
   }
 
   async equip(text: string, build: BuildProfile | null): Promise<GearSlot | undefined> {
     const item = parseItem(text)
     const slot = chooseEquipSlot(item, parseGear(this.gear), rulesForProfile(build))
     if (!slot) return undefined
-    this.gear = { ...this.gear, [slot]: text }
-    await this.file.write(this.gear)
+    await this.save({ ...this.gear, [slot]: text })
     return slot
   }
 
   async forget(slot: GearSlot): Promise<void> {
     const { [slot]: _forgotten, ...rest } = this.gear
-    this.gear = rest
-    await this.file.write(this.gear)
+    await this.save(rest)
   }
 
   async clear(): Promise<void> {
-    this.gear = {}
-    await this.file.write(this.gear)
+    await this.save({})
+  }
+
+  private async save(gear: Gear): Promise<void> {
+    this.gear = gear
+    try {
+      await this.file.write(gear)
+    } finally {
+      this.listeners.notify()
+    }
   }
 
   private load(): Gear {
     const data = this.file.read()
-    return data && typeof data === 'object' ? (data as Gear) : {}
+    return isGear(data) ? data : {}
   }
 }

@@ -2,10 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseItem } from '../item/parse'
 import {
+  applyEdit,
   defaultSearch,
   matchStat,
   PriceCheckUnsupported,
-  sanitizeSearch,
+  toSearchEdit,
   toTradeQuery,
   withScale,
   type TradeStatGroup,
@@ -95,20 +96,25 @@ describe('toTradeQuery', () => {
   })
 })
 
-describe('sanitizeSearch', () => {
-  it('drops filters the renderer could not have made', () => {
-    const search = sanitizeSearch({
-      rarity: 'rare',
-      status: 'weird',
-      filters: [
-        { key: 'a', label: 'ok', kind: 'mod', enabled: true, min: 5, max: null, statId: 'explicit.stat_1' },
-        { key: 'b', label: 'bad id', kind: 'mod', enabled: true, min: 5, max: null, statId: 'explicit.stat_1"}' },
-        { key: 'c', label: 'bad target', kind: 'property', enabled: true, min: 1, max: null, target: { group: 'trade_filters', filter: 'price' } },
-      ],
+describe('applyEdit', () => {
+  it('applies the options and filter changes the player can make, and nothing else', () => {
+    const search = defaultSearch(fixture('rare-ring-advanced'), stats)
+    const edit = toSearchEdit(search)
+    const life = byLabel(search, '+28 to maximum Life')!
+    const edited = applyEdit(search, {
+      options: { ...edit.options, rarity: 'rare', status: 'weird' },
+      filters: {
+        ...edit.filters,
+        [life.key]: { enabled: false, min: 20, max: 'lots' },
+        forged: { enabled: true, min: 1, max: null },
+      },
+      statId: 'explicit.stat_1"}',
     })
-    expect(search?.status).toBe('securable')
-    expect(search?.filters.map((filter) => filter.key)).toEqual(['a'])
-    expect(sanitizeSearch({ rarity: 'mythic', filters: [] })).toBeNull()
+
+    expect(edited).toMatchObject({ rarity: 'rare', status: 'securable', type: 'Iron Ring' })
+    expect(byLabel(edited, '+28 to maximum Life')).toMatchObject({ enabled: false, min: 20, max: null, statId: life.kind === 'mod' && life.statId })
+    expect(edited.filters.map((filter) => filter.key)).toEqual(search.filters.map((filter) => filter.key))
+    expect(applyEdit(search, null)).toEqual(search)
   })
 })
 

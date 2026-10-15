@@ -1,6 +1,7 @@
 import { inflateSync } from 'node:zlib'
-import { parsePobXml, PobParseError } from '../shared/build/pob'
-import { PROFILE_VERSION, profileFromPob, type BuildProfile } from '../shared/build/profile'
+import { parsePobXml } from '../shared/build/pob'
+import { hasItems, PROFILE_VERSION, profileFromPob, type BuildProfile, type StoredProfile } from '../shared/build/profile'
+import { UserFacingError } from '../shared/errors'
 
 export type Fetcher = (url: string) => Promise<string>
 
@@ -20,7 +21,7 @@ const MOBALYTICS = /^https?:\/\/(?:www\.)?mobalytics\.gg\/poe-2\/(?:builds|profi
 const EMBEDDED_CODE = /e[AFJN][\w+/=-]{200,}/g
 const EMBEDDED_LINK = /https?:\/\/(?:pobb\.in|maxroll\.gg\/poe2\/pob|poe2?\.ninja\/(?:poe2\/)?pob|poe2db\.tw\/pob)\/[\w-]+/g
 
-export class BuildImportError extends Error {}
+export class BuildImportError extends UserFacingError {}
 
 export function decodePobCode(code: string): string {
   const cleaned = code.trim().replace(/\s+/g, '')
@@ -36,12 +37,7 @@ export function decodePobCode(code: string): string {
 }
 
 function profileFromCode(code: string, source: string): BuildProfile {
-  try {
-    return { ...profileFromPob(parsePobXml(decodePobCode(code)), source), code: code.trim().replace(/\s+/g, '') }
-  } catch (error) {
-    if (error instanceof BuildImportError || error instanceof PobParseError) throw new BuildImportError(error.message)
-    throw error
-  }
+  return { ...profileFromPob(parsePobXml(decodePobCode(code)), source), code: code.trim().replace(/\s+/g, '') }
 }
 
 async function download(fetcher: Fetcher, url: string): Promise<string> {
@@ -52,14 +48,14 @@ async function download(fetcher: Fetcher, url: string): Promise<string> {
   }
 }
 
-export function refreshProfile(profile: BuildProfile): BuildProfile {
-  if (profile.version === PROFILE_VERSION || !profile.code) return profile
-  try {
-    const fresh = profileFromCode(profile.code, profile.source)
-    return { ...fresh, importedAt: profile.importedAt, custom: profile.custom }
-  } catch {
-    return profile
+export function refreshProfile(profile: StoredProfile): BuildProfile {
+  if (profile.version !== PROFILE_VERSION && profile.code) {
+    try {
+      const fresh = profileFromCode(profile.code, profile.source)
+      return { ...fresh, importedAt: profile.importedAt, custom: profile.custom }
+    } catch {}
   }
+  return hasItems(profile) ? profile : { ...profile, items: {} }
 }
 
 export async function importBuild(input: string, fetcher: Fetcher): Promise<BuildProfile> {

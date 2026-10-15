@@ -14,10 +14,10 @@ const VERDICT_LABELS: Record<Verdict, string> = {
 interface Props {
   result: GearComparison
   against: 'gear' | 'build'
-  buildName: string | undefined | null
+  weightsNote?: string
 }
 
-export function ComparisonView({ result, against, buildName }: Props) {
+export function ComparisonView({ result, against, weightsNote }: Props) {
   const { comparison, equipped, slot } = result
 
   return (
@@ -44,11 +44,7 @@ export function ComparisonView({ result, against, buildName }: Props) {
           </button>
         )}
       </p>
-      {buildName !== null && (
-        <p className="compare-build">
-          {buildName ? `Scored for ${buildName}` : 'General weights. Add your build in Settings.'}
-        </p>
-      )}
+      {weightsNote && <p className="compare-build">{weightsNote}</p>}
       {comparison.rows.length === 0 ? (
         <p className="compare-empty">Same stats as your equipped item</p>
       ) : (

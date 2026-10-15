@@ -21,14 +21,17 @@ export function App() {
     )
   }
 
-  const { item, evaluate, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt } = state
+  const { id, item, evaluate, comparison, buildComparison, equippedTo, build, hotkeys, locked } = state
   const comparable = gearSlotsFor(item.slot).length > 0
-  const buildName =
-    build && build.version !== PROFILE_VERSION ? `${build.name} (outdated: re-import it in Settings)` : build?.name
+  const weightsNote = !build
+    ? 'General weights. Add your build in Settings.'
+    : build.version !== PROFILE_VERSION
+      ? `Scored for ${build.name} (outdated: re-import it in Settings)`
+      : `Scored for ${build.name}`
 
   if (evaluate.status !== 'closed') {
     return (
-      <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
+      <Panel key={id} hotkeys={hotkeys} locked={locked}>
         <ItemCard item={item} compact />
         <EvaluateView evaluate={evaluate} />
       </Panel>
@@ -36,11 +39,11 @@ export function App() {
   }
 
   return (
-    <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
+    <Panel key={id} hotkeys={hotkeys} locked={locked}>
       {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOTS[equippedTo].label}</GearHint>}
-      {buildComparison && <ComparisonView result={buildComparison} against="build" buildName={buildName} />}
+      {buildComparison && <ComparisonView result={buildComparison} against="build" weightsNote={weightsNote} />}
       {comparison && (
-        <ComparisonView result={comparison} against="gear" buildName={buildComparison ? null : buildName} />
+        <ComparisonView result={comparison} against="gear" weightsNote={buildComparison ? undefined : weightsNote} />
       )}
       {!equippedTo && !comparison && comparable && item.slot && (
         <GearHint>
