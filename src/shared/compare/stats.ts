@@ -148,7 +148,7 @@ function firstNumber(value: string | undefined): number | undefined {
 function averageDamage(value: string | undefined): number {
   if (!value) return 0
   let total = 0
-  for (const [, min, max] of value.matchAll(/(\d+)-(\d+)/g)) {
+  for (const [, min, max] of value.matchAll(/(\d+)(?:-| or )(\d+)/g)) {
     total += (Number(min) + Number(max)) / 2
   }
   return total

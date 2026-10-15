@@ -8,7 +8,7 @@ const MOD_SUFFIX = /\s\((implicit|rune|enchant|desecrated|fractured|crafted)\)$/
 const NUMBER = /([+-]?)(\d+(?:\.\d+)?)(?:\((-?\d+(?:\.\d+)?)(?:-(-?\d+(?:\.\d+)?))?\))?/g
 const ADVANCED_NOTE = /\s+—\s+Unscalable Value$/
 const PROPERTY = /^([^:{}]+): (.+)$/
-const INSTRUCTION = /^(Right click|Place into|Can only|Used when|Shift click|Travel to|Stack Size)/
+const INSTRUCTION = /^(Right click|Place into|Can only|Used when|Shift click|Travel to|Stack Size|Can roll .+ modifiers$)/
 
 export class ItemParseError extends Error {}
 

@@ -27,6 +27,19 @@ describe('extractStats', () => {
     expect(stats.get('+# to Intelligence')?.value).toBe(22)
   })
 
+  it('counts "1 or 194" damage from min-or-max uniques as its average', () => {
+    const stats = extractStats(fixture('unique-spear-min-max'))
+
+    expect(stats.get('Elemental DPS')?.value).toBeCloseTo(97.5 * 2.11)
+    expect(stats.get('Total DPS')?.value).toBeCloseTo(97.5 * 2.11)
+    expect(stats.has('Adds # to # Lightning Damage')).toBe(false)
+  })
+
+  it('ignores "Can roll ... modifiers" notes on bases', () => {
+    const base = item(['Can roll Destruction modifiers', '+20 to maximum Life'], 'Spears')
+    expect(base.mods.map((mod) => mod.text)).toEqual(['+20 to maximum Life'])
+  })
+
   it('ignores local defence mods on armour because the property already includes them', () => {
     const stats = extractStats(fixture('rare-body-armour'))
 
