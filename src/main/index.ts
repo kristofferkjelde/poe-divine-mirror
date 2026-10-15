@@ -54,7 +54,12 @@ function start(): void {
     }
     busy = true
     try {
-      if (overlay.hide().wasFocused) await delay(FOCUS_RETURN_MS)
+      const wasVisible = overlay.visible
+      if (mode === 'price' && overlay.hovered && overlay.evaluateShown()) return
+      if (overlay.focused) {
+        overlay.hide()
+        await delay(FOCUS_RETURN_MS)
+      }
       const text = await copyHoveredItem()
       const shared = {
         capturedAt: Date.now(),
@@ -64,6 +69,7 @@ function start(): void {
         build: builds.current,
       }
       if (!text) {
+        if (mode === 'price' && wasVisible && overlay.evaluateShown()) return
         overlay.show({ ...shared, text: '', missed: MISSED_ITEM })
         return
       }

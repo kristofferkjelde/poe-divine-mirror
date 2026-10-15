@@ -60,6 +60,8 @@ window.overlay.onItemCaptured((captured) => {
   if (captured.priceCheck) void openEvaluate()
 })
 
+window.overlay.onEvaluateShown(() => void openEvaluate())
+
 function setEvaluate(capturedAt: number, update: (evaluate: EvaluateState) => EvaluateState) {
   if (state.status !== 'item' || state.capturedAt !== capturedAt) return
   setState({ ...state, evaluate: update(state.evaluate) })

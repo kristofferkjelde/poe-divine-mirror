@@ -13,6 +13,7 @@ export class Overlay {
   private height = 600
   private anchor = { x: 0, y: 0 }
   private placed: Rectangle | null = null
+  private shown: CapturedItem | null = null
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -59,10 +60,34 @@ export class Overlay {
     void loadRenderer(this.window)
   }
 
+  get visible(): boolean {
+    return this.window.isVisible()
+  }
+
+  get focused(): boolean {
+    return this.window.isFocused()
+  }
+
+  get hovered(): boolean {
+    return this.window.isVisible() && this.contains(screen.getCursorScreenPoint())
+  }
+
   show(item: CapturedItem): void {
+    this.shown = item.missed ? null : item
     this.window.webContents.send(IPC.itemCaptured, item)
     this.anchor = screen.getCursorScreenPoint()
     this.reposition()
+    this.reveal()
+  }
+
+  evaluateShown(): boolean {
+    if (!this.shown) return false
+    this.window.webContents.send(IPC.evaluateShown)
+    this.reveal()
+    return true
+  }
+
+  private reveal(): void {
     if (!this.window.isVisible()) this.window.showInactive()
     if (!globalShortcut.isRegistered(ESCAPE)) {
       try {
@@ -71,11 +96,9 @@ export class Overlay {
     }
   }
 
-  hide(): { wasFocused: boolean } {
-    const wasFocused = this.window.isFocused()
+  hide(): void {
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
-    return { wasFocused }
   }
 
   private contains({ x, y }: { x: number; y: number }): boolean {

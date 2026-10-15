@@ -7,6 +7,11 @@ const overlay: OverlayApi = {
     ipcRenderer.on(IPC.itemCaptured, handler)
     return () => ipcRenderer.off(IPC.itemCaptured, handler)
   },
+  onEvaluateShown: (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on(IPC.evaluateShown, handler)
+    return () => ipcRenderer.off(IPC.evaluateShown, handler)
+  },
   resize: (height) => ipcRenderer.send(IPC.overlayResize, height),
   hide: () => ipcRenderer.send(IPC.overlayHide),
   openSettings: () => ipcRenderer.send(IPC.settingsOpen),

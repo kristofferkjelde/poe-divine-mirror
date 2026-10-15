@@ -51,7 +51,7 @@ With a build added, **Alt+D** always compares the item against your build's item
 
 **Check the price**
 
-Press **Ctrl+D** on an item, or click **⚖ Evaluate price** at the bottom of any popup. The popup switches to an Evaluate view, like PoE Overlay's:
+Press **Ctrl+D** on an item, or click **⚖ Evaluate price** at the bottom of any popup. With a popup already open, **Ctrl+D** switches it to Evaluate unless you're hovering a different item in the game. The popup switches to an Evaluate view, like PoE Overlay's:
 
 <p align="center">
   <img src="docs/evaluate.png" alt="The Evaluate view for a rare spear with stat filters, the range slider, an estimated value and the cheapest listings" width="420" />

@@ -18,7 +18,7 @@ export async function copyHoveredItem(): Promise<string | null> {
   uIOhook.keyTap(UiohookKey.C, [UiohookKey.Ctrl, UiohookKey.Alt])
   let text = ''
   try {
-    for (let waited = 0; waited < TIMEOUT_MS; waited += POLL_INTERVAL_MS) {
+    while (Date.now() - started < TIMEOUT_MS) {
       await delay(POLL_INTERVAL_MS)
       text = await clipboard.readText()
       if (isItemText(text)) return text
