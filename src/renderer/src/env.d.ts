@@ -1,10 +1,10 @@
 /// <reference types="vite/client" />
 
-import type { OverlayApi, SettingsApi } from '../../shared/ipc'
+import type { OverlayBridge, SettingsApi } from '../../shared/ipc'
 
 declare global {
   interface Window {
-    overlay: OverlayApi
+    overlay: OverlayBridge
     settings: SettingsApi
   }
 }

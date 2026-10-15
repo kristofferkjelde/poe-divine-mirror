@@ -1,6 +1,6 @@
 import { globalShortcut } from 'electron'
 import type { SetHotkeyResult } from '../shared/ipc'
-import { DEFAULT_SETTINGS, type HotkeyAction, type Settings } from '../shared/settings'
+import { DEFAULT_SETTINGS, HOTKEY_ACTIONS, type HotkeyAction, type Settings } from '../shared/settings'
 import type { SettingsStore } from './settingsStore'
 
 type Handlers = Record<HotkeyAction, () => void>
@@ -15,17 +15,13 @@ export class Hotkeys {
     this.unavailable = this.register(store.current.hotkeys)
   }
 
-  get current(): Settings['hotkeys'] {
-    return { ...this.store.current.hotkeys }
-  }
-
   get unavailableActions(): HotkeyAction[] {
     return [...this.unavailable]
   }
 
   async set(action: HotkeyAction, accelerator: string): Promise<SetHotkeyResult> {
     const previous = this.store.current.hotkeys
-    const other = (Object.keys(previous) as HotkeyAction[]).find(
+    const other = HOTKEY_ACTIONS.find(
       (key) => key !== action && previous[key].toLowerCase() === accelerator.toLowerCase(),
     )
     if (other) return { ok: false, error: `${accelerator} is already used by the other hotkey` }
@@ -57,7 +53,7 @@ export class Hotkeys {
 
   private register(hotkeys: Settings['hotkeys']): HotkeyAction[] {
     globalShortcut.unregisterAll()
-    return (Object.keys(hotkeys) as HotkeyAction[]).filter((action) => {
+    return HOTKEY_ACTIONS.filter((action) => {
       try {
         return !globalShortcut.register(hotkeys[action], this.handlers[action])
       } catch {

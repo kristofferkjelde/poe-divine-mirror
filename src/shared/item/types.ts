@@ -35,6 +35,16 @@ export interface Property {
   augmented: boolean
 }
 
+export type DamageRange = [number, number]
+
+export interface WeaponStats {
+  physical?: DamageRange
+  elemental: DamageRange[]
+  chaos?: DamageRange
+  critChance?: number
+  attacksPerSecond?: number
+}
+
 export interface Requirements {
   level?: number
   str?: number
@@ -52,6 +62,7 @@ export interface ParsedItem {
   itemLevel?: number
   quality?: number
   properties: Property[]
+  weapon?: WeaponStats
   requirements: Requirements
   sockets?: string
   mods: Mod[]

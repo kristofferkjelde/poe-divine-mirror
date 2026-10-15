@@ -1,6 +1,6 @@
 import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared/compare/compare'
 import type { GearComparison } from '../../../shared/compare/gear'
-import { GEAR_SLOT_LABELS } from '../../../shared/gear'
+import { GEAR_SLOTS } from '../../../shared/gear'
 import { formatNumber } from '../../../shared/compare/stats'
 import { itemLabel } from '../../../shared/item/label'
 import { forgetGear } from '../overlayStore'
@@ -14,10 +14,10 @@ const VERDICT_LABELS: Record<Verdict, string> = {
 interface Props {
   result: GearComparison
   against: 'gear' | 'build'
-  buildName: string | undefined | null
+  weightsNote?: string
 }
 
-export function ComparisonView({ result, against, buildName }: Props) {
+export function ComparisonView({ result, against, weightsNote }: Props) {
   const { comparison, equipped, slot } = result
 
   return (
@@ -32,23 +32,19 @@ export function ComparisonView({ result, against, buildName }: Props) {
       </header>
       <p className="compare-against">
         vs your {against === 'build' ? "build's " : ''}
-        {GEAR_SLOT_LABELS[slot]}: <span className="item-value">{itemLabel(equipped)}</span>
+        {GEAR_SLOTS[slot].label}: <span className="item-value">{itemLabel(equipped)}</span>
         {against === 'gear' && (
           <button
             type="button"
             className="panel-link compare-forget"
-            title={`Forget your saved ${GEAR_SLOT_LABELS[slot]}`}
+            title={`Forget your saved ${GEAR_SLOTS[slot].label}`}
             onClick={() => void forgetGear(slot)}
           >
             ✕ Forget
           </button>
         )}
       </p>
-      {buildName !== null && (
-        <p className="compare-build">
-          {buildName ? `Scored for ${buildName}` : 'General weights. Add your build in Settings.'}
-        </p>
-      )}
+      {weightsNote && <p className="compare-build">{weightsNote}</p>}
       {comparison.rows.length === 0 ? (
         <p className="compare-empty">Same stats as your equipped item</p>
       ) : (

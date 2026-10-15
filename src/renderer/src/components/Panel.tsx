@@ -4,7 +4,7 @@ import { setOverlayLocked } from '../overlayStore'
 
 const reportHeight = (node: HTMLElement | null) => {
   if (!node) return
-  const observer = new ResizeObserver(([entry]) => window.overlay.resize(entry.borderBoxSize[0].blockSize))
+  const observer = new ResizeObserver(([entry]) => void window.overlay.resize(entry.borderBoxSize[0].blockSize))
   observer.observe(node)
   return () => observer.disconnect()
 }
@@ -34,10 +34,10 @@ export function Panel({ hotkeys, locked, children }: Props) {
             >
               {locked ? '🔒 Locked' : '🔓 Move'}
             </button>
-            <button type="button" className="panel-link" onClick={() => window.overlay.openSettings()}>
+            <button type="button" className="panel-link" onClick={() => void window.overlay.openSettings()}>
               Settings
             </button>
-            <button type="button" className="panel-link" onClick={() => window.overlay.hide()}>
+            <button type="button" className="panel-link" onClick={() => void window.overlay.hide()}>
               Esc
             </button>
           </span>

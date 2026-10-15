@@ -1,6 +1,7 @@
-import type { GearSlot } from '../gear'
+import { UserFacingError } from '../errors'
+import { GEAR_SLOTS, gearSlotForPob, type GearSlot } from '../gear'
 import { parseModLine } from '../item/parse'
-import type { Mod, ModType, ParsedItem, Property, Rarity, Slot } from '../item/types'
+import type { DamageRange, Mod, ModType, ParsedItem, Property, Rarity, Slot, WeaponStats } from '../item/types'
 import WEAPON_BASES from './weaponBases.json'
 
 export interface PobItem {
@@ -28,33 +29,7 @@ export interface PobBuild {
   items: PobItem[]
 }
 
-export class PobParseError extends Error {}
-
-const SLOTS: Record<string, GearSlot> = {
-  'Weapon 1': 'weapon',
-  'Weapon 2': 'offhand',
-  Helmet: 'helmet',
-  'Body Armour': 'body',
-  Gloves: 'gloves',
-  Boots: 'boots',
-  Belt: 'belt',
-  Amulet: 'amulet',
-  'Ring 1': 'ring1',
-  'Ring 2': 'ring2',
-}
-
-const ITEM_SLOT: Record<GearSlot, Slot> = {
-  weapon: 'weapon',
-  offhand: 'offhand',
-  helmet: 'helmet',
-  body: 'body',
-  gloves: 'gloves',
-  boots: 'boots',
-  belt: 'belt',
-  amulet: 'amulet',
-  ring1: 'ring',
-  ring2: 'ring',
-}
+export class PobParseError extends UserFacingError {}
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
@@ -123,10 +98,10 @@ function equippedItems(xml: string): PobItem[] {
 
   const result: PobItem[] = []
   for (const { attrs } of slots) {
-    const gearSlot = SLOTS[attrs.name]
+    const gearSlot = gearSlotForPob(attrs.name)
     const text = byId.get(attrs.itemId)
     if (!gearSlot || !text || attrs.itemId === '0') continue
-    result.push({ gearSlot, item: parsePobItem(text, ITEM_SLOT[gearSlot]) })
+    result.push({ gearSlot, item: parsePobItem(text, GEAR_SLOTS[gearSlot].slot) })
   }
   return result
 }
@@ -164,7 +139,8 @@ export function parsePobItem(text: string, slot: Slot): ParsedItem {
     if (value) properties.push({ name: property, value, augmented: false })
   }
   const base = baseType ? BASES[baseType] : undefined
-  if (slot === 'weapon' && base) properties.push(...weaponProperties(base, mods, quality))
+  const weapon = slot === 'weapon' && base ? weaponStats(base, mods, quality) : undefined
+  if (weapon && base) properties.push(...weaponProperties(weapon, base))
 
   return {
     itemClass: '',
@@ -175,6 +151,7 @@ export function parsePobItem(text: string, slot: Slot): ParsedItem {
     itemLevel: Number(field('Item Level')) || undefined,
     quality: quality || undefined,
     properties,
+    ...(weapon && { weapon }),
     requirements: { level: Number(field('LevelReq')) || undefined },
     mods,
     corrupted: false,
@@ -308,32 +285,37 @@ function scaleNumbers(text: string, scalar: number): string {
   )
 }
 
-function weaponProperties(base: WeaponBase, mods: Mod[], quality: number): Property[] {
+function weaponStats(base: WeaponBase, mods: Mod[], quality: number): WeaponStats {
   const sum = (template: string) =>
     mods.filter((mod) => mod.template === template).reduce((total, mod) => total + (mod.values[0] ?? 0), 0)
-  const added = (type: DamageType): [number, number] =>
+  const added = (type: DamageType): DamageRange =>
     mods
       .filter((mod) => mod.template === `Adds # to # ${type} Damage`)
-      .reduce<[number, number]>((total, mod) => [total[0] + mod.values[0], total[1] + mod.values[1]], [0, 0])
-  const damage = (type: DamageType, multiplier = 1): [number, number] | null => {
+      .reduce<DamageRange>((total, mod) => [total[0] + mod.values[0], total[1] + mod.values[1]], [0, 0])
+  const damage = (type: DamageType, multiplier = 1): DamageRange | undefined => {
     const [baseMin, baseMax] = base.damage[type] ?? [0, 0]
     const [addMin, addMax] = added(type)
-    const range: [number, number] = [Math.round((baseMin + addMin) * multiplier), Math.round((baseMax + addMax) * multiplier)]
-    return range[1] > 0 ? range : null
+    const range: DamageRange = [Math.round((baseMin + addMin) * multiplier), Math.round((baseMax + addMax) * multiplier)]
+    return range[1] > 0 ? range : undefined
   }
-  const format = ([min, max]: [number, number]) => `${min}-${max}`
 
-  const properties: Property[] = []
-  const physical = damage('Physical', 1 + (sum('#% increased Physical Damage') + quality) / 100)
-  if (physical) properties.push({ name: 'Physical Damage', value: format(physical), augmented: true })
-  const elemental = (['Fire', 'Cold', 'Lightning'] as const).map((type) => damage(type)).filter((range) => range !== null)
-  if (elemental.length > 0) properties.push({ name: 'Elemental Damage', value: elemental.map(format).join(', '), augmented: true })
-  const chaos = damage('Chaos')
-  if (chaos) properties.push({ name: 'Chaos Damage', value: format(chaos), augmented: true })
+  return {
+    physical: damage('Physical', 1 + (sum('#% increased Physical Damage') + quality) / 100),
+    elemental: (['Fire', 'Cold', 'Lightning'] as const).map((type) => damage(type)).filter((range) => range !== undefined),
+    chaos: damage('Chaos'),
+    critChance: base.crit + sum('+#% to Critical Hit Chance'),
+    attacksPerSecond: base.aps * (1 + sum('#% increased Attack Speed') / 100),
+  }
+}
 
-  const crit = base.crit + sum('+#% to Critical Hit Chance')
-  properties.push({ name: 'Critical Hit Chance', value: `${Number(crit.toFixed(2))}%`, augmented: crit !== base.crit })
-  const aps = base.aps * (1 + sum('#% increased Attack Speed') / 100)
-  properties.push({ name: 'Attacks per Second', value: aps.toFixed(2), augmented: aps !== base.aps })
-  return properties
+function weaponProperties(weapon: WeaponStats, base: WeaponBase): Property[] {
+  const format = ([min, max]: DamageRange) => `${min}-${max}`
+  const { physical, elemental, chaos, critChance = base.crit, attacksPerSecond = base.aps } = weapon
+  return [
+    ...(physical ? [{ name: 'Physical Damage', value: format(physical), augmented: true }] : []),
+    ...(elemental.length > 0 ? [{ name: 'Elemental Damage', value: elemental.map(format).join(', '), augmented: true }] : []),
+    ...(chaos ? [{ name: 'Chaos Damage', value: format(chaos), augmented: true }] : []),
+    { name: 'Critical Hit Chance', value: `${Number(critChance.toFixed(2))}%`, augmented: critChance !== base.crit },
+    { name: 'Attacks per Second', value: attacksPerSecond.toFixed(2), augmented: attacksPerSecond !== base.aps },
+  ]
 }

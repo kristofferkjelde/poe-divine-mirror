@@ -1,41 +1,20 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { IPC, type CapturedItem, type OverlayApi, type SettingsApi } from '../shared/ipc'
+import { API_METHODS, apiChannel, messageChannel, type ApiScope, type OverlayBridge, type SettingsApi } from '../shared/ipc'
 
-const overlay: OverlayApi = {
-  onItemCaptured: (listener) => {
-    const handler = (_event: IpcRendererEvent, item: CapturedItem) => listener(item)
-    ipcRenderer.on(IPC.itemCaptured, handler)
-    return () => ipcRenderer.off(IPC.itemCaptured, handler)
-  },
-  onEvaluateShown: (listener) => {
-    const handler = () => listener()
-    ipcRenderer.on(IPC.evaluateShown, handler)
-    return () => ipcRenderer.off(IPC.evaluateShown, handler)
-  },
-  resize: (height) => ipcRenderer.send(IPC.overlayResize, height),
-  hide: () => ipcRenderer.send(IPC.overlayHide),
-  openSettings: () => ipcRenderer.send(IPC.settingsOpen),
-  setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
-  forgetGear: (slot) => ipcRenderer.invoke(IPC.gearForget, slot),
-  prepareSearch: (text) => ipcRenderer.invoke(IPC.tradePrepare, text),
-  runSearch: (search) => ipcRenderer.invoke(IPC.tradeSearch, search),
-  openTrade: (url) => ipcRenderer.send(IPC.openTrade, url),
+function proxy<T>(scope: ApiScope): T {
+  return Object.fromEntries(
+    API_METHODS[scope].map((method) => [method, (...args: unknown[]) => ipcRenderer.invoke(apiChannel(scope, method), ...args)]),
+  ) as T
 }
 
-const settings: SettingsApi = {
-  get: () => ipcRenderer.invoke(IPC.settingsGet),
-  setHotkey: (action, accelerator) => ipcRenderer.invoke(IPC.settingsSetHotkey, action, accelerator),
-  reset: () => ipcRenderer.invoke(IPC.settingsReset),
-  resetPosition: () => ipcRenderer.invoke(IPC.settingsResetPosition),
-  setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
-  setRecording: (recording) => ipcRenderer.send(IPC.settingsRecording, recording),
-  importBuild: (input) => ipcRenderer.invoke(IPC.buildImport, input),
-  removeBuild: () => ipcRenderer.invoke(IPC.buildRemove),
-  setBuildWeight: (stat, weight) => ipcRenderer.invoke(IPC.buildSetWeight, stat, weight),
-  resetBuildWeights: () => ipcRenderer.invoke(IPC.buildResetWeights),
-  listLeagues: () => ipcRenderer.invoke(IPC.tradeLeagues),
-  setLeague: (league) => ipcRenderer.invoke(IPC.settingsSetLeague, league),
+const overlay: OverlayBridge = {
+  ...proxy<Omit<OverlayBridge, 'on'>>('overlay'),
+  on: (name, listener) => {
+    const handler = (_event: IpcRendererEvent, payload: Parameters<typeof listener>[0]) => listener(payload)
+    ipcRenderer.on(messageChannel(name), handler)
+    return () => ipcRenderer.off(messageChannel(name), handler)
+  },
 }
 
 contextBridge.exposeInMainWorld('overlay', overlay)
-contextBridge.exposeInMainWorld('settings', settings)
+contextBridge.exposeInMainWorld('settings', proxy<SettingsApi>('settings'))

@@ -1,6 +1,6 @@
 import type { ParsedGear } from '../compare/gear'
 import { DERIVED, statKeys } from '../compare/stats'
-import { DEFAULT_WEIGHTS, matchingRule, type WeightRule, type WeightTag } from '../compare/weights'
+import { DEFAULT_WEIGHTS, ruleWeight, weightFor, type WeightRule } from '../compare/weights'
 import type { PobBuild } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
@@ -84,17 +84,28 @@ export function profileFromPob(build: PobBuild, source: string): BuildProfile {
   }
 }
 
-function tagMultiplier(tag: WeightTag | undefined, profile: BuildProfile): number {
-  switch (tag) {
+const SKILL_LEVEL = /^\+# to Level of all (.+) Skills$/i
+
+function focusesSkillFamily(stat: string, profile: BuildProfile): boolean {
+  const family = SKILL_LEVEL.exec(stat)?.[1] ?? ''
+  return (Object.keys(SKILL_FAMILIES) as Array<keyof BuildProfile['focus']>).some(
+    (focus) => profile.focus[focus] && SKILL_FAMILIES[focus].test(family),
+  )
+}
+
+function multiplier(rule: WeightRule, stat: string, profile: BuildProfile): number {
+  switch (rule.tag) {
     case 'attack':
     case 'spell':
     case 'minion':
-      return profile.focus[tag] ? 1 : 0
+      return profile.focus[rule.tag] ? 1 : 0
+    case 'skillLevel':
+      return focusesSkillFamily(stat, profile) ? 1 : 0
     case 'armour':
     case 'evasion':
-      return profile.defences.includes(tag) ? 1.5 : OFF_DEFENCE
+      return profile.defences.includes(rule.tag) ? 1.5 : OFF_DEFENCE
     case 'energyShield':
-      return profile.lowLife ? 2.5 : profile.defences.includes(tag) ? 1.5 : OFF_DEFENCE
+      return profile.lowLife ? 2.5 : profile.defences.includes(rule.tag) ? 1.5 : OFF_DEFENCE
     case 'life':
       return profile.lowLife ? 0.2 : 1
     default:
@@ -102,32 +113,15 @@ function tagMultiplier(tag: WeightTag | undefined, profile: BuildProfile): numbe
   }
 }
 
-const SKILL_LEVEL = /^\+# to Level of all (.+) Skills$/i
-
-function skillLevelWeight(family: string, base: number, profile: BuildProfile): number {
-  const relevant = (Object.keys(SKILL_FAMILIES) as Array<keyof BuildProfile['focus']>).some(
-    (focus) => profile.focus[focus] && SKILL_FAMILIES[focus].test(family),
-  )
-  return relevant ? base : 1
-}
-
 function baseRules(profile: BuildProfile): WeightRule[] {
-  return DEFAULT_WEIGHTS.flatMap((rule): WeightRule[] => {
-    if (rule.tag !== 'skillLevel') return [{ ...rule, weight: rule.weight * tagMultiplier(rule.tag, profile) }]
-    return [
-      ...SKILL_FAMILY_NAMES.map((family) => ({
-        stat: `+# to Level of all ${family} Skills`,
-        weight: skillLevelWeight(family, rule.weight, profile),
-        tag: rule.tag,
-      })),
-      { ...rule, weight: 1 },
-    ]
-  })
+  return DEFAULT_WEIGHTS.map((rule) => ({
+    ...rule,
+    weight: (stat: string) => ruleWeight(rule, stat) * multiplier(rule, stat, profile),
+  }))
 }
 
 function gearWeight(stat: string, base: WeightRule[]): number {
-  if (SKILL_LEVEL.test(stat)) return matchingRule(stat, undefined, DEFAULT_WEIGHTS)?.weight ?? 0
-  const weight = matchingRule(stat, undefined, base)?.weight ?? 0
+  const weight = weightFor(stat, undefined, base)
   return weight > 0 ? weight * GEAR_BOOST : UNLISTED_GEAR_WEIGHT
 }
 
@@ -180,18 +174,22 @@ export function profileWeights(profile: BuildProfile): ProfileWeight[] {
   return [...stats]
     .map((stat) => ({
       stat,
-      weight: round(matchingRule(stat, undefined, rules)?.weight ?? 0),
+      weight: round(weightFor(stat, undefined, rules)),
       fromBuild: gear.has(stat),
       custom: stat in profile.custom,
     }))
-    .filter((entry) => entry.custom || entry.fromBuild || (entry.weight !== 0 && !(SKILL_LEVEL.test(entry.stat) && entry.weight <= 1)))
+    .filter((entry) => entry.custom || entry.fromBuild || entry.weight !== 0)
     .sort((a, b) => b.weight - a.weight || a.stat.localeCompare(b.stat))
 }
 
 const round = (value: number) => Math.round(value * 100) / 100
 
-export function isBuildProfile(value: unknown): value is BuildProfile {
-  const profile = value as BuildProfile | null
+export type StoredProfile = Omit<BuildProfile, 'items'> & { items?: ParsedGear }
+
+export const hasItems = (profile: StoredProfile): profile is BuildProfile => profile.items !== undefined
+
+export function isStoredProfile(value: unknown): value is StoredProfile {
+  const profile = value as StoredProfile | null
   return (
     typeof profile === 'object' &&
     profile !== null &&

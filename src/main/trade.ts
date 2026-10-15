@@ -1,5 +1,7 @@
 import { app, net } from 'electron'
-import { ItemParseError, parseItem } from '../shared/item/parse'
+import { randomUUID } from 'node:crypto'
+import { toResult, UserFacingError } from '../shared/errors'
+import { parseItem } from '../shared/item/parse'
 import {
   leagueIds,
   parseListings,
@@ -11,13 +13,7 @@ import {
   type PrepareResult,
   type PriceCheckResult,
 } from '../shared/trade/price'
-import {
-  defaultSearch,
-  PriceCheckUnsupported,
-  sanitizeSearch,
-  toTradeQuery,
-  type TradeStatGroup,
-} from '../shared/trade/query'
+import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
 import { jsonFile } from './jsonFile'
 
 const TIMEOUT_MS = 15_000
@@ -25,8 +21,9 @@ const STATS_MAX_AGE_MS = 24 * 60 * 60 * 1000
 const RESULT_CACHE_MS = 60_000
 const FETCH_COUNT = 20
 const FETCH_BATCH = 10
+const KEPT_SEARCHES = 20
 
-class TradeError extends Error {}
+class TradeError extends UserFacingError {}
 
 interface SearchResponse {
   id: string
@@ -40,6 +37,7 @@ export class TradeClient {
   private leagues: Promise<string[]> | null = null
   private blockedUntil = 0
   private readonly cache = new Map<string, { at: number; result: PriceCheckResult }>()
+  private readonly searches = new Map<string, ItemSearch>()
 
   async listLeagues(): Promise<string[]> {
     this.leagues ??= this.request('/api/trade2/data/leagues').then(leagueIds)
@@ -51,20 +49,23 @@ export class TradeClient {
 
   async prepare(text: string): Promise<PrepareResult> {
     try {
-      return { ok: true, search: defaultSearch(parseItem(text), await this.loadStats()) }
-    } catch (error) {
-      if (error instanceof TradeError || error instanceof PriceCheckUnsupported || error instanceof ItemParseError) {
-        return { ok: false, error: error.message }
+      const search = defaultSearch(parseItem(text), await this.loadStats())
+      const id = randomUUID()
+      this.searches.set(id, search)
+      if (this.searches.size > KEPT_SEARCHES) {
+        const [oldest] = this.searches.keys()
+        this.searches.delete(oldest)
       }
-      console.error('Preparing the price check failed', error)
-      return { ok: false, error: 'Could not reach the trade site' }
+      return { ok: true, id, search }
+    } catch (error) {
+      return toResult(error, 'Could not reach the trade site')
     }
   }
 
-  async search(input: unknown, league: string | null): Promise<PriceCheckResult> {
-    const search = sanitizeSearch(input)
-    if (!search) return { ok: false, error: 'Nothing to search for' }
-    const query = toTradeQuery(search)
+  async search(id: string, edit: unknown, league: string | null): Promise<PriceCheckResult> {
+    const search = this.searches.get(id)
+    if (!search) return { ok: false, error: 'This price check expired. Press the hotkey again.' }
+    const query = toTradeQuery(applyEdit(search, edit))
     const cacheKey = `${league}\n${JSON.stringify(query)}`
     const cached = this.cache.get(cacheKey)
     if (cached && Date.now() - cached.at < RESULT_CACHE_MS) return cached.result
@@ -91,9 +92,7 @@ export class TradeClient {
       this.cache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
-      if (error instanceof TradeError) return { ok: false, error: error.message, url }
-      console.error('Price check failed', error)
-      return { ok: false, error: 'Could not reach the trade site', url }
+      return { ...toResult(error, 'Could not reach the trade site'), url }
     }
   }
 
@@ -133,7 +132,7 @@ export class TradeClient {
         method: body === undefined ? 'GET' : 'POST',
         headers: {
           Accept: 'application/json',
-          'User-Agent': `DivineMirror/${app.getVersion()} (+https://github.com/kristofferkjelde/poe-item-checker)`,
+          'User-Agent': `DivineMirror/${app.getVersion()} (+https://github.com/kristofferkjelde/poe-divine-mirror)`,
           ...(body !== undefined && { 'Content-Type': 'application/json' }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),

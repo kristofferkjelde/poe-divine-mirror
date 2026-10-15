@@ -16,13 +16,13 @@ export function HotkeyField({ action, accelerator, unavailable }: Props) {
 
   const stop = () => {
     setRecording(false)
-    window.settings.setRecording(false)
+    void window.settings.setRecording(false)
   }
 
   const start = () => {
     setMessage(null)
     setRecording(true)
-    window.settings.setRecording(true)
+    void window.settings.setRecording(true)
   }
 
   const handleKeyDown = async (event: KeyboardEvent<HTMLButtonElement>) => {

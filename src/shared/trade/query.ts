@@ -1,5 +1,8 @@
 import { DERIVED, extractStats, isLocal } from '../compare/stats'
 import type { Mod, ModType, ParsedItem, Slot } from '../item/types'
+import { UserFacingError } from '../errors'
+import { modValue } from '../item/mods'
+import { isArmourSlot, itemClass } from '../item/slots'
 
 export interface TradeStatEntry {
   id: string
@@ -19,6 +22,8 @@ export type SearchRarity = 'nonunique' | 'normal' | 'magic' | 'rare' | 'unique'
 export type SaleStatus = 'available' | 'securable' | 'online' | 'any'
 export type ListedWithin = 'any' | '3hours' | '12hours' | '1day' | '3days' | '1week' | '1month'
 export type PriceCurrency = 'any' | 'exalted' | 'divine' | 'chaos'
+
+export const CORRUPTED_OPTIONS: Record<Corrupted, string> = { any: 'Corrupted: any', yes: 'Corrupted', no: 'Not corrupted' }
 
 export const RARITY_OPTIONS: Record<SearchRarity, string> = {
   nonunique: 'Any non-unique',
@@ -57,18 +62,20 @@ export interface PropertyTarget {
   filter: string
 }
 
-export interface SearchFilter {
+interface FilterBase {
   key: string
   label: string
-  kind: 'property' | 'mod' | 'unsearchable'
   enabled: boolean
-  value?: number
   min: number | null
   max: number | null
-  target?: PropertyTarget
-  statId?: string
-  modType?: ModType
 }
+
+export type SearchFilter = FilterBase &
+  (
+    | { kind: 'property'; target: PropertyTarget; value: number }
+    | { kind: 'mod'; statId: string; value?: number; modType: ModType }
+    | { kind: 'unsearchable'; modType: ModType }
+  )
 
 export interface ItemSearch {
   name?: string
@@ -81,6 +88,14 @@ export interface ItemSearch {
   currency: PriceCurrency
   scale: number
   filters: SearchFilter[]
+}
+
+export type SearchOptions = Pick<ItemSearch, 'rarity' | 'corrupted' | 'status' | 'listed' | 'currency'>
+export type FilterEdit = Pick<FilterBase, 'enabled' | 'min' | 'max'>
+
+export interface SearchEdit {
+  options: SearchOptions
+  filters: Record<string, FilterEdit>
 }
 
 type Range = { min?: number; max?: number }
@@ -96,7 +111,7 @@ export interface TradeQuery {
   sort: { price: 'asc' }
 }
 
-export class PriceCheckUnsupported extends Error {}
+export class PriceCheckUnsupported extends UserFacingError {}
 
 export const SCALE_STEP = 5
 export const SCALE_LIMIT = 50
@@ -104,7 +119,6 @@ const UNSCALED = new Set(['rune_sockets', 'ilvl'])
 
 const MOD_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated', 'implicit', 'rune', 'enchant'])
 const ENABLED_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated'])
-const ARMOUR_SLOTS: ReadonlySet<Slot> = new Set(['helmet', 'body', 'gloves', 'boots', 'offhand'])
 
 const GROUPS: Record<ModType, string[]> = {
   explicit: ['explicit'],
@@ -121,43 +135,12 @@ const PROPERTIES: Array<{ stat: string; label: string; target: PropertyTarget; e
   { stat: DERIVED.elementalDps, label: 'Elemental DPS', target: { group: 'equipment_filters', filter: 'edps' }, enabled: () => false },
   { stat: DERIVED.criticalHitChance, label: 'Critical Hit Chance', target: { group: 'equipment_filters', filter: 'crit' }, enabled: () => false },
   { stat: DERIVED.attacksPerSecond, label: 'Attacks per Second', target: { group: 'equipment_filters', filter: 'aps' }, enabled: () => false },
-  { stat: DERIVED.armour, label: 'Armour', target: { group: 'equipment_filters', filter: 'ar' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
-  { stat: DERIVED.evasion, label: 'Evasion', target: { group: 'equipment_filters', filter: 'ev' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
-  { stat: DERIVED.energyShield, label: 'Energy Shield', target: { group: 'equipment_filters', filter: 'es' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
+  { stat: DERIVED.armour, label: 'Armour', target: { group: 'equipment_filters', filter: 'ar' }, enabled: isArmourSlot },
+  { stat: DERIVED.evasion, label: 'Evasion', target: { group: 'equipment_filters', filter: 'ev' }, enabled: isArmourSlot },
+  { stat: DERIVED.energyShield, label: 'Energy Shield', target: { group: 'equipment_filters', filter: 'es' }, enabled: isArmourSlot },
   { stat: DERIVED.block, label: 'Block', target: { group: 'equipment_filters', filter: 'block' }, enabled: () => false },
   { stat: DERIVED.spirit, label: 'Spirit', target: { group: 'equipment_filters', filter: 'spirit' }, enabled: () => true },
 ]
-
-const CATEGORIES: Record<string, string> = {
-  Claws: 'weapon.claw',
-  Daggers: 'weapon.dagger',
-  Wands: 'weapon.wand',
-  'One Hand Swords': 'weapon.onesword',
-  'One Hand Axes': 'weapon.oneaxe',
-  'One Hand Maces': 'weapon.onemace',
-  Sceptres: 'weapon.sceptre',
-  Spears: 'weapon.spear',
-  Flails: 'weapon.flail',
-  Bows: 'weapon.bow',
-  Staves: 'weapon.staff',
-  'Two Hand Swords': 'weapon.twosword',
-  'Two Hand Axes': 'weapon.twoaxe',
-  'Two Hand Maces': 'weapon.twomace',
-  Quarterstaves: 'weapon.warstaff',
-  Crossbows: 'weapon.crossbow',
-  Shields: 'armour.shield',
-  Bucklers: 'armour.buckler',
-  Foci: 'armour.focus',
-  Quivers: 'armour.quiver',
-  Helmets: 'armour.helmet',
-  'Body Armours': 'armour.chest',
-  Gloves: 'armour.gloves',
-  Boots: 'armour.boots',
-  Belts: 'accessory.belt',
-  Amulets: 'accessory.amulet',
-  Rings: 'accessory.ring',
-  Jewels: 'jewel',
-}
 
 const FLIPPED: Array<[RegExp, string]> = [
   [/\breduced\b/, 'increased'],
@@ -191,12 +174,6 @@ function indexStats(groups: TradeStatGroup[]): StatIndex {
   }
   indexes.set(groups, index)
   return index
-}
-
-function modValue(mod: Mod): number | undefined {
-  if (mod.values.length === 0) return undefined
-  if (mod.values.length === 2 && /# to #/.test(mod.template)) return (mod.values[0] + mod.values[1]) / 2
-  return mod.values[0]
 }
 
 function pick(entries: TradeStatEntry[], local: boolean): TradeStatEntry {
@@ -281,7 +258,7 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
       filters.push({ key, label: mod.text, kind: 'unsearchable', enabled: false, min: null, max: null, modType: mod.type })
       continue
     }
-    const coveredByProperty = local && (item.slot === 'weapon' || (!!item.slot && ARMOUR_SLOTS.has(item.slot)))
+    const coveredByProperty = local && (item.slot === 'weapon' || isArmourSlot(item.slot))
     filters.push({
       key,
       label: mod.text,
@@ -295,7 +272,7 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
     })
   }
 
-  const category = CATEGORIES[item.itemClass]
+  const category = itemClass(item.itemClass)?.tradeCategory
   return {
     ...(unique && { name: item.name }),
     ...(item.baseType && { type: item.baseType }),
@@ -316,12 +293,14 @@ export function withScale(search: ItemSearch, scale: number): ItemSearch {
     ...search,
     scale: next,
     filters: search.filters.map((filter) =>
-      filter.value === undefined || UNSCALED.has(filter.key) ? filter : { ...filter, min: minimumFor(filter.value, next) },
+      filter.kind === 'unsearchable' || filter.value === undefined || UNSCALED.has(filter.key)
+        ? filter
+        : { ...filter, min: minimumFor(filter.value, next) },
     ),
   }
 }
 
-const range = ({ min, max }: SearchFilter): Range | undefined => {
+const range = ({ min, max }: FilterBase): Range | undefined => {
   const value: Range = {}
   if (min !== null && Number.isFinite(min)) value.min = min
   if (max !== null && Number.isFinite(max)) value.max = max
@@ -346,7 +325,7 @@ export function toTradeQuery(search: ItemSearch): TradeQuery {
   if (search.currency !== 'any') tradeFilters.price = { option: search.currency }
   if (Object.keys(tradeFilters).length > 0) filters.trade_filters = { filters: tradeFilters }
   for (const filter of enabled) {
-    if (filter.kind !== 'property' || !filter.target) continue
+    if (filter.kind !== 'property') continue
     const value = range(filter)
     if (!value) continue
     filters[filter.target.group] ??= { filters: {} }
@@ -361,12 +340,11 @@ export function toTradeQuery(search: ItemSearch): TradeQuery {
       stats: [
         {
           type: 'and',
-          filters: enabled
-            .filter((filter) => filter.kind === 'mod' && filter.statId)
-            .map((filter) => {
-              const value = range(filter)
-              return value ? { id: filter.statId!, value } : { id: filter.statId! }
-            }),
+          filters: enabled.flatMap((filter) => {
+            if (filter.kind !== 'mod') return []
+            const value = range(filter)
+            return [value ? { id: filter.statId, value } : { id: filter.statId }]
+          }),
         },
       ],
       filters,
@@ -375,45 +353,35 @@ export function toTradeQuery(search: ItemSearch): TradeQuery {
   }
 }
 
-const TARGETS = new Set(PROPERTIES.map((entry) => `${entry.target.group}.${entry.target.filter}`).concat(['type_filters.ilvl', 'type_filters.quality', 'equipment_filters.rune_sockets']))
-const STAT_ID = /^[a-z]+\.[\w.]+$/
-const optionalNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
-const optionalText = (value: unknown) => (typeof value === 'string' && value.length > 0 && value.length < 200 ? value : undefined)
+export const toSearchEdit = (search: ItemSearch): SearchEdit => ({
+  options: { rarity: search.rarity, corrupted: search.corrupted, status: search.status, listed: search.listed, currency: search.currency },
+  filters: Object.fromEntries(search.filters.map(({ key, enabled, min, max }) => [key, { enabled, min, max }])),
+})
 
-export function sanitizeSearch(input: unknown): ItemSearch | null {
-  const search = input as Partial<ItemSearch> | null
-  if (!search || typeof search !== 'object' || !Array.isArray(search.filters)) return null
-  if (typeof search.rarity !== 'string' || !(search.rarity in RARITY_OPTIONS)) return null
+const option = <T extends string>(options: Record<T, string>, value: unknown, fallback: T): T =>
+  typeof value === 'string' && Object.hasOwn(options, value) ? (value as T) : fallback
 
-  const filters = search.filters.flatMap((raw): SearchFilter[] => {
-    const filter = raw as Partial<SearchFilter> | null
-    if (!filter || typeof filter.key !== 'string' || typeof filter.label !== 'string') return []
-    const base = {
-      key: filter.key,
-      label: filter.label,
-      enabled: filter.enabled === true,
-      min: optionalNumber(filter.min),
-      max: optionalNumber(filter.max),
-    }
-    if (filter.kind === 'property' && filter.target && TARGETS.has(`${filter.target.group}.${filter.target.filter}`)) {
-      return [{ ...base, kind: 'property', target: { group: filter.target.group, filter: filter.target.filter } }]
-    }
-    if (filter.kind === 'mod' && typeof filter.statId === 'string' && STAT_ID.test(filter.statId)) {
-      return [{ ...base, kind: 'mod', statId: filter.statId }]
-    }
-    return []
-  })
+const finiteOrNull = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
 
+const entry = (record: unknown, key: string): Record<string, unknown> | undefined => {
+  if (typeof record !== 'object' || record === null || !Object.hasOwn(record, key)) return undefined
+  const value = (record as Record<string, unknown>)[key]
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
+}
+
+export function applyEdit(search: ItemSearch, edit: unknown): ItemSearch {
+  const options = entry(edit, 'options')
   return {
-    name: optionalText(search.name),
-    type: optionalText(search.type),
-    category: optionalText(search.category),
-    rarity: search.rarity,
-    corrupted: search.corrupted === 'yes' || search.corrupted === 'no' ? search.corrupted : 'any',
-    status: typeof search.status === 'string' && search.status in STATUS_OPTIONS ? search.status : 'securable',
-    listed: typeof search.listed === 'string' && search.listed in LISTED_OPTIONS ? search.listed : 'any',
-    currency: typeof search.currency === 'string' && search.currency in CURRENCY_OPTIONS ? search.currency : 'any',
-    scale: typeof search.scale === 'number' && Number.isFinite(search.scale) ? clampScale(search.scale) : 0,
-    filters,
+    ...search,
+    rarity: option(RARITY_OPTIONS, options?.rarity, search.rarity),
+    corrupted: option(CORRUPTED_OPTIONS, options?.corrupted, search.corrupted),
+    status: option(STATUS_OPTIONS, options?.status, search.status),
+    listed: option(LISTED_OPTIONS, options?.listed, search.listed),
+    currency: option(CURRENCY_OPTIONS, options?.currency, search.currency),
+    filters: search.filters.map((filter) => {
+      const change = entry(entry(edit, 'filters'), filter.key)
+      if (!change || filter.kind === 'unsearchable') return filter
+      return { ...filter, enabled: change.enabled === true, min: finiteOrNull(change.min), max: finiteOrNull(change.max) }
+    }),
   }
 }

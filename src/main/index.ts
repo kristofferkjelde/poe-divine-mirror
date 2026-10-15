@@ -1,23 +1,21 @@
-import { app, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
+import { app, globalShortcut, Menu, nativeImage, Tray } from 'electron'
 import { uIOhook } from 'uiohook-napi'
-import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
-import { IPC } from '../shared/ipc'
-import { HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
+import type { OverlayApi, SettingsApi } from '../shared/ipc'
+import { HOTKEY_ACTIONS, HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
+import { overlayHandlers, settingsHandlers } from './api'
 import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
+import { delay } from './delay'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
+import { registerHandlers } from './ipc'
 import { Overlay } from './overlay'
 import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
 import { TradeClient } from './trade'
-import { TRADE_ORIGIN } from '../shared/trade/price'
 
 const FOCUS_RETURN_MS = 120
-const MISSED_ITEM = 'Couldn\'t read an item. Hover it in the game and press the hotkey again.'
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 let tray: Tray | null = null
 
@@ -31,19 +29,22 @@ function start(): void {
   app.setAppUserModelId('io.kjelde.poe-item-checker')
   const store = new SettingsStore()
   const overlay = new Overlay(store)
-  const gearStore = new GearStore()
+  const gear = new GearStore()
   const builds = new BuildStore()
   const trade = new TradeClient()
-  ipcMain.handle(IPC.tradePrepare, (_event, text: unknown) =>
-    typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
-  )
-  ipcMain.handle(IPC.tradeSearch, (_event, search: unknown) => trade.search(search, store.current.league))
-  ipcMain.on(IPC.openTrade, (_event, url: unknown) => {
-    if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
-  })
-  ipcMain.handle(IPC.gearForget, async (_event, slot: unknown) => {
-    if (typeof slot === 'string' && slot in GEAR_SLOT_LABELS) await gearStore.forget(slot as GearSlot)
-  })
+
+  const pushContext = () =>
+    overlay.send('context', {
+      gear: gear.current,
+      hotkeys: store.current.hotkeys,
+      locked: store.current.overlayLocked,
+      build: builds.current,
+    })
+  overlay.onLoad(pushContext)
+  store.onChange(pushContext)
+  gear.onChange(pushContext)
+  builds.onChange(pushContext)
+
   let busy = false
   let queued: HotkeyAction | null = null
 
@@ -54,27 +55,16 @@ function start(): void {
     }
     busy = true
     try {
-      const wasVisible = overlay.visible
-      if (mode === 'price' && overlay.hovered && overlay.evaluateShown()) return
+      const overlayVisible = overlay.visible
+      if (overlay.hovered) return overlay.show({ kind: 'missed', mode, overlayVisible })
       if (overlay.focused) {
         overlay.hide()
         await delay(FOCUS_RETURN_MS)
       }
       const text = await copyHoveredItem()
-      const shared = {
-        capturedAt: Date.now(),
-        gear: gearStore.current,
-        hotkeys: hotkeys.current,
-        locked: store.current.overlayLocked,
-        build: builds.current,
-      }
-      if (!text) {
-        if (mode === 'price' && wasVisible && overlay.evaluateShown()) return
-        overlay.show({ ...shared, text: '', missed: MISSED_ITEM })
-        return
-      }
-      const equippedTo = mode === 'equip' ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
-      overlay.show({ ...shared, text, equippedTo, priceCheck: mode === 'price' })
+      if (!text) return overlay.show({ kind: 'missed', mode, overlayVisible })
+      const equippedTo = mode === 'equip' ? await gear.equip(text, builds.current).catch(() => undefined) : undefined
+      overlay.show({ kind: 'item', text, mode, equippedTo })
     } finally {
       busy = false
       const next = queued
@@ -83,12 +73,14 @@ function start(): void {
     }
   }
 
-  const hotkeys = new Hotkeys(store, {
-    compare: () => void capture('compare'),
-    equip: () => void capture('equip'),
-    price: () => void capture('price'),
-  })
-  const settingsWindow = new SettingsWindow(store, hotkeys, builds, trade)
+  const hotkeys = new Hotkeys(
+    store,
+    Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
+  )
+  const settingsWindow = new SettingsWindow(hotkeys)
+  const services = { store, gear, builds, hotkeys, trade, overlay, settingsWindow }
+  registerHandlers<OverlayApi>('overlay', overlayHandlers(services))
+  registerHandlers<SettingsApi>('settings', settingsHandlers(services))
 
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))
   const refreshTray = () => {
@@ -101,9 +93,10 @@ function start(): void {
     )
     tray?.setContextMenu(
       Menu.buildFromTemplate([
-        { label: `${settings.hotkeys.compare}: ${HOTKEY_LABELS.compare.toLowerCase()}`, enabled: false },
-        { label: `${settings.hotkeys.equip}: ${HOTKEY_LABELS.equip.toLowerCase()}`, enabled: false },
-        { label: `${settings.hotkeys.price}: ${HOTKEY_LABELS.price.toLowerCase()}`, enabled: false },
+        ...HOTKEY_ACTIONS.map((action) => ({
+          label: `${settings.hotkeys[action]}: ${HOTKEY_LABELS[action].toLowerCase()}`,
+          enabled: false,
+        })),
         { type: 'separator' },
         { label: 'Settings…', click: () => settingsWindow.open() },
         {
@@ -112,7 +105,7 @@ function start(): void {
           checked: settings.overlayLocked,
           click: (item) => void store.update({ overlayLocked: item.checked }),
         },
-        { label: 'Clear saved gear', click: () => void gearStore.clear() },
+        { label: 'Clear saved gear', click: () => void gear.clear() },
         { label: 'Quit', click: () => app.quit() },
       ]),
     )

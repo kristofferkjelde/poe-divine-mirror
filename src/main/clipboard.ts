@@ -2,11 +2,10 @@ import { app, clipboard } from 'electron'
 import { appendFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { UiohookKey, uIOhook } from 'uiohook-napi'
+import { delay } from './delay'
 
 const POLL_INTERVAL_MS = 16
 const TIMEOUT_MS = 1200
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const isItemText = (text: string) => text.startsWith('Item Class:') || text.startsWith('Rarity:')
 

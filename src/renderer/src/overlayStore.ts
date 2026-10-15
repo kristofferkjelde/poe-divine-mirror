@@ -1,104 +1,136 @@
 import { useSyncExternalStore } from 'react'
-import { rulesForProfile, type BuildProfile } from '../../shared/build/profile'
+import { rulesForProfile } from '../../shared/build/profile'
 import { compareWithGear, parseGear, type GearComparison } from '../../shared/compare/gear'
+import { UserFacingError } from '../../shared/errors'
 import type { GearSlot } from '../../shared/gear'
-import { ItemParseError, parseItem } from '../../shared/item/parse'
+import type { OverlayContext, OverlayEvent } from '../../shared/ipc'
+import { parseItem } from '../../shared/item/parse'
 import type { ParsedItem } from '../../shared/item/types'
-import type { CapturedItem } from '../../shared/ipc'
-import type { Settings } from '../../shared/settings'
+import { DEFAULT_SETTINGS } from '../../shared/settings'
 import type { PriceCheckResult } from '../../shared/trade/price'
-import { withScale, type ItemSearch, type SearchFilter } from '../../shared/trade/query'
+import {
+  toSearchEdit,
+  withScale,
+  type FilterEdit,
+  type ItemSearch,
+  type SearchOptions,
+} from '../../shared/trade/query'
+
+const MISSED_ITEM = "Couldn't read an item. Hover it in the game and press the hotkey again."
 
 export type EvaluateState =
   | { status: 'closed' }
   | { status: 'preparing' }
   | { status: 'unavailable'; error: string }
-  | { status: 'ready'; search: ItemSearch; searching: boolean; result: PriceCheckResult | null }
+  | { status: 'ready'; id: string; search: ItemSearch; searching: boolean; result: PriceCheckResult | null }
 
-export type OverlayState =
+type View =
   | { status: 'idle' }
-  | {
-      status: 'item'
-      text: string
-      item: ParsedItem
-      evaluate: EvaluateState
-      comparison: GearComparison | null
-      buildComparison: GearComparison | null
-      equippedTo?: GearSlot
-      build: BuildProfile | null
-      hotkeys: Settings['hotkeys']
-      locked: boolean
-      capturedAt: number
-    }
-  | { status: 'error'; message: string; hotkeys: Settings['hotkeys']; locked: boolean; capturedAt: number }
+  | { status: 'item'; id: number; text: string; item: ParsedItem; equippedTo?: GearSlot; evaluate: EvaluateState }
+  | { status: 'error'; id: number; message: string }
 
-let state: OverlayState = { status: 'idle' }
+interface Comparisons {
+  comparison: GearComparison | null
+  buildComparison: GearComparison | null
+}
+
+export type OverlayState = OverlayContext &
+  (
+    | { status: 'idle' }
+    | (Extract<View, { status: 'item' }> & Comparisons)
+    | Extract<View, { status: 'error' }>
+  )
+
+let context: OverlayContext = { gear: {}, hotkeys: DEFAULT_SETTINGS.hotkeys, locked: false, build: null }
+let view: View = { status: 'idle' }
+let comparisons: Comparisons = { comparison: null, buildComparison: null }
+let state: OverlayState = { ...context, ...view }
+let nextId = 1
 const listeners = new Set<() => void>()
 
-function toState({ text, capturedAt, gear, equippedTo, hotkeys, locked, build, missed }: CapturedItem): OverlayState {
-  if (missed) return { status: 'error', message: missed, hotkeys, locked, capturedAt }
-  try {
-    const item = parseItem(text)
-    const rules = rulesForProfile(build)
-    const comparison = equippedTo ? null : compareWithGear(item, parseGear(gear), rules)
-    const buildComparison = equippedTo || !build?.items ? null : compareWithGear(item, build.items, rules)
-    const evaluate: EvaluateState = { status: 'closed' }
-    return { status: 'item', text, item, evaluate, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt }
-  } catch (error) {
-    const message = error instanceof ItemParseError ? error.message : 'Could not read that item'
-    return { status: 'error', message, hotkeys, locked, capturedAt }
+function compare(): Comparisons {
+  if (view.status !== 'item' || view.equippedTo) return { comparison: null, buildComparison: null }
+  const rules = rulesForProfile(context.build)
+  return {
+    comparison: compareWithGear(view.item, parseGear(context.gear), rules),
+    buildComparison: context.build ? compareWithGear(view.item, context.build.items, rules) : null,
   }
 }
 
-function setState(next: OverlayState) {
-  state = next
+function render() {
+  state = view.status === 'item' ? { ...context, ...view, ...comparisons } : { ...context, ...view }
   listeners.forEach((listener) => listener())
 }
 
-window.overlay.onItemCaptured((captured) => {
-  setState(toState(captured))
-  if (captured.priceCheck) void openEvaluate()
+function setView(next: View) {
+  const itemChanged = next.status === 'item' && (view.status !== 'item' || next.id !== view.id)
+  view = next
+  if (itemChanged) comparisons = compare()
+  render()
+}
+
+function show(event: Extract<OverlayEvent, { kind: 'item' }>): View {
+  const id = nextId++
+  try {
+    const item = parseItem(event.text)
+    return { status: 'item', id, text: event.text, item, equippedTo: event.equippedTo, evaluate: { status: 'closed' } }
+  } catch (error) {
+    return { status: 'error', id, message: error instanceof UserFacingError ? error.message : 'Could not read that item' }
+  }
+}
+
+window.overlay.on('context', (next) => {
+  context = next
+  comparisons = compare()
+  render()
 })
 
-window.overlay.onEvaluateShown(() => void openEvaluate())
+window.overlay.on('event', (event) => {
+  if (event.kind === 'item') {
+    setView(show(event))
+    if (event.mode === 'price') void openEvaluate()
+  } else if (event.mode === 'price' && event.overlayVisible && view.status === 'item') {
+    void openEvaluate()
+  } else {
+    setView({ status: 'error', id: nextId++, message: MISSED_ITEM })
+  }
+})
 
-function setEvaluate(capturedAt: number, update: (evaluate: EvaluateState) => EvaluateState) {
-  if (state.status !== 'item' || state.capturedAt !== capturedAt) return
-  setState({ ...state, evaluate: update(state.evaluate) })
+function setEvaluate(id: number, update: (evaluate: EvaluateState) => EvaluateState) {
+  if (view.status !== 'item' || view.id !== id) return
+  setView({ ...view, evaluate: update(view.evaluate) })
 }
 
 function editSearch(update: (search: ItemSearch) => ItemSearch) {
-  if (state.status !== 'item') return
-  setEvaluate(state.capturedAt, (evaluate) =>
-    evaluate.status === 'ready' ? { ...evaluate, search: update(evaluate.search) } : evaluate,
-  )
+  if (view.status !== 'item') return
+  setEvaluate(view.id, (evaluate) => (evaluate.status === 'ready' ? { ...evaluate, search: update(evaluate.search) } : evaluate))
 }
 
 export async function openEvaluate(): Promise<void> {
-  if (state.status !== 'item' || state.evaluate.status !== 'closed') return
-  const { capturedAt, text } = state
-  setEvaluate(capturedAt, () => ({ status: 'preparing' }))
+  if (view.status !== 'item' || view.evaluate.status !== 'closed') return
+  const { id, text } = view
+  setEvaluate(id, () => ({ status: 'preparing' }))
   const prepared = await window.overlay.prepareSearch(text)
-  setEvaluate(capturedAt, () =>
+  setEvaluate(id, () =>
     prepared.ok
-      ? { status: 'ready', search: prepared.search, searching: false, result: null }
+      ? { status: 'ready', id: prepared.id, search: prepared.search, searching: false, result: null }
       : { status: 'unavailable', error: prepared.error },
   )
   if (prepared.ok) await runSearch()
 }
 
 export function closeEvaluate(): void {
-  if (state.status === 'item') setEvaluate(state.capturedAt, () => ({ status: 'closed' }))
+  if (view.status === 'item') setEvaluate(view.id, () => ({ status: 'closed' }))
 }
 
-export function updateFilter(key: string, patch: Partial<Pick<SearchFilter, 'enabled' | 'min' | 'max'>>): void {
+export function updateFilter(key: string, patch: Partial<FilterEdit>): void {
   editSearch((search) => ({
     ...search,
     filters: search.filters.map((filter) => (filter.key === key ? { ...filter, ...patch } : filter)),
   }))
 }
 
-export function updateSearch(patch: Partial<Pick<ItemSearch, 'rarity' | 'corrupted' | 'status' | 'listed' | 'currency'>>): void {
+export function updateSearch(patch: Partial<SearchOptions>): void {
   editSearch((search) => ({ ...search, ...patch }))
 }
 
@@ -107,23 +139,19 @@ export function setSearchScale(scale: number): void {
 }
 
 export async function runSearch(): Promise<void> {
-  if (state.status !== 'item' || state.evaluate.status !== 'ready' || state.evaluate.searching) return
-  const { capturedAt } = state
-  const { search } = state.evaluate
-  setEvaluate(capturedAt, (evaluate) => (evaluate.status === 'ready' ? { ...evaluate, searching: true } : evaluate))
-  const result = await window.overlay.runSearch(search)
-  setEvaluate(capturedAt, (evaluate) =>
-    evaluate.status === 'ready' ? { ...evaluate, searching: false, result } : evaluate,
-  )
+  if (view.status !== 'item' || view.evaluate.status !== 'ready' || view.evaluate.searching) return
+  const { id } = view
+  const { id: searchId, search } = view.evaluate
+  setEvaluate(id, (evaluate) => (evaluate.status === 'ready' ? { ...evaluate, searching: true } : evaluate))
+  const result = await window.overlay.runSearch(searchId, toSearchEdit(search))
+  setEvaluate(id, (evaluate) => (evaluate.status === 'ready' ? { ...evaluate, searching: false, result } : evaluate))
 }
 
-export async function forgetGear(slot: GearSlot): Promise<void> {
-  await window.overlay.forgetGear(slot)
-  if (state.status === 'item' && state.comparison?.slot === slot) setState({ ...state, comparison: null })
-}
+export const forgetGear = (slot: GearSlot): Promise<void> => window.overlay.forgetGear(slot)
 
 export async function setOverlayLocked(locked: boolean): Promise<void> {
-  if (state.status !== 'idle') setState({ ...state, locked })
+  context = { ...context, locked }
+  render()
   await window.overlay.setLocked(locked)
 }
 

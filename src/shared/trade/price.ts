@@ -16,7 +16,7 @@ export type PriceCheckResult =
   | { ok: true; league: string; url: string; total: number; listings: Listing[] }
   | { ok: false; error: string; url?: string }
 
-export type PrepareResult = { ok: true; search: ItemSearch } | { ok: false; error: string }
+export type PrepareResult = { ok: true; id: string; search: ItemSearch } | { ok: false; error: string }
 
 export type Reliability = 'Very low' | 'Low' | 'Medium' | 'High'
 
