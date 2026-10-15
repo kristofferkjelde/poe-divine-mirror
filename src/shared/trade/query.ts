@@ -14,7 +14,6 @@ export interface TradeStatGroup {
   entries: TradeStatEntry[]
 }
 
-export type SearchMode = 'exact' | 'broad'
 export type Corrupted = 'any' | 'yes' | 'no'
 export type SearchRarity = 'nonunique' | 'normal' | 'magic' | 'rare' | 'unique'
 export type SaleStatus = 'available' | 'securable' | 'online' | 'any'
@@ -80,7 +79,7 @@ export interface ItemSearch {
   status: SaleStatus
   listed: ListedWithin
   currency: PriceCurrency
-  mode: SearchMode
+  scale: number
   filters: SearchFilter[]
 }
 
@@ -99,7 +98,9 @@ export interface TradeQuery {
 
 export class PriceCheckUnsupported extends Error {}
 
-export const BROAD_MATCH = 0.9
+export const SCALE_STEP = 5
+export const SCALE_LIMIT = 50
+const UNSCALED = new Set(['rune_sockets', 'ilvl'])
 
 const MOD_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated', 'implicit', 'rune', 'enchant'])
 const ENABLED_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated'])
@@ -225,18 +226,22 @@ export function matchStat(
   return null
 }
 
-export function minimumFor(value: number | undefined, mode: SearchMode): number | null {
+export function minimumFor(value: number | undefined, scale: number): number | null {
   if (value === undefined || value <= 0) return null
-  if (mode === 'exact') return value
-  const broad = value * BROAD_MATCH
-  return Number.isInteger(value) ? Math.floor(broad) : Math.floor(broad * 100) / 100
+  if (scale === 0) return value
+  const scaled = value * (1 + scale / 100)
+  const round = scale < 0 ? Math.floor : Math.ceil
+  return Number.isInteger(value) ? round(scaled) : round(scaled * 100) / 100
 }
 
-function property(key: string, label: string, value: number, enabled: boolean, target: PropertyTarget, mode: SearchMode): SearchFilter {
-  return { key, label, kind: 'property', enabled, value, min: minimumFor(value, mode), max: null, target }
+export const clampScale = (scale: number) =>
+  Math.max(-SCALE_LIMIT, Math.min(SCALE_LIMIT, Math.round(scale / SCALE_STEP) * SCALE_STEP))
+
+function property(key: string, label: string, value: number, enabled: boolean, target: PropertyTarget, scale: number): SearchFilter {
+  return { key, label, kind: 'property', enabled, value, min: minimumFor(value, UNSCALED.has(key) ? 0 : scale), max: null, target }
 }
 
-export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], mode: SearchMode = 'broad'): ItemSearch {
+export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale = 0): ItemSearch {
   if (item.unidentified && item.rarity !== 'Unique') throw new PriceCheckUnsupported('Identify the item first')
   if (item.rarity === 'Currency' || item.rarity === 'Gem' || item.rarity === 'Unknown') {
     throw new PriceCheckUnsupported('Price check works on gear. Use the currency exchange for this one.')
@@ -249,22 +254,22 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], mode: 
   for (const entry of PROPERTIES) {
     const stat = stats.get(entry.stat)
     if (stat && stat.value > 0) {
-      filters.push(property(entry.target.filter, entry.label, stat.value, !unique && entry.enabled(item.slot), entry.target, mode))
+      filters.push(property(entry.target.filter, entry.label, stat.value, !unique && entry.enabled(item.slot), entry.target, scale))
     }
   }
   const craftingBase = item.rarity === 'Normal'
   if (item.itemLevel) {
     filters.push({
-      ...property('ilvl', 'Item Level', item.itemLevel, craftingBase, { group: 'type_filters', filter: 'ilvl' }, mode),
+      ...property('ilvl', 'Item Level', item.itemLevel, craftingBase, { group: 'type_filters', filter: 'ilvl' }, scale),
       ...(craftingBase && { min: item.itemLevel }),
     })
   }
   if (item.quality) {
-    filters.push(property('quality', 'Quality', item.quality, false, { group: 'type_filters', filter: 'quality' }, mode))
+    filters.push(property('quality', 'Quality', item.quality, false, { group: 'type_filters', filter: 'quality' }, scale))
   }
   const sockets = item.sockets?.split(/\s+/).filter(Boolean).length
   if (sockets) {
-    filters.push(property('rune_sockets', 'Rune Sockets', sockets, false, { group: 'equipment_filters', filter: 'rune_sockets' }, 'exact'))
+    filters.push(property('rune_sockets', 'Rune Sockets', sockets, false, { group: 'equipment_filters', filter: 'rune_sockets' }, 0))
   }
 
   for (const [index, mod] of item.mods.entries()) {
@@ -283,7 +288,7 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], mode: 
       kind: 'mod',
       enabled: !unique && ENABLED_TYPES.has(mod.type) && !coveredByProperty,
       value: stat.value,
-      min: minimumFor(stat.value, mode),
+      min: minimumFor(stat.value, scale),
       max: null,
       statId: stat.id,
       modType: mod.type,
@@ -300,17 +305,18 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], mode: 
     status: 'securable',
     listed: 'any',
     currency: 'any',
-    mode,
+    scale,
     filters,
   }
 }
 
-export function withMode(search: ItemSearch, mode: SearchMode): ItemSearch {
+export function withScale(search: ItemSearch, scale: number): ItemSearch {
+  const next = clampScale(scale)
   return {
     ...search,
-    mode,
+    scale: next,
     filters: search.filters.map((filter) =>
-      filter.value === undefined || filter.key === 'rune_sockets' ? filter : { ...filter, min: minimumFor(filter.value, mode) },
+      filter.value === undefined || UNSCALED.has(filter.key) ? filter : { ...filter, min: minimumFor(filter.value, next) },
     ),
   }
 }
@@ -407,7 +413,7 @@ export function sanitizeSearch(input: unknown): ItemSearch | null {
     status: typeof search.status === 'string' && search.status in STATUS_OPTIONS ? search.status : 'securable',
     listed: typeof search.listed === 'string' && search.listed in LISTED_OPTIONS ? search.listed : 'any',
     currency: typeof search.currency === 'string' && search.currency in CURRENCY_OPTIONS ? search.currency : 'any',
-    mode: search.mode === 'exact' ? 'exact' : 'broad',
+    scale: typeof search.scale === 'number' && Number.isFinite(search.scale) ? clampScale(search.scale) : 0,
     filters,
   }
 }

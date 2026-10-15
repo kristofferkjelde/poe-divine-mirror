@@ -54,7 +54,7 @@ With a build added, **Alt+D** always compares the item against your build's item
 Press **Ctrl+D** on an item, or click **⚖ Evaluate price** at the bottom of any popup. The popup switches to an Evaluate view, like PoE Overlay's:
 
 - Every property (DPS, defences, item level, quality, rune sockets) and mod gets a row with a checkbox and **min**/**max** boxes. Tick the ones that matter and adjust the numbers. Mods the trade site can't search for are shown in italics.
-- **Exact match** uses your item's own values as the minimum. **Broad (−10%)** lowers every minimum by 10%.
+- The **range slider** starts at **Exact match** (your item's own values as the minimums) and moves every minimum down or up in 5% steps, from −50% to +50%. Click the label to go back to exact.
 - Pick the rarity, corrupted state, currency, **Instant buyout** or **In person** listings, and how recently they were listed.
 - Press **Search** (or Enter). You get an **estimated value** (the middle of the cheapest listings, with the range and how reliable it is), the cheapest listings with item level, quality, seller and when they were listed, and **Open on trade ↗** to continue in your browser.
 

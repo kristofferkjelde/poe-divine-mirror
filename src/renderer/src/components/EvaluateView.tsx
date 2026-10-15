@@ -2,6 +2,8 @@ import type { ChangeEvent } from 'react'
 import { formatNumber } from '../../../shared/compare/stats'
 import { estimate, formatAge, formatPrice, type PriceCheckResult } from '../../../shared/trade/price'
 import {
+  SCALE_LIMIT,
+  SCALE_STEP,
   CURRENCY_OPTIONS,
   LISTED_OPTIONS,
   RARITY_OPTIONS,
@@ -17,7 +19,7 @@ import {
 import {
   closeEvaluate,
   runSearch,
-  setSearchMode,
+  setSearchScale,
   updateFilter,
   updateSearch,
   type EvaluateState,
@@ -82,13 +84,32 @@ function SearchForm({ search, searching, result }: FormProps) {
           <FilterRow key={filter.key} filter={filter} />
         ))}
       </ul>
-      <div className="evaluate-mode" role="radiogroup" aria-label="Match">
-        {(['exact', 'broad'] as const).map((mode) => (
-          <label key={mode}>
-            <input type="radio" name="mode" checked={search.mode === mode} onChange={() => setSearchMode(mode)} />
-            {mode === 'exact' ? 'Exact match' : 'Broad (−10%)'}
-          </label>
-        ))}
+      <div className="evaluate-scale">
+        <button type="button" className="panel-link" onClick={() => setSearchScale(search.scale - SCALE_STEP)} aria-label="Lower minimums by 5%">
+          −
+        </button>
+        <input
+          type="range"
+          min={-SCALE_LIMIT}
+          max={SCALE_LIMIT}
+          step={SCALE_STEP}
+          value={search.scale}
+          aria-label="Scale every minimum"
+          aria-valuetext={scaleLabel(search.scale)}
+          onChange={(event) => setSearchScale(Number(event.target.value))}
+        />
+        <button type="button" className="panel-link" onClick={() => setSearchScale(search.scale + SCALE_STEP)} aria-label="Raise minimums by 5%">
+          +
+        </button>
+        <button
+          type="button"
+          className="evaluate-scale-label panel-link"
+          data-exact={search.scale === 0}
+          title="Back to exact match"
+          onClick={() => setSearchScale(0)}
+        >
+          {scaleLabel(search.scale)}
+        </button>
       </div>
       <EstimateBox searching={searching} result={result} />
       <div className="evaluate-selects">
@@ -122,6 +143,8 @@ function SearchForm({ search, searching, result }: FormProps) {
     </form>
   )
 }
+
+const scaleLabel = (scale: number) => (scale === 0 ? 'Exact match' : `${scale > 0 ? '+' : '−'}${Math.abs(scale)}%`)
 
 const numberFrom = (event: ChangeEvent<HTMLInputElement>) => {
   if (event.target.value === '') return null

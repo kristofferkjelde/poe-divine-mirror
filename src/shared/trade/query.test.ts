@@ -7,7 +7,7 @@ import {
   PriceCheckUnsupported,
   sanitizeSearch,
   toTradeQuery,
-  withMode,
+  withScale,
   type TradeStatGroup,
 } from './query'
 
@@ -18,12 +18,12 @@ const byLabel = (search: ReturnType<typeof defaultSearch>, label: string) =>
   search.filters.find((filter) => filter.label === label)
 
 describe('defaultSearch', () => {
-  it('turns a rare ring into toggleable mod filters at 90% of the rolls', () => {
+  it('turns a rare ring into toggleable mod filters at the exact rolls', () => {
     const search = defaultSearch(fixture('rare-ring-advanced'), stats)
 
-    expect(search).toMatchObject({ type: 'Iron Ring', rarity: 'nonunique', corrupted: 'no', status: 'securable', mode: 'broad' })
-    expect(byLabel(search, '+28 to maximum Life')).toMatchObject({ enabled: true, value: 28, min: 25, statId: 'explicit.stat_3299347043' })
-    expect(byLabel(search, 'Adds 3 to 7 Physical Damage to Attacks')).toMatchObject({ enabled: true, value: 5, min: 4 })
+    expect(search).toMatchObject({ type: 'Iron Ring', rarity: 'nonunique', corrupted: 'no', status: 'securable', scale: 0 })
+    expect(byLabel(search, '+28 to maximum Life')).toMatchObject({ enabled: true, value: 28, min: 28, statId: 'explicit.stat_3299347043' })
+    expect(byLabel(search, 'Adds 3 to 7 Physical Damage to Attacks')).toMatchObject({ enabled: true, value: 5, min: 5 })
     expect(byLabel(search, 'Adds 1 to 4 Physical Damage to Attacks')).toMatchObject({ enabled: false, modType: 'implicit', statId: 'implicit.stat_3032590688' })
     expect(byLabel(search, 'Item Level')).toMatchObject({ enabled: false, value: 47 })
   })
@@ -78,15 +78,20 @@ describe('toTradeQuery', () => {
     expect(query.status).toEqual({ option: 'securable' })
     expect(query.type).toBe('Hardwood Spear')
     expect(query.stats[0].filters).toEqual([{ id: 'explicit.stat_803737631', value: { min: 20, max: 40 } }])
-    expect(query.filters.equipment_filters.filters.dps).toEqual({ min: Math.floor(((20 + 38) / 2) * 1.5 * 0.9 * 100) / 100 })
+    expect(query.filters.equipment_filters.filters.dps).toEqual({ min: ((20 + 38) / 2) * 1.5 })
     expect(query.filters.misc_filters.filters.corrupted).toEqual({ option: 'true' })
     expect(query.filters.trade_filters.filters.indexed).toEqual({ option: '3days' })
   })
 
-  it('switches every minimum between exact and broad', () => {
-    const search = withMode(defaultSearch(fixture('rare-ring-advanced'), stats), 'exact')
-    expect(byLabel(search, '+28 to maximum Life')?.min).toBe(28)
-    expect(byLabel(withMode(search, 'broad'), '+28 to maximum Life')?.min).toBe(25)
+  it('scales every minimum in 5% steps, leaving item level and sockets alone', () => {
+    const search = defaultSearch(fixture('rare-ring-advanced'), stats)
+    const lower = withScale(search, -10)
+    expect(byLabel(lower, '+28 to maximum Life')?.min).toBe(25)
+    expect(byLabel(lower, 'Item Level')?.min).toBe(47)
+    expect(byLabel(withScale(search, 5), '+28 to maximum Life')?.min).toBe(30)
+    expect(withScale(search, 7).scale).toBe(5)
+    expect(withScale(search, 80).scale).toBe(50)
+    expect(byLabel(withScale(lower, 0), '+28 to maximum Life')?.min).toBe(28)
   })
 })
 

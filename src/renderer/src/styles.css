@@ -649,22 +649,33 @@ tr[data-direction='down'] .compare-delta {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.evaluate-mode {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
+.evaluate-scale {
+  display: grid;
+  grid-template-columns: auto 1fr auto 96px;
+  align-items: center;
+  gap: 8px;
   color: var(--text-value);
 }
 
-.evaluate-mode label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
+.evaluate-scale input[type='range'] {
+  width: 100%;
+  accent-color: var(--gold);
 }
 
-.evaluate-mode input {
-  accent-color: var(--gold);
+.evaluate-scale .panel-link {
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.evaluate-scale .evaluate-scale-label {
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-value);
+}
+
+.evaluate-scale-label[data-exact='true'] {
+  color: var(--gold);
 }
 
 .evaluate-estimate {

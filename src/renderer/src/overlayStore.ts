@@ -7,7 +7,7 @@ import type { ParsedItem } from '../../shared/item/types'
 import type { CapturedItem } from '../../shared/ipc'
 import type { Settings } from '../../shared/settings'
 import type { PriceCheckResult } from '../../shared/trade/price'
-import { withMode, type ItemSearch, type SearchFilter, type SearchMode } from '../../shared/trade/query'
+import { withScale, type ItemSearch, type SearchFilter } from '../../shared/trade/query'
 
 export type EvaluateState =
   | { status: 'closed' }
@@ -99,8 +99,8 @@ export function updateSearch(patch: Partial<Pick<ItemSearch, 'rarity' | 'corrupt
   editSearch((search) => ({ ...search, ...patch }))
 }
 
-export function setSearchMode(mode: SearchMode): void {
-  editSearch((search) => withMode(search, mode))
+export function setSearchScale(scale: number): void {
+  editSearch((search) => withScale(search, scale))
 }
 
 export async function runSearch(): Promise<void> {
