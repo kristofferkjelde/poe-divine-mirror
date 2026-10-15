@@ -68,8 +68,8 @@ function start(): void {
     const unavailable = hotkeys.unavailableActions
     tray?.setToolTip(
       unavailable.length === 0
-        ? `PoE Item Checker: hover an item and press ${settings.hotkeys.compare}`
-        : 'PoE Item Checker: a hotkey is taken by another app. Open Settings to change it.',
+        ? `Divine Mirror: hover an item and press ${settings.hotkeys.compare}`
+        : 'Divine Mirror: a hotkey is taken by another app. Open Settings to change it.',
     )
     tray?.setContextMenu(
       Menu.buildFromTemplate([

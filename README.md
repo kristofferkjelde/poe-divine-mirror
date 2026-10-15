@@ -1,4 +1,4 @@
-# PoE Item Checker
+# Divine Mirror
 
 **Is this item an upgrade?** Hover it in Path of Exile 2, press **Alt+D**, and find out without leaving the game.
 
@@ -6,7 +6,7 @@
   <img src="docs/overlay.png" alt="The overlay showing a rare ring with its mods and tier badges" width="420" />
 </p>
 
-PoE Item Checker is a small overlay for Path of Exile 2. It shows the item under your cursor next to what you have equipped, stat by stat, and tells you whether it's an upgrade.
+Divine Mirror is a small overlay for Path of Exile 2. It shows the item under your cursor next to what you have equipped, stat by stat, and tells you whether it's an upgrade.
 
 > **Tip:** add your build under **Settings → Build** so the upgrade score cares about the stats your build actually uses. Without one, it uses sensible general weights (life, resistances, damage and so on).
 
@@ -15,7 +15,7 @@ PoE Item Checker is a small overlay for Path of Exile 2. It shows the item under
 ## Install
 
 1. Go to the [**Releases**](https://github.com/kristofferkjelde/poe-item-checker/releases/latest) page.
-2. Download `PoE-Item-Checker-Setup-x.y.z.exe` and run it.
+2. Download `Divine-Mirror-Setup-x.y.z.exe` and run it.
 3. Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.
 
 The app starts in the system tray (bottom-right, near the clock). Right-click the icon to quit.

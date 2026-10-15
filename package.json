@@ -32,7 +32,7 @@
   },
   "build": {
     "appId": "io.kjelde.poe-item-checker",
-    "productName": "PoE Item Checker",
+    "productName": "Divine Mirror",
     "files": [
       "out/**",
       "resources/**"
@@ -57,7 +57,7 @@
     },
     "nsis": {
       "oneClick": true,
-      "artifactName": "PoE-Item-Checker-Setup-${version}.${ext}"
+      "artifactName": "Divine-Mirror-Setup-${version}.${ext}"
     }
   },
   "engines": {

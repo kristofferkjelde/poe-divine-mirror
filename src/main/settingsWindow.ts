@@ -94,7 +94,7 @@ export class SettingsWindow {
       minimizable: false,
       fullscreenable: false,
       autoHideMenuBar: true,
-      title: 'PoE Item Checker Settings',
+      title: 'Divine Mirror Settings',
       backgroundColor: '#0b0907',
       webPreferences: { preload: PRELOAD_PATH, sandbox: true },
     })
