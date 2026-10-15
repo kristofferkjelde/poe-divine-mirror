@@ -135,6 +135,15 @@ describe('parseItem', () => {
     expect(item.mods[0]).toMatchObject({ type: 'implicit', values: [0.17] })
   })
 
+  it('does not treat "Can roll … modifiers" as a stat, however it is suffixed', () => {
+    for (const line of ['Can roll Destruction modifiers', 'Can roll Destruction modifiers (implicit)']) {
+      const item = parseItem(
+        `Item Class: Spears\nRarity: Rare\nBeast Edge\nSoaring Spear\n--------\nItem Level: 82\n--------\n${line}\n--------\n+51 to Accuracy Rating`,
+      )
+      expect(item.mods.map((mod) => mod.text)).toEqual(['+51 to Accuracy Rating'])
+    }
+  })
+
   it('accepts Windows line endings', () => {
     const item = parseItem(fixture('rare-body-armour').replace(/\n/g, '\r\n'))
     expect(item.mods).toHaveLength(6)

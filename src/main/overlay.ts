@@ -1,17 +1,18 @@
-import { BrowserWindow, ipcMain, screen } from 'electron'
-import { join } from 'node:path'
+import { BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
 import { IPC, type CapturedItem } from '../shared/ipc'
+import { loadRenderer, PRELOAD_PATH } from './renderer'
+import type { SettingsStore } from './settingsStore'
 
-const WIDTH = 420
-const MAX_HEIGHT = 720
-const CURSOR_OFFSET = 24
+const WIDTH = 440
+const SCREEN_MARGIN = 24
 
 export class Overlay {
   private readonly window: BrowserWindow
-  private height = MAX_HEIGHT
+  private height = 600
   private anchor = { x: 0, y: 0 }
+  private placed: Rectangle | null = null
 
-  constructor() {
+  constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
       width: WIDTH,
       height: this.height,
@@ -19,41 +20,38 @@ export class Overlay {
       frame: false,
       transparent: true,
       resizable: false,
-      movable: false,
+      movable: !store.current.overlayLocked,
       skipTaskbar: true,
       alwaysOnTop: true,
       fullscreenable: false,
       hasShadow: false,
       webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
+        preload: PRELOAD_PATH,
         sandbox: true,
       },
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
     this.window.on('blur', () => this.hide())
+    this.window.on('moved', () => this.rememberPosition())
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
         event.preventDefault()
         this.hide()
       }
     })
+    store.onChange(() => {
+      this.window.setMovable(!store.current.overlayLocked)
+      if (this.window.isVisible()) this.reposition()
+    })
 
     ipcMain.on(IPC.overlayHide, () => this.hide())
     ipcMain.on(IPC.overlayResize, (_event, height: unknown) => {
       if (typeof height !== 'number' || !Number.isFinite(height)) return
-      this.height = Math.min(Math.ceil(height), MAX_HEIGHT)
+      this.height = Math.ceil(height)
       this.reposition()
     })
 
-    if (process.env.ELECTRON_RENDERER_URL) {
-      void this.window.loadURL(process.env.ELECTRON_RENDERER_URL)
-    } else {
-      void this.window.loadFile(join(__dirname, '../renderer/index.html'))
-    }
-  }
-
-  get visible(): boolean {
-    return this.window.isVisible()
+    void loadRenderer(this.window)
   }
 
   show(item: CapturedItem): void {
@@ -70,11 +68,31 @@ export class Overlay {
     return true
   }
 
-  private reposition(): void {
-    const { workArea } = screen.getDisplayNearestPoint(this.anchor)
-    const fitsRight = this.anchor.x + CURSOR_OFFSET + WIDTH <= workArea.x + workArea.width
-    const x = fitsRight ? this.anchor.x + CURSOR_OFFSET : this.anchor.x - CURSOR_OFFSET - WIDTH
-    const y = Math.min(Math.max(this.anchor.y - this.height / 2, workArea.y), workArea.y + workArea.height - this.height)
-    this.window.setBounds({ x: Math.round(x), y: Math.round(y), width: WIDTH, height: this.height })
+  private rememberPosition(): void {
+    const [x, y] = this.window.getPosition()
+    if (this.placed && this.placed.x === x && this.placed.y === y) return
+    if (this.store.current.overlayLocked) return
+    void this.store.update({ overlayPosition: { x, y } })
   }
+
+  private reposition(): void {
+    const saved = this.store.current.overlayPosition
+    const { workArea } = screen.getDisplayNearestPoint(saved ?? this.anchor)
+    const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
+    const bounds = saved
+      ? {
+          x: clamp(saved.x, workArea.x, workArea.x + workArea.width - WIDTH),
+          y: clamp(saved.y, workArea.y, workArea.y + workArea.height - height),
+        }
+      : {
+          x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
+          y: Math.round(workArea.y + (workArea.height - height) / 2),
+        }
+    this.placed = { ...bounds, width: WIDTH, height }
+    this.window.setBounds(this.placed)
+  }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.round(Math.min(Math.max(value, min), max))
 }

@@ -12,7 +12,7 @@ export async function copyHoveredItem(): Promise<string | null> {
   const previous = await clipboard.readText()
   await clipboard.writeText('')
 
-  uIOhook.keyToggle(UiohookKey.Shift, 'up')
+  for (const key of [UiohookKey.Shift, UiohookKey.Meta]) uIOhook.keyToggle(key, 'up')
   uIOhook.keyTap(UiohookKey.C, [UiohookKey.Ctrl, UiohookKey.Alt])
 
   try {
