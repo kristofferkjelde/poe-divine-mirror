@@ -8,7 +8,7 @@
 
 PoE Item Checker is a small overlay for Path of Exile 2. It shows the item under your cursor next to what you have equipped, stat by stat, and tells you whether it's an upgrade.
 
-> **Early days:** the upgrade score uses sensible default weights (life, resistances, damage and so on). Tuning it to your build is next on the [roadmap](#roadmap).
+> **Tip:** add your build under **Settings → Build** so the upgrade score cares about the stats your build actually uses. Without one, it uses sensible general weights (life, resistances, damage and so on).
 
 ---
 
@@ -34,14 +34,21 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
 | Press **Esc** or click the game | The popup closes |
 | Drag the popup anywhere | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
-| Right-click the tray icon → **Settings…** (or double-click the icon) | Change the hotkeys: click one and press the new keys |
+| Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, or change the hotkeys: click one and press the new keys |
 | Right-click the tray icon → **Quit** | The app closes |
 
 Works anywhere you can hover an item: your inventory, stash, vendors, or the ground.
 
+**Add your build**
+
+1. Get your build's Path of Building code. On **Mobalytics**, open the build and click **Copy Code** next to Path of Building. In **Path of Building**, use **Import/Export Build → Generate**. A **pobb.in**, **poe.ninja** or **Maxroll** link works too.
+2. Open **Settings**, paste it under **Build**, and click **Import build**.
+
+The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it. The popup shows **Scored for …** with your build's name.
+
 **Reading the popup**
 
-- The **verdict** at the top adds up every stat difference, weighted by how much it usually matters. The percentage next to it is how much better or worse the new item is overall, e.g. **+57%**. Within ±2% counts as a sidegrade.
+- The **verdict** at the top adds up every stat difference, weighted by how much it matters to your build (or in general, if you haven't added one). The percentage next to it is how much better or worse the new item is overall, e.g. **+57%**. Within ±2% counts as a sidegrade.
 - The table lists each stat that changes: what you have **now**, what the **new** item has, and the difference in green or red. Greyed-out rows aren't counted in the score yet.
 - Rings compare against whichever of your two rings is weaker, since that's the one you'd swap out.
 - Saved gear survives restarts. Right-click the tray icon → **Clear saved gear** to start over.
@@ -73,7 +80,7 @@ Your clipboard is put back the way it was right after the item is read.
 ## Roadmap
 
 - [x] **Overlay:** hotkey, item reading, tooltip with mod tiers
-- [ ] **Build profile:** paste a Mobalytics build link or Path of Building code so the app knows which stats matter to you
+- [x] **Build profile:** paste a Path of Building code or build link so the app knows which stats matter to you
 - [x] **Remember your gear:** mark the items you're wearing once, per slot
 - [x] **Compare on hover:** stat-by-stat differences against your equipped item, plus an overall upgrade score
 - [ ] **Import your gear:** fetch what your character is wearing from your pathofexile.com profile
@@ -100,6 +107,7 @@ npm run dist       # build a Windows installer into release/
 | `src/renderer` | React UI styled like the in-game tooltip |
 | `src/shared/item` | Item text parser and types, unit tested against real item text |
 | `src/shared/compare` | Stat extraction, weights, and the upgrade comparison |
+| `src/shared/build` | Path of Building parsing and build-based weights |
 
 **Releasing:** bump `version` in `package.json`, then push a tag like `v0.1.0`. GitHub Actions builds the Windows installer and publishes it on the Releases page.
 

@@ -1,6 +1,7 @@
 import { app, globalShortcut, Menu, nativeImage, Tray } from 'electron'
 import { join } from 'node:path'
 import { HOTKEY_LABELS } from '../shared/settings'
+import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
@@ -24,6 +25,7 @@ function start(): void {
   const store = new SettingsStore()
   const overlay = new Overlay(store)
   const gearStore = new GearStore()
+  const builds = new BuildStore()
   let busy = false
 
   const capture = async (equip: boolean) => {
@@ -33,13 +35,14 @@ function start(): void {
       if (overlay.hide()) await delay(FOCUS_RETURN_MS)
       const text = await copyHoveredItem()
       if (!text) return
-      const equippedTo = equip ? await gearStore.equip(text).catch(() => undefined) : undefined
+      const equippedTo = equip ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
       overlay.show({
         text,
         capturedAt: Date.now(),
         gear: gearStore.current,
         hotkeys: hotkeys.current,
         locked: store.current.overlayLocked,
+        build: builds.current,
         equippedTo,
       })
     } finally {
@@ -51,7 +54,7 @@ function start(): void {
     compare: () => void capture(false),
     equip: () => void capture(true),
   })
-  const settingsWindow = new SettingsWindow(store, hotkeys)
+  const settingsWindow = new SettingsWindow(store, hotkeys, builds)
 
   tray = new Tray(nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')))
   const refreshTray = () => {

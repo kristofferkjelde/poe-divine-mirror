@@ -51,6 +51,11 @@ export function extractStats(item: ParsedItem): StatMap {
   return stats
 }
 
+export function statKeys(mod: Mod, slot: Slot | undefined): string[] {
+  if (isLocal(mod.template, slot)) return []
+  return expandMod(mod).map(([key]) => key)
+}
+
 function isLocal(template: string, slot: Slot | undefined): boolean {
   if (slot === 'weapon') return LOCAL_WEAPON.some((pattern) => pattern.test(template))
   if (slot && ARMOUR_SLOTS.has(slot)) return LOCAL_DEFENCE.some((pattern) => pattern.test(template))

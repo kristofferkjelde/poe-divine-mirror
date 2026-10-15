@@ -19,13 +19,13 @@ export function App() {
     )
   }
 
-  const { item, comparison, equippedTo, hotkeys, locked, capturedAt } = state
+  const { item, comparison, equippedTo, build, hotkeys, locked, capturedAt } = state
   const comparable = gearSlotsFor(item.slot).length > 0
 
   return (
     <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
       {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
-      {comparison && <ComparisonView result={comparison} />}
+      {comparison && <ComparisonView result={comparison} buildName={build?.name} />}
       {!equippedTo && !comparison && comparable && item.slot && (
         <GearHint>
           No equipped {SLOT_LABELS[item.slot].toLowerCase()} saved yet. Hover yours and press {hotkeys.equip}.
