@@ -1,4 +1,5 @@
 import { isBuildProfile, type BuildProfile } from '../shared/build/profile'
+import { refreshProfile } from './buildImport'
 import { jsonFile } from './jsonFile'
 
 export class BuildStore {
@@ -22,6 +23,9 @@ export class BuildStore {
 
   private load(): BuildProfile | null {
     const data = this.file.read()
-    return isBuildProfile(data) ? data : null
+    if (!isBuildProfile(data)) return null
+    const profile = refreshProfile(data)
+    if (profile !== data) void this.file.write(profile)
+    return profile
   }
 }

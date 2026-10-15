@@ -1,5 +1,5 @@
 import { useActionState, useState } from 'react'
-import { profileWeights, type BuildProfile } from '../../../shared/build/profile'
+import { PROFILE_VERSION, profileWeights, type BuildProfile } from '../../../shared/build/profile'
 import { setSettingsState } from './settingsStore'
 
 export function BuildSettings({ build }: { build: BuildProfile | null }) {
@@ -27,6 +27,12 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
           </button>
         </span>
       </div>
+      {build.version !== PROFILE_VERSION && (
+        <p className="hotkey-status">
+          This build was imported by an older version of the app. Click Change and import it again to pick up the latest
+          fixes.
+        </p>
+      )}
       <BuildWeights build={build} />
     </>
   )

@@ -1,3 +1,4 @@
+import { PROFILE_VERSION } from '../../shared/build/profile'
 import { GEAR_SLOT_LABELS, gearSlotsFor } from '../../shared/gear'
 import { SLOT_LABELS } from '../../shared/item/slots'
 import { ComparisonView } from './components/ComparisonView'
@@ -21,13 +22,15 @@ export function App() {
 
   const { item, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt } = state
   const comparable = gearSlotsFor(item.slot).length > 0
+  const buildName =
+    build && build.version !== PROFILE_VERSION ? `${build.name} (outdated: re-import it in Settings)` : build?.name
 
   return (
     <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
       {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
-      {buildComparison && <ComparisonView result={buildComparison} against="build" buildName={build?.name} />}
+      {buildComparison && <ComparisonView result={buildComparison} against="build" buildName={buildName} />}
       {comparison && (
-        <ComparisonView result={comparison} against="gear" buildName={buildComparison ? null : build?.name} />
+        <ComparisonView result={comparison} against="gear" buildName={buildComparison ? null : buildName} />
       )}
       {!equippedTo && !comparison && comparable && item.slot && (
         <GearHint>

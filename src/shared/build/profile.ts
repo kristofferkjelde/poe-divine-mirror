@@ -5,7 +5,11 @@ import type { PobBuild } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
 
+export const PROFILE_VERSION = 2
+
 export interface BuildProfile {
+  version?: number
+  code?: string
   name: string
   source: string
   importedAt: number
@@ -67,6 +71,7 @@ export function profileFromPob(build: PobBuild, source: string): BuildProfile {
 
   const name = [build.ascendancy ?? build.className, build.mainSkill].filter(Boolean).join(' · ') || 'Imported build'
   return {
+    version: PROFILE_VERSION,
     name,
     source,
     importedAt: Date.now(),

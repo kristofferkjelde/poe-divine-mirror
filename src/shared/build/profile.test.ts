@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { BuildImportError, decodePobCode, importBuild } from '../../main/buildImport'
+import { BuildImportError, decodePobCode, importBuild, refreshProfile } from '../../main/buildImport'
 import { compareItems } from '../compare/compare'
 import { compareWithGear } from '../compare/gear'
 import { DERIVED, extractStats } from '../compare/stats'
@@ -167,6 +167,17 @@ describe('importBuild', () => {
   it('imports a pasted code', async () => {
     expect(decodePobCode(code)).toBe(xml)
     expect((await importBuild(`  ${code}\n`, offline)).name).toBe('Spirit Walker · Twister')
+  })
+
+  it('re-reads a build saved by an older version, keeping custom weights', async () => {
+    const current = await importBuild(code, offline)
+    const old = { ...current, version: 1, gearStats: [], items: {}, custom: { '+# to maximum Life': 3 } }
+    const refreshed = refreshProfile(old)
+    expect(refreshed.version).toBe(current.version)
+    expect(refreshed.items.weapon?.name).toBe('Storm Impaler')
+    expect(refreshed.custom).toEqual({ '+# to maximum Life': 3 })
+    const withoutCode = { ...old, code: undefined }
+    expect(refreshProfile(withoutCode)).toBe(withoutCode)
   })
 
   it('downloads pobb.in and poe.ninja links', async () => {

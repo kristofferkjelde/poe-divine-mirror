@@ -1,6 +1,6 @@
 import { inflateSync } from 'node:zlib'
 import { parsePobXml, PobParseError } from '../shared/build/pob'
-import { profileFromPob, type BuildProfile } from '../shared/build/profile'
+import { PROFILE_VERSION, profileFromPob, type BuildProfile } from '../shared/build/profile'
 
 export type Fetcher = (url: string) => Promise<string>
 
@@ -37,7 +37,7 @@ export function decodePobCode(code: string): string {
 
 function profileFromCode(code: string, source: string): BuildProfile {
   try {
-    return profileFromPob(parsePobXml(decodePobCode(code)), source)
+    return { ...profileFromPob(parsePobXml(decodePobCode(code)), source), code: code.trim().replace(/\s+/g, '') }
   } catch (error) {
     if (error instanceof BuildImportError || error instanceof PobParseError) throw new BuildImportError(error.message)
     throw error
@@ -49,6 +49,16 @@ async function download(fetcher: Fetcher, url: string): Promise<string> {
     return await fetcher(url)
   } catch {
     throw new BuildImportError(`Could not download the build from ${new URL(url).hostname}. Check your connection and try again.`)
+  }
+}
+
+export function refreshProfile(profile: BuildProfile): BuildProfile {
+  if (profile.version === PROFILE_VERSION || !profile.code) return profile
+  try {
+    const fresh = profileFromCode(profile.code, profile.source)
+    return { ...fresh, importedAt: profile.importedAt, custom: profile.custom }
+  } catch {
+    return profile
   }
 }
 
