@@ -36,6 +36,7 @@ export interface CapturedItem {
   build: BuildProfile | null
   equippedTo?: GearSlot
   priceCheck?: boolean
+  missed?: string
 }
 
 export interface SettingsState {

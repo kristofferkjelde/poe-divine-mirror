@@ -74,3 +74,41 @@ function keyName(code: string): string | undefined {
 export function formatAccelerator(accelerator: string): string {
   return accelerator.replace(/\+/g, ' + ')
 }
+
+export type Modifier = 'Ctrl' | 'Alt' | 'Shift' | 'Meta'
+
+const MODIFIER_NAMES: Record<string, Modifier> = {
+  ctrl: 'Ctrl',
+  control: 'Ctrl',
+  commandorcontrol: 'Ctrl',
+  cmdorctrl: 'Ctrl',
+  alt: 'Alt',
+  option: 'Alt',
+  altgr: 'Alt',
+  shift: 'Shift',
+  super: 'Meta',
+  meta: 'Meta',
+  cmd: 'Meta',
+  command: 'Meta',
+}
+
+export function heldModifiers(accelerator: string): Set<Modifier> {
+  const held = new Set<Modifier>()
+  for (const part of accelerator.split('+')) {
+    const modifier = MODIFIER_NAMES[part.trim().toLowerCase()]
+    if (modifier) held.add(modifier)
+  }
+  return held
+}
+
+export interface CopyKeys {
+  release: Modifier[]
+  press: Modifier[]
+}
+
+export function copyKeys(held: Set<Modifier>): CopyKeys {
+  return {
+    release: (['Shift', 'Meta'] as const).filter((modifier) => held.has(modifier)),
+    press: (['Ctrl', 'Alt'] as const).filter((modifier) => !held.has(modifier)),
+  }
+}

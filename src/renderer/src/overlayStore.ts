@@ -35,7 +35,8 @@ export type OverlayState =
 let state: OverlayState = { status: 'idle' }
 const listeners = new Set<() => void>()
 
-function toState({ text, capturedAt, gear, equippedTo, hotkeys, locked, build }: CapturedItem): OverlayState {
+function toState({ text, capturedAt, gear, equippedTo, hotkeys, locked, build, missed }: CapturedItem): OverlayState {
+  if (missed) return { status: 'error', message: missed, hotkeys, locked, capturedAt }
   try {
     const item = parseItem(text)
     const rules = rulesForProfile(build)

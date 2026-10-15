@@ -1,7 +1,8 @@
 import { app, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
+import { uIOhook } from 'uiohook-napi'
 import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
 import { IPC } from '../shared/ipc'
-import { HOTKEY_LABELS } from '../shared/settings'
+import { HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
 import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
@@ -13,7 +14,8 @@ import { SettingsWindow } from './settingsWindow'
 import { TradeClient } from './trade'
 import { TRADE_ORIGIN } from '../shared/trade/price'
 
-const FOCUS_RETURN_MS = 60
+const FOCUS_RETURN_MS = 120
+const MISSED_ITEM = 'Couldn\'t read an item. Hover it in the game and press the hotkey again.'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -43,27 +45,35 @@ function start(): void {
     if (typeof slot === 'string' && slot in GEAR_SLOT_LABELS) await gearStore.forget(slot as GearSlot)
   })
   let busy = false
+  let queued: HotkeyAction | null = null
 
-  const capture = async (mode: 'compare' | 'equip' | 'price') => {
-    if (busy) return
+  const capture = async (mode: HotkeyAction) => {
+    if (busy) {
+      queued = mode
+      return
+    }
     busy = true
     try {
-      if (overlay.hide()) await delay(FOCUS_RETURN_MS)
-      const text = await copyHoveredItem()
-      if (!text) return
-      const equippedTo = mode === 'equip' ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
-      overlay.show({
-        text,
+      if (overlay.hide().wasFocused) await delay(FOCUS_RETURN_MS)
+      const text = await copyHoveredItem(store.current.hotkeys[mode])
+      const shared = {
         capturedAt: Date.now(),
         gear: gearStore.current,
         hotkeys: hotkeys.current,
         locked: store.current.overlayLocked,
         build: builds.current,
-        equippedTo,
-        priceCheck: mode === 'price',
-      })
+      }
+      if (!text) {
+        overlay.show({ ...shared, text: '', missed: MISSED_ITEM })
+        return
+      }
+      const equippedTo = mode === 'equip' ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
+      overlay.show({ ...shared, text, equippedTo, priceCheck: mode === 'price' })
     } finally {
       busy = false
+      const next = queued
+      queued = null
+      if (next) void capture(next)
     }
   }
 
@@ -105,7 +115,15 @@ function start(): void {
   store.onChange(refreshTray)
   tray.on('double-click', () => settingsWindow.open())
   if (hotkeys.unavailableActions.length > 0) settingsWindow.open()
+  try {
+    uIOhook.start()
+  } catch (error) {
+    console.error('Could not watch mouse clicks', error)
+  }
 }
 
 app.on('window-all-closed', () => {})
-app.on('will-quit', () => globalShortcut.unregisterAll())
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+  uIOhook.stop()
+})

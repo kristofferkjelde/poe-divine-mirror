@@ -1,10 +1,12 @@
-import { BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
+import { BrowserWindow, globalShortcut, ipcMain, screen, type Rectangle } from 'electron'
+import { uIOhook } from 'uiohook-napi'
 import { IPC, type CapturedItem } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 import type { SettingsStore } from './settingsStore'
 
 const WIDTH = 440
 const SCREEN_MARGIN = 24
+const ESCAPE = 'Escape'
 
 export class Overlay {
   private readonly window: BrowserWindow
@@ -32,6 +34,9 @@ export class Overlay {
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
     this.window.on('blur', () => this.hide())
+    uIOhook.on('mousedown', () => {
+      if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
+    })
     this.window.on('moved', () => this.rememberPosition())
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
@@ -58,14 +63,24 @@ export class Overlay {
     this.window.webContents.send(IPC.itemCaptured, item)
     this.anchor = screen.getCursorScreenPoint()
     this.reposition()
-    this.window.show()
-    this.window.focus()
+    if (!this.window.isVisible()) this.window.showInactive()
+    if (!globalShortcut.isRegistered(ESCAPE)) {
+      try {
+        globalShortcut.register(ESCAPE, () => this.hide())
+      } catch {}
+    }
   }
 
-  hide(): boolean {
-    if (!this.window.isVisible()) return false
-    this.window.hide()
-    return true
+  hide(): { wasFocused: boolean } {
+    const wasFocused = this.window.isFocused()
+    if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
+    if (this.window.isVisible()) this.window.hide()
+    return { wasFocused }
+  }
+
+  private contains({ x, y }: { x: number; y: number }): boolean {
+    const bounds = this.window.getBounds()
+    return x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height
   }
 
   private rememberPosition(): void {
