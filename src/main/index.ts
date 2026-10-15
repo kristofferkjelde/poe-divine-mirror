@@ -55,7 +55,7 @@ function start(): void {
     busy = true
     try {
       if (overlay.hide().wasFocused) await delay(FOCUS_RETURN_MS)
-      const text = await copyHoveredItem(store.current.hotkeys[mode])
+      const text = await copyHoveredItem()
       const shared = {
         capturedAt: Date.now(),
         gear: gearStore.current,

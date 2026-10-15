@@ -1,50 +1,40 @@
-import { clipboard } from 'electron'
+import { app, clipboard } from 'electron'
+import { appendFile, mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { UiohookKey, uIOhook } from 'uiohook-napi'
-import { copyKeys, heldModifiers, type Modifier } from '../shared/accelerator'
 
 const POLL_INTERVAL_MS = 16
 const TIMEOUT_MS = 1200
-const KEY_GAP_MS = 15
-const KEY_HOLD_MS = 40
-
-const KEYS: Record<Modifier, number> = {
-  Ctrl: UiohookKey.Ctrl,
-  Alt: UiohookKey.Alt,
-  Shift: UiohookKey.Shift,
-  Meta: UiohookKey.Meta,
-}
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const isItemText = (text: string) => text.startsWith('Item Class:') || text.startsWith('Rarity:')
 
-async function pressCopy(accelerator: string): Promise<void> {
-  const { release, press } = copyKeys(heldModifiers(accelerator))
-  for (const modifier of release) uIOhook.keyToggle(KEYS[modifier], 'up')
-  for (const modifier of press) uIOhook.keyToggle(KEYS[modifier], 'down')
-  try {
-    await delay(KEY_GAP_MS)
-    uIOhook.keyToggle(UiohookKey.C, 'down')
-    await delay(KEY_HOLD_MS)
-    uIOhook.keyToggle(UiohookKey.C, 'up')
-    await delay(KEY_GAP_MS)
-  } finally {
-    for (const modifier of press.toReversed()) uIOhook.keyToggle(KEYS[modifier], 'up')
-  }
-}
-
-export async function copyHoveredItem(accelerator: string): Promise<string | null> {
+export async function copyHoveredItem(): Promise<string | null> {
+  const started = Date.now()
   const previous = await clipboard.readText()
   await clipboard.writeText('')
+  for (const key of [UiohookKey.Shift, UiohookKey.Meta]) uIOhook.keyToggle(key, 'up')
+  uIOhook.keyTap(UiohookKey.C, [UiohookKey.Ctrl, UiohookKey.Alt])
+  let text = ''
   try {
-    await pressCopy(accelerator)
     for (let waited = 0; waited < TIMEOUT_MS; waited += POLL_INTERVAL_MS) {
-      const text = await clipboard.readText()
-      if (isItemText(text)) return text
       await delay(POLL_INTERVAL_MS)
+      text = await clipboard.readText()
+      if (isItemText(text)) return text
     }
     return null
   } finally {
     await clipboard.writeText(previous)
+    void logCapture(Date.now() - started, isItemText(text), text)
   }
+}
+
+async function logCapture(ms: number, ok: boolean, text: string): Promise<void> {
+  const dir = app.getPath('logs')
+  const result = ok ? 'copied' : text ? `not an item: ${JSON.stringify(text.slice(0, 40))}` : 'clipboard stayed empty'
+  try {
+    await mkdir(dir, { recursive: true })
+    await appendFile(join(dir, 'capture.log'), `${new Date().toISOString()} ${result} after ${ms}ms\n`)
+  } catch {}
 }

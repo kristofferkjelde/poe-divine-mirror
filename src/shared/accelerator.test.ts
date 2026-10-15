@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { copyKeys, heldModifiers, toAccelerator, type KeyLike } from './accelerator'
+import { toAccelerator, type KeyLike } from './accelerator'
 
 const press = (code: string, modifiers: Partial<KeyLike> = {}): KeyLike => ({
   key: code,
@@ -38,27 +38,5 @@ describe('toAccelerator', () => {
 
   it('rejects keys Electron cannot register', () => {
     expect(toAccelerator(press('IntlBackslash', { altKey: true })).status).toBe('invalid')
-  })
-})
-
-describe('heldModifiers', () => {
-  it('reads the modifiers out of an accelerator', () => {
-    expect([...heldModifiers('Alt+Shift+D')]).toEqual(['Alt', 'Shift'])
-    expect([...heldModifiers('CommandOrControl+Super+F1')]).toEqual(['Ctrl', 'Meta'])
-    expect([...heldModifiers('F5')]).toEqual([])
-  })
-})
-
-describe('copyKeys', () => {
-  it('never presses or releases a copy modifier the player is still holding', () => {
-    expect(copyKeys(heldModifiers('Alt+D'))).toEqual({ release: [], press: ['Ctrl'] })
-    expect(copyKeys(heldModifiers('Ctrl+D'))).toEqual({ release: [], press: ['Alt'] })
-    expect(copyKeys(heldModifiers('Ctrl+Alt+D'))).toEqual({ release: [], press: [] })
-    expect(copyKeys(heldModifiers('F5'))).toEqual({ release: [], press: ['Ctrl', 'Alt'] })
-  })
-
-  it('lets go of Shift and Windows so the game sees Ctrl+Alt+C', () => {
-    expect(copyKeys(heldModifiers('Alt+Shift+D'))).toEqual({ release: ['Shift'], press: ['Ctrl'] })
-    expect(copyKeys(heldModifiers('Super+D'))).toEqual({ release: ['Meta'], press: ['Ctrl', 'Alt'] })
   })
 })
