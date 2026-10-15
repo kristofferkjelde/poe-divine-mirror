@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { HOTKEYS } from '../../../shared/ipc'
 
 const reportHeight = (node: HTMLElement | null) => {
   if (!node) return
@@ -12,7 +13,9 @@ export function Panel({ children }: { children: ReactNode }) {
     <div ref={reportHeight} className="panel">
       {children}
       <footer className="panel-footer">
-        <span>Alt+D compare</span>
+        <span>
+          {HOTKEYS.compare} compare · {HOTKEYS.equip} set equipped
+        </span>
         <button type="button" className="panel-close" onClick={() => window.overlay.hide()}>
           Esc close
         </button>

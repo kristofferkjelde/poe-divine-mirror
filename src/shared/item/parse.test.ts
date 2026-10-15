@@ -113,6 +113,21 @@ describe('parseItem', () => {
     ])
   })
 
+  it('parses a real in-game advanced copy of a corrupted unique', () => {
+    const item = parseItem(fixture('unique-spear-ingame'))
+
+    expect(item).toMatchObject({ rarity: 'Unique', slot: 'weapon', sockets: 'S', corrupted: true, quality: 20 })
+    expect(item.properties).toContainEqual({ name: 'Critical Hit Chance', value: '10.84%, 10.84%', augmented: true })
+    expect(item.mods.map((mod) => [mod.text, mod.values])).toEqual([
+      ['Adds 18 to 42 Physical Damage', [18, 42]],
+      ['Bifurcates Critical Hits', []],
+      ['+22 to Intelligence', [22]],
+      ['11% of Skill Mana Costs Converted to Life Costs', [11]],
+      ['+5.84% to Critical Hit Chance', [5.84]],
+    ])
+    expect(item.mods.every((mod) => mod.type === 'explicit' && mod.affix === undefined)).toBe(true)
+  })
+
   it('handles magic items without a separate base type line', () => {
     const item = parseItem(fixture('magic-belt'))
 
