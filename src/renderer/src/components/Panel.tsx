@@ -22,7 +22,7 @@ export function Panel({ hotkeys, locked, children }: Props) {
         {children}
         <footer className="panel-footer">
           <span>
-            {hotkeys.compare} compare · {hotkeys.equip} set equipped
+            {hotkeys.compare} compare · {hotkeys.equip} equip · {hotkeys.price} price
           </span>
           <span className="panel-actions">
             <button

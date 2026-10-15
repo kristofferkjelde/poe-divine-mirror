@@ -32,6 +32,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | --- | --- |
 | Hover an item you're **wearing** and press **Alt+Shift+D** | It's saved as your equipped item for that slot (do this once per slot) |
 | Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
+| Hover an item and press **Ctrl+D** | The popup searches the official trade site for similar items and shows what they sell for |
 | Press **Esc** or click the game | The popup closes |
 | Drag the popup anywhere | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, or change the hotkeys: click one and press the new keys |
@@ -48,6 +49,16 @@ The app reads the build's gear, main skill and defences. It then boosts the stat
 
 With a build added, **Alt+D** always compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. If you've also saved your own item for that slot, a second comparison against it shows underneath.
 
+**Check the price**
+
+Press **Ctrl+D** on an item, or click **⚖ Check trade price** at the bottom of any popup. The app searches the trade site in the current league for the same base with every mod at 80% or more of your rolls. If fewer than 5 are listed, it allows one mod to miss. You'll see:
+
+- the **cheapest** and the **typical** price (the middle of the 10 cheapest listings, since the very cheapest are often price-fixers),
+- the cheapest listings with how long ago each was listed,
+- **Open on trade ↗** to open the same search in your browser and fine-tune it.
+
+Uniques are searched by name. Pick another league under **Settings → Trade**. The trade site limits how often anyone can search, so if you check many items quickly the popup asks you to wait a few seconds.
+
 **Reading the popup**
 
 - The **verdict** at the top adds up every stat difference, weighted by how much it matters to your build (or in general, if you haven't added one). The percentage next to it is how much better or worse the new item is overall, e.g. **+57%**. Within ±2% counts as a sidegrade.
@@ -63,6 +74,7 @@ The app follows the same rules as popular tools like PoE Overlay and Exiled Exch
 
 - It **never reads or changes game memory or files**.
 - Each hotkey press sends **one** keypress to the game (Ctrl+Alt+C, the game's own "copy item" shortcut), which is what GGG allows.
+- Price checks only make normal searches on the public trade site, the same as you would in your browser, and respect its rate limits.
 - It doesn't automate gameplay in any way.
 
 Your clipboard is put back the way it was right after the item is read.
@@ -86,7 +98,7 @@ Your clipboard is put back the way it was right after the item is read.
 - [x] **Remember your gear:** mark the items you're wearing once, per slot
 - [x] **Compare on hover:** stat-by-stat differences against your equipped item, plus an overall upgrade score
 - [ ] **Import your gear:** fetch what your character is wearing from your pathofexile.com profile
-- [ ] **Later:** trade site search
+- [x] **Price check:** search the trade site for similar items and show what they sell for
 
 ---
 

@@ -1,4 +1,4 @@
-import { app, globalShortcut, ipcMain, Menu, nativeImage, Tray } from 'electron'
+import { app, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
 import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
 import { IPC } from '../shared/ipc'
 import { HOTKEY_LABELS } from '../shared/settings'
@@ -10,6 +10,8 @@ import { Overlay } from './overlay'
 import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
+import { TradeClient } from './trade'
+import { TRADE_ORIGIN } from '../shared/trade/price'
 
 const FOCUS_RETURN_MS = 60
 
@@ -29,19 +31,26 @@ function start(): void {
   const overlay = new Overlay(store)
   const gearStore = new GearStore()
   const builds = new BuildStore()
+  const trade = new TradeClient()
+  ipcMain.handle(IPC.priceCheck, (_event, text: unknown) =>
+    typeof text === 'string' ? trade.priceCheck(text, store.current.league) : { ok: false, error: 'No item to price' },
+  )
+  ipcMain.on(IPC.openTrade, (_event, url: unknown) => {
+    if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
+  })
   ipcMain.handle(IPC.gearForget, async (_event, slot: unknown) => {
     if (typeof slot === 'string' && slot in GEAR_SLOT_LABELS) await gearStore.forget(slot as GearSlot)
   })
   let busy = false
 
-  const capture = async (equip: boolean) => {
+  const capture = async (mode: 'compare' | 'equip' | 'price') => {
     if (busy) return
     busy = true
     try {
       if (overlay.hide()) await delay(FOCUS_RETURN_MS)
       const text = await copyHoveredItem()
       if (!text) return
-      const equippedTo = equip ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
+      const equippedTo = mode === 'equip' ? await gearStore.equip(text, builds.current).catch(() => undefined) : undefined
       overlay.show({
         text,
         capturedAt: Date.now(),
@@ -50,6 +59,7 @@ function start(): void {
         locked: store.current.overlayLocked,
         build: builds.current,
         equippedTo,
+        priceCheck: mode === 'price',
       })
     } finally {
       busy = false
@@ -57,10 +67,11 @@ function start(): void {
   }
 
   const hotkeys = new Hotkeys(store, {
-    compare: () => void capture(false),
-    equip: () => void capture(true),
+    compare: () => void capture('compare'),
+    equip: () => void capture('equip'),
+    price: () => void capture('price'),
   })
-  const settingsWindow = new SettingsWindow(store, hotkeys, builds)
+  const settingsWindow = new SettingsWindow(store, hotkeys, builds, trade)
 
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))
   const refreshTray = () => {
@@ -75,6 +86,7 @@ function start(): void {
       Menu.buildFromTemplate([
         { label: `${settings.hotkeys.compare}: ${HOTKEY_LABELS.compare.toLowerCase()}`, enabled: false },
         { label: `${settings.hotkeys.equip}: ${HOTKEY_LABELS.equip.toLowerCase()}`, enabled: false },
+        { label: `${settings.hotkeys.price}: ${HOTKEY_LABELS.price.toLowerCase()}`, enabled: false },
         { type: 'separator' },
         { label: 'Settings…', click: () => settingsWindow.open() },
         {
