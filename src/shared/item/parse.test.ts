@@ -141,4 +141,15 @@ describe('parseModLine', () => {
       type: 'explicit',
     })
   })
+
+  it('drops single-value annotations and the unscalable marker from advanced text', () => {
+    expect(parseModLine('11(10)% of Skill Mana Costs Converted to Life Costs')).toMatchObject({
+      text: '11% of Skill Mana Costs Converted to Life Costs',
+      values: [11],
+    })
+    expect(parseModLine('Bifurcates Critical Hits — Unscalable Value')).toMatchObject({
+      text: 'Bifurcates Critical Hits',
+      values: [],
+    })
+  })
 })

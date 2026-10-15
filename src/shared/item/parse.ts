@@ -5,7 +5,8 @@ const SEPARATOR = /^-{8,}$/
 const FLAGS = new Set(['Corrupted', 'Unidentified', 'Mirrored', 'Split', 'Unmodifiable'])
 const RARITIES = new Set<Rarity>(['Normal', 'Magic', 'Rare', 'Unique', 'Currency', 'Gem'])
 const MOD_SUFFIX = /\s\((implicit|rune|enchant|desecrated|fractured|crafted)\)$/
-const NUMBER = /([+-]?)(\d+(?:\.\d+)?)(?:\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\))?/g
+const NUMBER = /([+-]?)(\d+(?:\.\d+)?)(?:\((-?\d+(?:\.\d+)?)(?:-(-?\d+(?:\.\d+)?))?\))?/g
+const ADVANCED_NOTE = /\s+—\s+Unscalable Value$/
 const PROPERTY = /^([^:{}]+): (.+)$/
 const INSTRUCTION = /^(Right click|Place into|Can only|Used when|Shift click|Travel to|Stack Size)/
 
@@ -153,8 +154,9 @@ function isFlavourText(section: string[], rarity: Rarity, rest: string[][]): boo
 }
 
 export function parseModLine(line: string, fallbackType: ModType = 'explicit'): Mod {
-  const suffix = MOD_SUFFIX.exec(line)
-  const body = suffix ? line.slice(0, suffix.index) : line
+  const cleaned = line.replace(ADVANCED_NOTE, '')
+  const suffix = MOD_SUFFIX.exec(cleaned)
+  const body = suffix ? cleaned.slice(0, suffix.index) : cleaned
   const type = suffix ? toModType(suffix[1]) : fallbackType
 
   const values: number[] = []

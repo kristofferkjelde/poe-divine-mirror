@@ -78,7 +78,7 @@ Your clipboard is put back the way it was right after the item is read.
 Built with Electron, React 19, TypeScript and Vite ([electron-vite](https://electron-vite.org)). Requires Node 22+. The hotkey and overlay only work on Windows, but the UI and tests run anywhere.
 
 ```sh
-npm install
+npm install        # also downloads Electron
 npm run dev        # start the overlay with hot reload
 npm test           # item parser tests
 npm run typecheck
