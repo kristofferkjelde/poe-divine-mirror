@@ -1,58 +1,114 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseItem } from '../item/parse'
-import { buildSearch, matchStat, PriceCheckUnsupported, type TradeStatGroup } from './query'
+import {
+  defaultSearch,
+  matchStat,
+  PriceCheckUnsupported,
+  sanitizeSearch,
+  toTradeQuery,
+  withScale,
+  type TradeStatGroup,
+} from './query'
 
 const stats = (JSON.parse(readFileSync(new URL('./__fixtures__/stats.json', import.meta.url), 'utf8')) as { result: TradeStatGroup[] }).result
 const fixture = (name: string) =>
   parseItem(readFileSync(new URL(`../item/__fixtures__/${name}.txt`, import.meta.url), 'utf8'))
+const byLabel = (search: ReturnType<typeof defaultSearch>, label: string) =>
+  search.filters.find((filter) => filter.label === label)
 
-describe('buildSearch', () => {
-  it('searches a rare ring by base type and its explicit mods at 80% of the rolls', () => {
-    const plan = buildSearch(fixture('rare-ring-advanced'), stats)
+describe('defaultSearch', () => {
+  it('turns a rare ring into toggleable mod filters at the exact rolls', () => {
+    const search = defaultSearch(fixture('rare-ring-advanced'), stats)
 
-    expect(plan.query.query.type).toBe('Iron Ring')
-    expect(plan.query.query.name).toBeUndefined()
-    expect(plan.query.query.filters.type_filters.filters.rarity).toEqual({ option: 'nonunique' })
-    expect(plan.query.query.stats).toEqual([
-      {
-        type: 'and',
-        filters: [
-          { id: 'explicit.stat_3299347043', value: { min: 22 } },
-          { id: 'explicit.stat_3032590688', value: { min: 4 } },
-          { id: 'explicit.stat_3372524247', value: { min: 14 } },
-        ],
-      },
-    ])
-    expect(plan.unmatched).toEqual([])
+    expect(search).toMatchObject({ type: 'Iron Ring', rarity: 'nonunique', corrupted: 'no', status: 'securable', scale: 0 })
+    expect(byLabel(search, '+28 to maximum Life')).toMatchObject({ enabled: true, value: 28, min: 28, statId: 'explicit.stat_3299347043' })
+    expect(byLabel(search, 'Adds 3 to 7 Physical Damage to Attacks')).toMatchObject({ enabled: true, value: 5, min: 5 })
+    expect(byLabel(search, 'Adds 1 to 4 Physical Damage to Attacks')).toMatchObject({ enabled: false, modType: 'implicit', statId: 'implicit.stat_3032590688' })
+    expect(byLabel(search, 'Item Level')).toMatchObject({ enabled: false, value: 47 })
   })
 
-  it('picks the local version of weapon mods', () => {
-    const plan = buildSearch(fixture('rare-spear'), stats)
-    expect(plan.query.query.stats[0].filters.map((filter) => filter.id)).toEqual([
-      'explicit.stat_1940865751',
-      'explicit.stat_210067635',
-      'explicit.stat_803737631',
-    ])
+  it('searches weapons by DPS and leaves the local damage mods off', () => {
+    const search = defaultSearch(fixture('rare-spear'), stats)
+
+    expect(byLabel(search, 'DPS')).toMatchObject({ enabled: true, target: { group: 'equipment_filters', filter: 'dps' } })
+    expect(byLabel(search, 'Adds 5 to 9 Physical Damage')).toMatchObject({ enabled: false, statId: 'explicit.stat_1940865751' })
+    expect(byLabel(search, '12% increased Attack Speed')).toMatchObject({ enabled: false, statId: 'explicit.stat_210067635' })
+    expect(byLabel(search, '+31 to Accuracy Rating')).toMatchObject({ enabled: true })
+    expect(search.corrupted).toBe('yes')
   })
 
-  it('lets one mod miss when relaxed', () => {
-    const plan = buildSearch(fixture('rare-ring-advanced'), stats, true)
-    expect(plan.relaxed).toBe(true)
-    expect(plan.query.query.stats[0]).toMatchObject({ type: 'count', value: { min: 2 } })
-  })
-
-  it('searches uniques by name and base without mods', () => {
-    const plan = buildSearch(fixture('unique-boots'), stats)
+  it('searches uniques by name with their mods off', () => {
     const boots = fixture('unique-boots')
-    expect(plan.query.query).toMatchObject({ name: boots.name, type: boots.baseType })
-    expect(plan.query.query.filters.type_filters.filters.rarity).toEqual({ option: 'unique' })
-    expect(plan.query.query.stats[0].filters).toEqual([])
+    const search = defaultSearch(boots, stats)
+    expect(search).toMatchObject({ name: boots.name, type: boots.baseType, rarity: 'unique' })
+    expect(search.filters.every((filter) => !filter.enabled)).toBe(true)
+  })
+
+  it('prices normal items as crafting bases by item level', () => {
+    const base = parseItem('Item Class: Rings\nRarity: Normal\nIron Ring\n--------\nItem Level: 82\n--------\nAdds 1 to 4 Physical Damage to Attacks (implicit)')
+    const search = defaultSearch(base, stats)
+    expect(search.rarity).toBe('normal')
+    expect(byLabel(search, 'Item Level')).toMatchObject({ enabled: true, min: 82 })
+  })
+
+  it('keeps mods the trade site has no stat for, but not searchable', () => {
+    const item = parseItem('Item Class: Rings\nRarity: Rare\nX\nIron Ring\n--------\nItem Level: 1\n--------\n+20 to maximum Life\nSomething Unheard Of')
+    expect(byLabel(defaultSearch(item, stats), 'Something Unheard Of')).toMatchObject({ kind: 'unsearchable', enabled: false })
   })
 
   it('refuses currency', () => {
     const orb = parseItem('Item Class: Stackable Currency\nRarity: Currency\nExalted Orb\n--------\nStack Size: 1/20')
-    expect(() => buildSearch(orb, stats)).toThrow(PriceCheckUnsupported)
+    expect(() => defaultSearch(orb, stats)).toThrow(PriceCheckUnsupported)
+  })
+})
+
+describe('toTradeQuery', () => {
+  it('sends only the enabled filters with their min and max', () => {
+    const search = defaultSearch(fixture('rare-spear'), stats)
+    const edited = {
+      ...search,
+      listed: '3days' as const,
+      filters: search.filters.map((filter) =>
+        filter.label === '+31 to Accuracy Rating' ? { ...filter, min: 20, max: 40 } : filter,
+      ),
+    }
+    const { query } = toTradeQuery(edited)
+
+    expect(query.status).toEqual({ option: 'securable' })
+    expect(query.type).toBe('Hardwood Spear')
+    expect(query.stats[0].filters).toEqual([{ id: 'explicit.stat_803737631', value: { min: 20, max: 40 } }])
+    expect(query.filters.equipment_filters.filters.dps).toEqual({ min: ((20 + 38) / 2) * 1.5 })
+    expect(query.filters.misc_filters.filters.corrupted).toEqual({ option: 'true' })
+    expect(query.filters.trade_filters.filters.indexed).toEqual({ option: '3days' })
+  })
+
+  it('scales every minimum in 5% steps, leaving item level and sockets alone', () => {
+    const search = defaultSearch(fixture('rare-ring-advanced'), stats)
+    const lower = withScale(search, -10)
+    expect(byLabel(lower, '+28 to maximum Life')?.min).toBe(25)
+    expect(byLabel(lower, 'Item Level')?.min).toBe(47)
+    expect(byLabel(withScale(search, 5), '+28 to maximum Life')?.min).toBe(30)
+    expect(withScale(search, 7).scale).toBe(5)
+    expect(withScale(search, 80).scale).toBe(50)
+    expect(byLabel(withScale(lower, 0), '+28 to maximum Life')?.min).toBe(28)
+  })
+})
+
+describe('sanitizeSearch', () => {
+  it('drops filters the renderer could not have made', () => {
+    const search = sanitizeSearch({
+      rarity: 'rare',
+      status: 'weird',
+      filters: [
+        { key: 'a', label: 'ok', kind: 'mod', enabled: true, min: 5, max: null, statId: 'explicit.stat_1' },
+        { key: 'b', label: 'bad id', kind: 'mod', enabled: true, min: 5, max: null, statId: 'explicit.stat_1"}' },
+        { key: 'c', label: 'bad target', kind: 'property', enabled: true, min: 1, max: null, target: { group: 'trade_filters', filter: 'price' } },
+      ],
+    })
+    expect(search?.status).toBe('securable')
+    expect(search?.filters.map((filter) => filter.key)).toEqual(['a'])
+    expect(sanitizeSearch({ rarity: 'mythic', filters: [] })).toBeNull()
   })
 })
 
@@ -60,10 +116,5 @@ describe('matchStat', () => {
   it('turns reduced into a negative increased value', () => {
     const [mod] = parseItem('Item Class: Rings\nRarity: Rare\nX\nIron Ring\n--------\nItem Level: 1\n--------\n8% reduced Cast Speed').mods
     expect(matchStat(mod, stats)).toEqual({ id: 'explicit.stat_2891184298', value: -8 })
-  })
-
-  it('reports mods the trade site has no stat for', () => {
-    const item = parseItem('Item Class: Rings\nRarity: Rare\nX\nIron Ring\n--------\nItem Level: 1\n--------\n+20 to maximum Life\nSomething Unheard Of')
-    expect(buildSearch(item, stats).unmatched).toEqual(['Something Unheard Of'])
   })
 })

@@ -12,7 +12,8 @@ const overlay: OverlayApi = {
   openSettings: () => ipcRenderer.send(IPC.settingsOpen),
   setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
   forgetGear: (slot) => ipcRenderer.invoke(IPC.gearForget, slot),
-  checkPrice: (text) => ipcRenderer.invoke(IPC.priceCheck, text),
+  prepareSearch: (text) => ipcRenderer.invoke(IPC.tradePrepare, text),
+  runSearch: (search) => ipcRenderer.invoke(IPC.tradeSearch, search),
   openTrade: (url) => ipcRenderer.send(IPC.openTrade, url),
 }
 

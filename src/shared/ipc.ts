@@ -1,7 +1,8 @@
 import type { BuildProfile } from './build/profile'
 import type { Gear, GearSlot } from './gear'
 import type { HotkeyAction, Settings } from './settings'
-import type { PriceCheckResult } from './trade/price'
+import type { PrepareResult, PriceCheckResult } from './trade/price'
+import type { ItemSearch } from './trade/query'
 
 export const IPC = {
   itemCaptured: 'item:captured',
@@ -19,7 +20,8 @@ export const IPC = {
   buildRemove: 'build:remove',
   buildSetWeight: 'build:set-weight',
   buildResetWeights: 'build:reset-weights',
-  priceCheck: 'trade:price-check',
+  tradePrepare: 'trade:prepare',
+  tradeSearch: 'trade:search',
   openTrade: 'trade:open',
   tradeLeagues: 'trade:leagues',
   settingsSetLeague: 'settings:set-league',
@@ -52,7 +54,8 @@ export interface OverlayApi {
   openSettings: () => void
   setLocked: (locked: boolean) => Promise<void>
   forgetGear: (slot: GearSlot) => Promise<void>
-  checkPrice: (text: string) => Promise<PriceCheckResult>
+  prepareSearch: (text: string) => Promise<PrepareResult>
+  runSearch: (search: ItemSearch) => Promise<PriceCheckResult>
   openTrade: (url: string) => void
 }
 

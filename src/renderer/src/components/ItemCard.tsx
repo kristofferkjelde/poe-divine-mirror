@@ -5,7 +5,21 @@ import type { Mod, ModType, ParsedItem, Requirements } from '../../../shared/ite
 const MOD_GROUPS: ModType[] = ['enchant', 'rune', 'implicit']
 const EXPLICIT_TYPES = new Set<ModType>(['explicit', 'desecrated', 'fractured'])
 
-export function ItemCard({ item }: { item: ParsedItem }) {
+export function ItemCard({ item, compact = false }: { item: ParsedItem; compact?: boolean }) {
+  const header = (
+    <header className="item-header">
+      <h1>{item.name}</h1>
+      {item.baseType && item.baseType !== item.name && <h2>{item.baseType}</h2>}
+    </header>
+  )
+  if (compact) {
+    return (
+      <article className="item" data-rarity={item.rarity.toLowerCase()}>
+        {header}
+      </article>
+    )
+  }
+
   const sections: ReactNode[] = []
 
   if (item.category || item.properties.length > 0) {
@@ -82,10 +96,7 @@ export function ItemCard({ item }: { item: ParsedItem }) {
 
   return (
     <article className="item" data-rarity={item.rarity.toLowerCase()}>
-      <header className="item-header">
-        <h1>{item.name}</h1>
-        {item.baseType && item.baseType !== item.name && <h2>{item.baseType}</h2>}
-      </header>
+      {header}
       <div className="item-body">
         {sections.map((section, index) => (
           <Fragment key={index}>

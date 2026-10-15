@@ -1,5 +1,5 @@
-import type { Mod, ModType, ParsedItem } from '../item/types'
-import { isLocal } from '../compare/stats'
+import { DERIVED, extractStats, isLocal } from '../compare/stats'
+import type { Mod, ModType, ParsedItem, Slot } from '../item/types'
 
 export interface TradeStatEntry {
   id: string
@@ -14,40 +14,119 @@ export interface TradeStatGroup {
   entries: TradeStatEntry[]
 }
 
-export interface StatFilter {
-  id: string
-  value?: { min: number }
+export type Corrupted = 'any' | 'yes' | 'no'
+export type SearchRarity = 'nonunique' | 'normal' | 'magic' | 'rare' | 'unique'
+export type SaleStatus = 'available' | 'securable' | 'online' | 'any'
+export type ListedWithin = 'any' | '3hours' | '12hours' | '1day' | '3days' | '1week' | '1month'
+export type PriceCurrency = 'any' | 'exalted' | 'divine' | 'chaos'
+
+export const RARITY_OPTIONS: Record<SearchRarity, string> = {
+  nonunique: 'Any non-unique',
+  normal: 'Normal',
+  magic: 'Magic',
+  rare: 'Rare',
+  unique: 'Unique',
 }
+
+export const STATUS_OPTIONS: Record<SaleStatus, string> = {
+  available: 'Instant buyout and in person',
+  securable: 'Instant buyout only',
+  online: 'In person trade only',
+  any: 'Any',
+}
+
+export const LISTED_OPTIONS: Record<ListedWithin, string> = {
+  any: 'Any time',
+  '3hours': 'Up to 3 hours ago',
+  '12hours': 'Up to 12 hours ago',
+  '1day': 'Up to a day ago',
+  '3days': 'Up to 3 days ago',
+  '1week': 'Up to a week ago',
+  '1month': 'Up to a month ago',
+}
+
+export const CURRENCY_OPTIONS: Record<PriceCurrency, string> = {
+  any: 'Exalted equivalent',
+  exalted: 'Exalted Orb',
+  divine: 'Divine Orb',
+  chaos: 'Chaos Orb',
+}
+
+export interface PropertyTarget {
+  group: 'type_filters' | 'equipment_filters'
+  filter: string
+}
+
+export interface SearchFilter {
+  key: string
+  label: string
+  kind: 'property' | 'mod' | 'unsearchable'
+  enabled: boolean
+  value?: number
+  min: number | null
+  max: number | null
+  target?: PropertyTarget
+  statId?: string
+  modType?: ModType
+}
+
+export interface ItemSearch {
+  name?: string
+  type?: string
+  category?: string
+  rarity: SearchRarity
+  corrupted: Corrupted
+  status: SaleStatus
+  listed: ListedWithin
+  currency: PriceCurrency
+  scale: number
+  filters: SearchFilter[]
+}
+
+type Range = { min?: number; max?: number }
 
 export interface TradeQuery {
   query: {
-    status: { option: 'online' }
+    status: { option: SaleStatus }
     name?: string
     type?: string
-    stats: Array<{ type: 'and' | 'count'; filters: StatFilter[]; value?: { min: number } }>
-    filters: { type_filters: { filters: Record<string, { option: string }> } }
+    stats: Array<{ type: 'and'; filters: Array<{ id: string; value?: Range }> }>
+    filters: Record<string, { filters: Record<string, Range | { option: string }> }>
   }
   sort: { price: 'asc' }
 }
 
-export interface SearchPlan {
-  query: TradeQuery
-  matched: string[]
-  unmatched: string[]
-  relaxed: boolean
-}
-
 export class PriceCheckUnsupported extends Error {}
 
-export const ROLL_MATCH = 0.8
+export const SCALE_STEP = 5
+export const SCALE_LIMIT = 50
+const UNSCALED = new Set(['rune_sockets', 'ilvl'])
 
-const SEARCHED_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated'])
+const MOD_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated', 'implicit', 'rune', 'enchant'])
+const ENABLED_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated'])
+const ARMOUR_SLOTS: ReadonlySet<Slot> = new Set(['helmet', 'body', 'gloves', 'boots', 'offhand'])
 
-const GROUPS: Partial<Record<ModType, string[]>> = {
+const GROUPS: Record<ModType, string[]> = {
   explicit: ['explicit'],
   fractured: ['fractured', 'explicit'],
   desecrated: ['desecrated', 'explicit'],
+  implicit: ['implicit'],
+  rune: ['rune', 'augment'],
+  enchant: ['enchant'],
 }
+
+const PROPERTIES: Array<{ stat: string; label: string; target: PropertyTarget; enabled: (slot?: Slot) => boolean }> = [
+  { stat: DERIVED.totalDps, label: 'DPS', target: { group: 'equipment_filters', filter: 'dps' }, enabled: (slot) => slot === 'weapon' },
+  { stat: DERIVED.physicalDps, label: 'Physical DPS', target: { group: 'equipment_filters', filter: 'pdps' }, enabled: () => false },
+  { stat: DERIVED.elementalDps, label: 'Elemental DPS', target: { group: 'equipment_filters', filter: 'edps' }, enabled: () => false },
+  { stat: DERIVED.criticalHitChance, label: 'Critical Hit Chance', target: { group: 'equipment_filters', filter: 'crit' }, enabled: () => false },
+  { stat: DERIVED.attacksPerSecond, label: 'Attacks per Second', target: { group: 'equipment_filters', filter: 'aps' }, enabled: () => false },
+  { stat: DERIVED.armour, label: 'Armour', target: { group: 'equipment_filters', filter: 'ar' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
+  { stat: DERIVED.evasion, label: 'Evasion', target: { group: 'equipment_filters', filter: 'ev' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
+  { stat: DERIVED.energyShield, label: 'Energy Shield', target: { group: 'equipment_filters', filter: 'es' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
+  { stat: DERIVED.block, label: 'Block', target: { group: 'equipment_filters', filter: 'block' }, enabled: () => false },
+  { stat: DERIVED.spirit, label: 'Spirit', target: { group: 'equipment_filters', filter: 'spirit' }, enabled: () => true },
+]
 
 const CATEGORIES: Record<string, string> = {
   Claws: 'weapon.claw',
@@ -133,7 +212,7 @@ export function matchStat(
 ): { id: string; value: number | undefined } | null {
   const index = indexStats(groups)
   const value = modValue(mod)
-  for (const groupId of GROUPS[mod.type] ?? [mod.type]) {
+  for (const groupId of GROUPS[mod.type]) {
     const byText = index.get(groupId)
     if (!byText) continue
     const exact = byText.get(normalize(mod.template))
@@ -147,53 +226,194 @@ export function matchStat(
   return null
 }
 
-const minimumFor = (value: number) =>
-  Number.isInteger(value) ? Math.floor(value * ROLL_MATCH) : Math.floor(value * ROLL_MATCH * 10) / 10
+export function minimumFor(value: number | undefined, scale: number): number | null {
+  if (value === undefined || value <= 0) return null
+  if (scale === 0) return value
+  const scaled = value * (1 + scale / 100)
+  const round = scale < 0 ? Math.floor : Math.ceil
+  return Number.isInteger(value) ? round(scaled) : round(scaled * 100) / 100
+}
 
-export function buildSearch(item: ParsedItem, groups: TradeStatGroup[], relaxed = false): SearchPlan {
+export const clampScale = (scale: number) =>
+  Math.max(-SCALE_LIMIT, Math.min(SCALE_LIMIT, Math.round(scale / SCALE_STEP) * SCALE_STEP))
+
+function property(key: string, label: string, value: number, enabled: boolean, target: PropertyTarget, scale: number): SearchFilter {
+  return { key, label, kind: 'property', enabled, value, min: minimumFor(value, UNSCALED.has(key) ? 0 : scale), max: null, target }
+}
+
+export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale = 0): ItemSearch {
   if (item.unidentified && item.rarity !== 'Unique') throw new PriceCheckUnsupported('Identify the item first')
   if (item.rarity === 'Currency' || item.rarity === 'Gem' || item.rarity === 'Unknown') {
     throw new PriceCheckUnsupported('Price check works on gear. Use the currency exchange for this one.')
   }
 
   const unique = item.rarity === 'Unique'
-  const typeFilters: Record<string, { option: string }> = { rarity: { option: unique ? 'unique' : 'nonunique' } }
-  const category = CATEGORIES[item.itemClass]
-  if (!item.baseType && category) typeFilters.category = { option: category }
+  const filters: SearchFilter[] = []
+  const stats = extractStats(item)
 
-  const filters: StatFilter[] = []
-  const matched: string[] = []
-  const unmatched: string[] = []
-  if (!unique) {
-    for (const mod of item.mods) {
-      if (!SEARCHED_TYPES.has(mod.type)) continue
-      const stat = matchStat(mod, groups, isLocal(mod.template, item.slot))
-      if (!stat) {
-        unmatched.push(mod.text)
-        continue
-      }
-      if (filters.some((filter) => filter.id === stat.id)) continue
-      filters.push(stat.value !== undefined && stat.value > 0 ? { id: stat.id, value: { min: minimumFor(stat.value) } } : { id: stat.id })
-      matched.push(mod.text)
+  for (const entry of PROPERTIES) {
+    const stat = stats.get(entry.stat)
+    if (stat && stat.value > 0) {
+      filters.push(property(entry.target.filter, entry.label, stat.value, !unique && entry.enabled(item.slot), entry.target, scale))
     }
   }
+  const craftingBase = item.rarity === 'Normal'
+  if (item.itemLevel) {
+    filters.push({
+      ...property('ilvl', 'Item Level', item.itemLevel, craftingBase, { group: 'type_filters', filter: 'ilvl' }, scale),
+      ...(craftingBase && { min: item.itemLevel }),
+    })
+  }
+  if (item.quality) {
+    filters.push(property('quality', 'Quality', item.quality, false, { group: 'type_filters', filter: 'quality' }, scale))
+  }
+  const sockets = item.sockets?.split(/\s+/).filter(Boolean).length
+  if (sockets) {
+    filters.push(property('rune_sockets', 'Rune Sockets', sockets, false, { group: 'equipment_filters', filter: 'rune_sockets' }, 0))
+  }
 
-  const useCount = relaxed && filters.length >= 3
+  for (const [index, mod] of item.mods.entries()) {
+    if (!MOD_TYPES.has(mod.type)) continue
+    const local = isLocal(mod.template, item.slot)
+    const stat = matchStat(mod, groups, local)
+    const key = `mod-${index}`
+    if (!stat) {
+      filters.push({ key, label: mod.text, kind: 'unsearchable', enabled: false, min: null, max: null, modType: mod.type })
+      continue
+    }
+    const coveredByProperty = local && (item.slot === 'weapon' || (!!item.slot && ARMOUR_SLOTS.has(item.slot)))
+    filters.push({
+      key,
+      label: mod.text,
+      kind: 'mod',
+      enabled: !unique && ENABLED_TYPES.has(mod.type) && !coveredByProperty,
+      value: stat.value,
+      min: minimumFor(stat.value, scale),
+      max: null,
+      statId: stat.id,
+      modType: mod.type,
+    })
+  }
+
+  const category = CATEGORIES[item.itemClass]
+  return {
+    ...(unique && { name: item.name }),
+    ...(item.baseType && { type: item.baseType }),
+    ...(!item.baseType && category && { category }),
+    rarity: unique ? 'unique' : craftingBase ? 'normal' : 'nonunique',
+    corrupted: item.corrupted ? 'yes' : 'no',
+    status: 'securable',
+    listed: 'any',
+    currency: 'any',
+    scale,
+    filters,
+  }
+}
+
+export function withScale(search: ItemSearch, scale: number): ItemSearch {
+  const next = clampScale(scale)
+  return {
+    ...search,
+    scale: next,
+    filters: search.filters.map((filter) =>
+      filter.value === undefined || UNSCALED.has(filter.key) ? filter : { ...filter, min: minimumFor(filter.value, next) },
+    ),
+  }
+}
+
+const range = ({ min, max }: SearchFilter): Range | undefined => {
+  const value: Range = {}
+  if (min !== null && Number.isFinite(min)) value.min = min
+  if (max !== null && Number.isFinite(max)) value.max = max
+  return Object.keys(value).length > 0 ? value : undefined
+}
+
+export function toTradeQuery(search: ItemSearch): TradeQuery {
+  const enabled = search.filters.filter((filter) => filter.enabled)
+  const filters: TradeQuery['query']['filters'] = {
+    type_filters: {
+      filters: {
+        rarity: { option: search.rarity },
+        ...(search.category && { category: { option: search.category } }),
+      },
+    },
+  }
+  if (search.corrupted !== 'any') {
+    filters.misc_filters = { filters: { corrupted: { option: search.corrupted === 'yes' ? 'true' : 'false' } } }
+  }
+  const tradeFilters: Record<string, { option: string }> = {}
+  if (search.listed !== 'any') tradeFilters.indexed = { option: search.listed }
+  if (search.currency !== 'any') tradeFilters.price = { option: search.currency }
+  if (Object.keys(tradeFilters).length > 0) filters.trade_filters = { filters: tradeFilters }
+  for (const filter of enabled) {
+    if (filter.kind !== 'property' || !filter.target) continue
+    const value = range(filter)
+    if (!value) continue
+    filters[filter.target.group] ??= { filters: {} }
+    filters[filter.target.group].filters[filter.target.filter] = value
+  }
+
   return {
     query: {
-      query: {
-        status: { option: 'online' },
-        ...(unique ? { name: item.name } : {}),
-        ...(item.baseType ? { type: item.baseType } : {}),
-        stats: [
-          useCount ? { type: 'count', filters, value: { min: filters.length - 1 } } : { type: 'and', filters },
-        ],
-        filters: { type_filters: { filters: typeFilters } },
-      },
-      sort: { price: 'asc' },
+      status: { option: search.status },
+      ...(search.name && { name: search.name }),
+      ...(search.type && { type: search.type }),
+      stats: [
+        {
+          type: 'and',
+          filters: enabled
+            .filter((filter) => filter.kind === 'mod' && filter.statId)
+            .map((filter) => {
+              const value = range(filter)
+              return value ? { id: filter.statId!, value } : { id: filter.statId! }
+            }),
+        },
+      ],
+      filters,
     },
-    matched,
-    unmatched,
-    relaxed: useCount,
+    sort: { price: 'asc' },
+  }
+}
+
+const TARGETS = new Set(PROPERTIES.map((entry) => `${entry.target.group}.${entry.target.filter}`).concat(['type_filters.ilvl', 'type_filters.quality', 'equipment_filters.rune_sockets']))
+const STAT_ID = /^[a-z]+\.[\w.]+$/
+const optionalNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
+const optionalText = (value: unknown) => (typeof value === 'string' && value.length > 0 && value.length < 200 ? value : undefined)
+
+export function sanitizeSearch(input: unknown): ItemSearch | null {
+  const search = input as Partial<ItemSearch> | null
+  if (!search || typeof search !== 'object' || !Array.isArray(search.filters)) return null
+  if (typeof search.rarity !== 'string' || !(search.rarity in RARITY_OPTIONS)) return null
+
+  const filters = search.filters.flatMap((raw): SearchFilter[] => {
+    const filter = raw as Partial<SearchFilter> | null
+    if (!filter || typeof filter.key !== 'string' || typeof filter.label !== 'string') return []
+    const base = {
+      key: filter.key,
+      label: filter.label,
+      enabled: filter.enabled === true,
+      min: optionalNumber(filter.min),
+      max: optionalNumber(filter.max),
+    }
+    if (filter.kind === 'property' && filter.target && TARGETS.has(`${filter.target.group}.${filter.target.filter}`)) {
+      return [{ ...base, kind: 'property', target: { group: filter.target.group, filter: filter.target.filter } }]
+    }
+    if (filter.kind === 'mod' && typeof filter.statId === 'string' && STAT_ID.test(filter.statId)) {
+      return [{ ...base, kind: 'mod', statId: filter.statId }]
+    }
+    return []
+  })
+
+  return {
+    name: optionalText(search.name),
+    type: optionalText(search.type),
+    category: optionalText(search.category),
+    rarity: search.rarity,
+    corrupted: search.corrupted === 'yes' || search.corrupted === 'no' ? search.corrupted : 'any',
+    status: typeof search.status === 'string' && search.status in STATUS_OPTIONS ? search.status : 'securable',
+    listed: typeof search.listed === 'string' && search.listed in LISTED_OPTIONS ? search.listed : 'any',
+    currency: typeof search.currency === 'string' && search.currency in CURRENCY_OPTIONS ? search.currency : 'any',
+    scale: typeof search.scale === 'number' && Number.isFinite(search.scale) ? clampScale(search.scale) : 0,
+    filters,
   }
 }

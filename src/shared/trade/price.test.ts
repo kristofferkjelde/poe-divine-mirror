@@ -1,18 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { formatAge, formatPrice, leagueIds, parseListings, pickLeague, rateLimitWait, tradeUrl, typicalListing } from './price'
+import { estimate, formatAge, formatPrice, leagueIds, parseListings, pickLeague, rateLimitWait, tradeUrl } from './price'
 
 describe('trade price helpers', () => {
   it('reads priced listings and skips unpriced ones', () => {
     const body = {
       result: [
-        { listing: { indexed: '2026-10-15T10:00:00Z', price: { type: '~price', amount: 3, currency: 'exalted' } } },
+        {
+          listing: { indexed: '2026-10-15T10:00:00Z', account: { name: 'Exile#1234' }, price: { type: '~price', amount: 3, currency: 'exalted' } },
+          item: { ilvl: 79, properties: [{ name: '[Quality]', values: [['+20%', 1]] }] },
+        },
         { listing: { indexed: '2026-10-15T10:00:00Z', price: null } },
         null,
         { listing: { price: { amount: 1, currency: 'divine' } } },
       ],
     }
     expect(parseListings(body)).toEqual([
-      { amount: 3, currency: 'exalted', indexed: '2026-10-15T10:00:00Z' },
+      { amount: 3, currency: 'exalted', indexed: '2026-10-15T10:00:00Z', account: 'Exile#1234', itemLevel: 79, quality: 20 },
       { amount: 1, currency: 'divine', indexed: undefined },
     ])
   })
@@ -24,8 +27,14 @@ describe('trade price helpers', () => {
     expect(formatAge('2026-10-15T11:30:00Z', now)).toBe('30m')
     expect(formatAge('2026-10-14T12:00:00Z', now)).toBe('24h')
     expect(formatAge(undefined, now)).toBeUndefined()
-    const listings = [1, 2, 3, 4].map((amount) => ({ amount, currency: 'exalted' }))
-    expect(typicalListing(listings)?.amount).toBe(2)
+  })
+
+  it('estimates the value from the cheapest listings', () => {
+    const listings = [1, 2, 3, 4, 5].map((amount) => ({ amount, currency: 'exalted' }))
+    expect(estimate(listings, 50)).toMatchObject({ value: { amount: 3 }, low: { amount: 1 }, high: { amount: 5 }, reliability: 'High' })
+    expect(estimate(listings.slice(0, 2), 2)?.reliability).toBe('Very low')
+    expect(estimate(listings, 8)?.reliability).toBe('Low')
+    expect(estimate([], 0)).toBeNull()
   })
 
   it('picks the current softcore trade league', () => {
