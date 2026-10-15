@@ -402,3 +402,32 @@ tr[data-direction='down'] .compare-delta {
   min-width: 0;
   color: var(--text-muted);
 }
+
+.panel[data-locked='false'] {
+  -webkit-app-region: drag;
+}
+
+.panel button {
+  -webkit-app-region: no-drag;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-row small {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.settings-toggle {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
+}

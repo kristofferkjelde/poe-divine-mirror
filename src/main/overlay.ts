@@ -1,6 +1,7 @@
-import { BrowserWindow, ipcMain, screen } from 'electron'
+import { BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
 import { IPC, type CapturedItem } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
+import type { SettingsStore } from './settingsStore'
 
 const WIDTH = 440
 const SCREEN_MARGIN = 24
@@ -9,8 +10,9 @@ export class Overlay {
   private readonly window: BrowserWindow
   private height = 600
   private anchor = { x: 0, y: 0 }
+  private placed: Rectangle | null = null
 
-  constructor() {
+  constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
       width: WIDTH,
       height: this.height,
@@ -18,7 +20,7 @@ export class Overlay {
       frame: false,
       transparent: true,
       resizable: false,
-      movable: false,
+      movable: !store.current.overlayLocked,
       skipTaskbar: true,
       alwaysOnTop: true,
       fullscreenable: false,
@@ -30,11 +32,16 @@ export class Overlay {
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
     this.window.on('blur', () => this.hide())
+    this.window.on('moved', () => this.rememberPosition())
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
         event.preventDefault()
         this.hide()
       }
+    })
+    store.onChange(() => {
+      this.window.setMovable(!store.current.overlayLocked)
+      if (this.window.isVisible()) this.reposition()
     })
 
     ipcMain.on(IPC.overlayHide, () => this.hide())
@@ -45,10 +52,6 @@ export class Overlay {
     })
 
     void loadRenderer(this.window)
-  }
-
-  get visible(): boolean {
-    return this.window.isVisible()
   }
 
   show(item: CapturedItem): void {
@@ -65,14 +68,31 @@ export class Overlay {
     return true
   }
 
-  private reposition(): void {
-    const { workArea } = screen.getDisplayNearestPoint(this.anchor)
-    const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
-    this.window.setBounds({
-      x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
-      y: Math.round(workArea.y + (workArea.height - height) / 2),
-      width: WIDTH,
-      height,
-    })
+  private rememberPosition(): void {
+    const [x, y] = this.window.getPosition()
+    if (this.placed && this.placed.x === x && this.placed.y === y) return
+    if (this.store.current.overlayLocked) return
+    void this.store.update({ overlayPosition: { x, y } })
   }
+
+  private reposition(): void {
+    const saved = this.store.current.overlayPosition
+    const { workArea } = screen.getDisplayNearestPoint(saved ?? this.anchor)
+    const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
+    const bounds = saved
+      ? {
+          x: clamp(saved.x, workArea.x, workArea.x + workArea.width - WIDTH),
+          y: clamp(saved.y, workArea.y, workArea.y + workArea.height - height),
+        }
+      : {
+          x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
+          y: Math.round(workArea.y + (workArea.height - height) / 2),
+        }
+    this.placed = { ...bounds, width: WIDTH, height }
+    this.window.setBounds(this.placed)
+  }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.round(Math.min(Math.max(value, min), max))
 }

@@ -13,17 +13,17 @@ export function App() {
 
   if (state.status === 'error') {
     return (
-      <Panel hotkeys={state.hotkeys}>
+      <Panel hotkeys={state.hotkeys} locked={state.locked}>
         <p className="panel-message">{state.message}</p>
       </Panel>
     )
   }
 
-  const { item, comparison, equippedTo, hotkeys, capturedAt } = state
+  const { item, comparison, equippedTo, hotkeys, locked, capturedAt } = state
   const comparable = gearSlotsFor(item.slot).length > 0
 
   return (
-    <Panel key={capturedAt} hotkeys={hotkeys}>
+    <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
       {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
       {comparison && <ComparisonView result={comparison} />}
       {!equippedTo && !comparison && comparable && item.slot && (

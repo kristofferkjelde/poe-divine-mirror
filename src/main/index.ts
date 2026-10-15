@@ -5,6 +5,7 @@ import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
 import { Overlay } from './overlay'
+import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
 
 const FOCUS_RETURN_MS = 60
@@ -20,7 +21,8 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 function start(): void {
-  const overlay = new Overlay()
+  const store = new SettingsStore()
+  const overlay = new Overlay(store)
   const gearStore = new GearStore()
   let busy = false
 
@@ -32,21 +34,29 @@ function start(): void {
       const text = await copyHoveredItem()
       if (!text) return
       const equippedTo = equip ? await gearStore.equip(text).catch(() => undefined) : undefined
-      overlay.show({ text, capturedAt: Date.now(), gear: gearStore.current, hotkeys: hotkeys.current, equippedTo })
+      overlay.show({
+        text,
+        capturedAt: Date.now(),
+        gear: gearStore.current,
+        hotkeys: hotkeys.current,
+        locked: store.current.overlayLocked,
+        equippedTo,
+      })
     } finally {
       busy = false
     }
   }
 
-  const hotkeys = new Hotkeys({
+  const hotkeys = new Hotkeys(store, {
     compare: () => void capture(false),
     equip: () => void capture(true),
   })
-  const settingsWindow = new SettingsWindow(hotkeys)
+  const settingsWindow = new SettingsWindow(store, hotkeys)
 
   tray = new Tray(nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')))
   const refreshTray = () => {
-    const { settings, unavailable } = hotkeys.state
+    const settings = store.current
+    const unavailable = hotkeys.unavailableActions
     tray?.setToolTip(
       unavailable.length === 0
         ? `PoE Item Checker: hover an item and press ${settings.hotkeys.compare}`
@@ -58,15 +68,21 @@ function start(): void {
         { label: `${settings.hotkeys.equip}: ${HOTKEY_LABELS.equip.toLowerCase()}`, enabled: false },
         { type: 'separator' },
         { label: 'Settings…', click: () => settingsWindow.open() },
+        {
+          label: 'Lock overlay position',
+          type: 'checkbox',
+          checked: settings.overlayLocked,
+          click: (item) => void store.update({ overlayLocked: item.checked }),
+        },
         { label: 'Clear saved gear', click: () => void gearStore.clear() },
         { label: 'Quit', click: () => app.quit() },
       ]),
     )
   }
   refreshTray()
-  hotkeys.onChange(refreshTray)
+  store.onChange(refreshTray)
   tray.on('double-click', () => settingsWindow.open())
-  if (hotkeys.state.unavailable.length > 0) settingsWindow.open()
+  if (hotkeys.unavailableActions.length > 0) settingsWindow.open()
 }
 
 app.on('window-all-closed', () => {})

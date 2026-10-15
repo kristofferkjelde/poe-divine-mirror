@@ -1,34 +1,30 @@
 import { globalShortcut } from 'electron'
-import type { SetHotkeyResult, SettingsState } from '../shared/ipc'
-import { DEFAULT_SETTINGS, normalizeSettings, type HotkeyAction, type Settings } from '../shared/settings'
-import { jsonFile } from './jsonFile'
+import type { SetHotkeyResult } from '../shared/ipc'
+import { DEFAULT_SETTINGS, type HotkeyAction, type Settings } from '../shared/settings'
+import type { SettingsStore } from './settingsStore'
 
 type Handlers = Record<HotkeyAction, () => void>
 
 export class Hotkeys {
-  private readonly file = jsonFile('settings.json')
-  private settings: Settings = normalizeSettings(this.file.read())
   private unavailable: HotkeyAction[] = []
-  private readonly listeners = new Set<() => void>()
 
-  constructor(private readonly handlers: Handlers) {
-    this.unavailable = this.register(this.settings.hotkeys)
-  }
-
-  get state(): SettingsState {
-    return { settings: this.settings, unavailable: [...this.unavailable] }
-  }
-
-  onChange(listener: () => void): void {
-    this.listeners.add(listener)
+  constructor(
+    private readonly store: SettingsStore,
+    private readonly handlers: Handlers,
+  ) {
+    this.unavailable = this.register(store.current.hotkeys)
   }
 
   get current(): Settings['hotkeys'] {
-    return { ...this.settings.hotkeys }
+    return { ...this.store.current.hotkeys }
+  }
+
+  get unavailableActions(): HotkeyAction[] {
+    return [...this.unavailable]
   }
 
   async set(action: HotkeyAction, accelerator: string): Promise<SetHotkeyResult> {
-    const previous = this.settings.hotkeys
+    const previous = this.store.current.hotkeys
     const other = (Object.keys(previous) as HotkeyAction[]).find(
       (key) => key !== action && previous[key].toLowerCase() === accelerator.toLowerCase(),
     )
@@ -41,19 +37,14 @@ export class Hotkeys {
       return { ok: false, error: `${accelerator} is taken by another app. Pick a different combination.` }
     }
 
-    this.settings = { ...this.settings, hotkeys: next }
     this.unavailable = unavailable
-    await this.file.write(this.settings)
-    this.notify()
-    return { ok: true, state: this.state }
+    await this.store.update({ hotkeys: next })
+    return { ok: true }
   }
 
-  async reset(): Promise<SettingsState> {
-    this.settings = structuredClone(DEFAULT_SETTINGS)
-    this.unavailable = this.register(this.settings.hotkeys)
-    await this.file.write(this.settings)
-    this.notify()
-    return this.state
+  async reset(): Promise<void> {
+    this.unavailable = this.register(DEFAULT_SETTINGS.hotkeys)
+    await this.store.update({ hotkeys: { ...DEFAULT_SETTINGS.hotkeys } })
   }
 
   suspend(): void {
@@ -61,11 +52,7 @@ export class Hotkeys {
   }
 
   resume(): void {
-    this.unavailable = this.register(this.settings.hotkeys)
-  }
-
-  private notify(): void {
-    this.listeners.forEach((listener) => listener())
+    this.unavailable = this.register(this.store.current.hotkeys)
   }
 
   private register(hotkeys: Settings['hotkeys']): HotkeyAction[] {

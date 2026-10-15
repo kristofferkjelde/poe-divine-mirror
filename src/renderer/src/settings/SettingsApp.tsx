@@ -1,5 +1,6 @@
 import type { HotkeyAction } from '../../../shared/settings'
 import { HotkeyField } from './HotkeyField'
+import { OverlaySettings } from './OverlaySettings'
 import { setSettingsState, useSettingsState } from './settingsStore'
 
 const ACTIONS: HotkeyAction[] = ['compare', 'equip']
@@ -26,6 +27,12 @@ export function SettingsApp() {
           <p className="settings-help">Loading…</p>
         )}
       </section>
+      {state && (
+        <section className="settings-section">
+          <h2>Overlay</h2>
+          <OverlaySettings settings={state.settings} />
+        </section>
+      )}
       <footer className="settings-footer">
         <button
           type="button"

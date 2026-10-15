@@ -14,28 +14,36 @@ export type OverlayState =
       comparison: GearComparison | null
       equippedTo?: GearSlot
       hotkeys: Settings['hotkeys']
+      locked: boolean
       capturedAt: number
     }
-  | { status: 'error'; message: string; hotkeys: Settings['hotkeys']; capturedAt: number }
+  | { status: 'error'; message: string; hotkeys: Settings['hotkeys']; locked: boolean; capturedAt: number }
 
 let state: OverlayState = { status: 'idle' }
 const listeners = new Set<() => void>()
 
-function toState({ text, capturedAt, gear, equippedTo, hotkeys }: CapturedItem): OverlayState {
+function toState({ text, capturedAt, gear, equippedTo, hotkeys, locked }: CapturedItem): OverlayState {
   try {
     const item = parseItem(text)
     const comparison = equippedTo ? null : compareWithGear(item, parseGear(gear))
-    return { status: 'item', item, comparison, equippedTo, hotkeys, capturedAt }
+    return { status: 'item', item, comparison, equippedTo, hotkeys, locked, capturedAt }
   } catch (error) {
     const message = error instanceof ItemParseError ? error.message : 'Could not read that item'
-    return { status: 'error', message, hotkeys, capturedAt }
+    return { status: 'error', message, hotkeys, locked, capturedAt }
   }
 }
 
-window.overlay.onItemCaptured((captured) => {
-  state = toState(captured)
+function setState(next: OverlayState) {
+  state = next
   listeners.forEach((listener) => listener())
-})
+}
+
+window.overlay.onItemCaptured((captured) => setState(toState(captured)))
+
+export async function setOverlayLocked(locked: boolean): Promise<void> {
+  if (state.status !== 'idle') setState({ ...state, locked })
+  await window.overlay.setLocked(locked)
+}
 
 function subscribe(listener: () => void) {
   listeners.add(listener)

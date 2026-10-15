@@ -33,6 +33,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover an item you're **wearing** and press **Alt+Shift+D** | It's saved as your equipped item for that slot (do this once per slot) |
 | Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
 | Press **Esc** or click the game | The popup closes |
+| Drag the popup anywhere | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Change the hotkeys: click one and press the new keys |
 | Right-click the tray icon → **Quit** | The app closes |
 

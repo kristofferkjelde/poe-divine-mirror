@@ -10,12 +10,15 @@ const overlay: OverlayApi = {
   resize: (height) => ipcRenderer.send(IPC.overlayResize, height),
   hide: () => ipcRenderer.send(IPC.overlayHide),
   openSettings: () => ipcRenderer.send(IPC.settingsOpen),
+  setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
 }
 
 const settings: SettingsApi = {
   get: () => ipcRenderer.invoke(IPC.settingsGet),
   setHotkey: (action, accelerator) => ipcRenderer.invoke(IPC.settingsSetHotkey, action, accelerator),
   reset: () => ipcRenderer.invoke(IPC.settingsReset),
+  resetPosition: () => ipcRenderer.invoke(IPC.settingsResetPosition),
+  setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
   setRecording: (recording) => ipcRenderer.send(IPC.settingsRecording, recording),
 }
 
