@@ -1,5 +1,4 @@
 import { app, globalShortcut, ipcMain, Menu, nativeImage, Tray } from 'electron'
-import { join } from 'node:path'
 import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
 import { IPC } from '../shared/ipc'
 import { HOTKEY_LABELS } from '../shared/settings'
@@ -8,6 +7,7 @@ import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
 import { Overlay } from './overlay'
+import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
 
@@ -24,6 +24,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 function start(): void {
+  app.setAppUserModelId('io.kjelde.poe-item-checker')
   const store = new SettingsStore()
   const overlay = new Overlay(store)
   const gearStore = new GearStore()
@@ -61,7 +62,7 @@ function start(): void {
   })
   const settingsWindow = new SettingsWindow(store, hotkeys, builds)
 
-  tray = new Tray(nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')))
+  tray = new Tray(nativeImage.createFromPath(ICON_PATH))
   const refreshTray = () => {
     const settings = store.current
     const unavailable = hotkeys.unavailableActions

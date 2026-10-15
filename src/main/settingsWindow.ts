@@ -4,7 +4,7 @@ import type { HotkeyAction } from '../shared/settings'
 import { BuildImportError, importBuild } from './buildImport'
 import type { BuildStore } from './buildStore'
 import type { Hotkeys } from './hotkeys'
-import { loadRenderer, PRELOAD_PATH } from './renderer'
+import { ICON_PATH, loadRenderer, PRELOAD_PATH } from './renderer'
 import type { SettingsStore } from './settingsStore'
 
 const ACTIONS = new Set<HotkeyAction>(['compare', 'equip'])
@@ -86,6 +86,7 @@ export class SettingsWindow {
 
     this.window = new BrowserWindow({
       width: 460,
+      icon: ICON_PATH,
       height: 720,
       minHeight: 480,
       resizable: true,

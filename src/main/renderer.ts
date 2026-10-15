@@ -11,3 +11,5 @@ export function loadRenderer(window: BrowserWindow, view?: 'settings'): Promise<
   }
   return window.loadFile(join(__dirname, '../renderer/index.html'), view ? { query: { view } } : undefined)
 }
+
+export const ICON_PATH = join(__dirname, '../../resources', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
