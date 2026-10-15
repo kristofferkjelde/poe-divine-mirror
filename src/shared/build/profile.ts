@@ -1,3 +1,4 @@
+import type { ParsedGear } from '../compare/gear'
 import { DERIVED, statKeys } from '../compare/stats'
 import { DEFAULT_WEIGHTS, matchingRule, type WeightRule, type WeightTag } from '../compare/weights'
 import type { PobBuild } from './pob'
@@ -12,6 +13,7 @@ export interface BuildProfile {
   defences: Defence[]
   lowLife: boolean
   gearStats: string[]
+  items: ParsedGear
   custom: Record<string, number>
 }
 
@@ -39,7 +41,9 @@ const SKILL_FAMILY_NAMES = [
 
 export function profileFromPob(build: PobBuild, source: string): BuildProfile {
   const gearStats = new Set<string>()
-  for (const item of build.items) {
+  const items: ParsedGear = {}
+  for (const { gearSlot, item } of build.items) {
+    items[gearSlot] = item
     for (const mod of item.mods) statKeys(mod, item.slot).forEach((key) => gearStats.add(key))
     if (item.slot === 'weapon' && item.mods.some((mod) => /^Adds # to # \w+ Damage$|Physical Damage$|Attack Speed$/.test(mod.template))) {
       gearStats.add(DERIVED.totalDps)
@@ -70,6 +74,7 @@ export function profileFromPob(build: PobBuild, source: string): BuildProfile {
     defences,
     lowLife: energyShield > life * 1.5,
     gearStats: [...gearStats].sort(),
+    items,
     custom: {},
   }
 }
@@ -193,6 +198,7 @@ export function isBuildProfile(value: unknown): value is BuildProfile {
     profile.gearStats.every((stat) => typeof stat === 'string') &&
     typeof profile.custom === 'object' &&
     profile.custom !== null &&
-    Object.values(profile.custom).every((weight) => Number.isFinite(weight))
+    Object.values(profile.custom).every((weight) => Number.isFinite(weight)) &&
+    (profile.items === undefined || (typeof profile.items === 'object' && profile.items !== null))
   )
 }

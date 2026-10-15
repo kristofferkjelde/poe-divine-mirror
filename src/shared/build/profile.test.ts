@@ -3,7 +3,8 @@ import { deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { BuildImportError, decodePobCode, importBuild } from '../../main/buildImport'
 import { compareItems } from '../compare/compare'
-import { DERIVED } from '../compare/stats'
+import { compareWithGear } from '../compare/gear'
+import { DERIVED, extractStats } from '../compare/stats'
 import { DEFAULT_WEIGHTS, weightFor } from '../compare/weights'
 import { parseItem } from '../item/parse'
 import { parsePobXml, PobParseError } from './pob'
@@ -26,11 +27,36 @@ describe('parsePobXml', () => {
   })
 
   it('reads only equipped gear and resolves ranges, variants and runes', () => {
-    expect(build.items.map((item) => item.slot)).toEqual(['weapon', 'helmet', 'ring', 'boots'])
-    const weapon = build.items[0]
+    expect(build.items.map((entry) => entry.gearSlot)).toEqual(['weapon', 'helmet', 'ring1', 'boots'])
+    const weapon = build.items[0].item
     expect(weapon.mods.map((mod) => mod.text)).toContain('Adds 22 to 37 Physical Damage')
     expect(weapon.mods[0].type).toBe('rune')
-    expect(build.items[3].mods.map((mod) => mod.text)).toEqual(['+20 to Dexterity', '+5 to maximum Mana', '20% increased Movement Speed'])
+    expect(build.items[3].item.mods.map((mod) => mod.text)).toEqual([
+      '+20 to Dexterity',
+      '+5 to maximum Mana',
+      '20% increased Movement Speed',
+    ])
+  })
+
+  it('works out weapon damage from the base type and local mods', () => {
+    const weapon = build.items[0].item
+    expect(weapon.baseType).toBe('Hunting Spear')
+    expect(Object.fromEntries(weapon.properties.map(({ name, value }) => [name, value]))).toEqual({
+      'Physical Damage': '51-86',
+      'Elemental Damage': '8-105',
+      'Critical Hit Chance': '5%',
+      'Attacks per Second': '1.77',
+    })
+    const stats = extractStats(weapon)
+    expect(stats.get(DERIVED.physicalDps)?.value).toBeCloseTo(121.2, 0)
+    expect(stats.get(DERIVED.totalDps)?.value).toBeCloseTo(221.2, 0)
+  })
+
+  it('keeps armour values from the build', () => {
+    const helmet = build.items[1].item
+    expect(helmet.properties).toEqual([{ name: 'Evasion Rating', value: '412', augmented: false }])
+    expect(helmet.rarity).toBe('Rare')
+    expect(helmet.baseType).toBe('Elite Helm')
   })
 
   it('rejects PoE 1 builds', () => {
@@ -80,6 +106,16 @@ describe('profileFromPob', () => {
       custom: true,
       fromBuild: true,
     })
+  })
+
+  it("compares an item against the build's item for that slot", () => {
+    const ring = parseItem(
+      'Item Class: Rings\nRarity: Rare\nStorm Loop\nIron Ring\n--------\nItem Level: 70\n--------\n+90 to maximum Life\n+35% to Fire Resistance\nAdds 9 to 16 Physical Damage to Attacks\nAdds 7 to 12 Cold Damage to Attacks',
+    )
+    const result = compareWithGear(ring, profile.items, rulesForProfile(profile))
+    expect(result?.slot).toBe('ring1')
+    expect(result?.equipped.name).toBe('Doom Coil')
+    expect(result?.comparison.verdict).toBe('upgrade')
   })
 
   it('falls back to the default weights without a build', () => {

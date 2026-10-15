@@ -1,11 +1,22 @@
+import type { GearSlot } from '../gear'
 import { parseModLine } from '../item/parse'
-import type { Mod, Slot } from '../item/types'
+import type { Mod, ParsedItem, Property, Rarity, Slot } from '../item/types'
+import WEAPON_BASES from './weaponBases.json'
 
 export interface PobItem {
-  slot: Slot
-  name: string
-  mods: Mod[]
+  gearSlot: GearSlot
+  item: ParsedItem
 }
+
+interface WeaponBase {
+  damage: Partial<Record<DamageType, [number, number]>>
+  crit: number
+  aps: number
+}
+
+type DamageType = 'Physical' | 'Fire' | 'Cold' | 'Lightning' | 'Chaos'
+
+const BASES = WEAPON_BASES as unknown as Record<string, WeaponBase>
 
 export interface PobBuild {
   className?: string
@@ -19,7 +30,7 @@ export interface PobBuild {
 
 export class PobParseError extends Error {}
 
-const SLOTS: Record<string, Slot> = {
+const SLOTS: Record<string, GearSlot> = {
   'Weapon 1': 'weapon',
   'Weapon 2': 'offhand',
   Helmet: 'helmet',
@@ -28,8 +39,21 @@ const SLOTS: Record<string, Slot> = {
   Boots: 'boots',
   Belt: 'belt',
   Amulet: 'amulet',
-  'Ring 1': 'ring',
-  'Ring 2': 'ring',
+  'Ring 1': 'ring1',
+  'Ring 2': 'ring2',
+}
+
+const ITEM_SLOT: Record<GearSlot, Slot> = {
+  weapon: 'weapon',
+  offhand: 'offhand',
+  helmet: 'helmet',
+  body: 'body',
+  gloves: 'gloves',
+  boots: 'boots',
+  belt: 'belt',
+  amulet: 'amulet',
+  ring1: 'ring',
+  ring2: 'ring',
 }
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
@@ -99,29 +123,75 @@ function equippedItems(xml: string): PobItem[] {
 
   const result: PobItem[] = []
   for (const { attrs } of slots) {
-    const slot = SLOTS[attrs.name]
+    const gearSlot = SLOTS[attrs.name]
     const text = byId.get(attrs.itemId)
-    if (!slot || !text || attrs.itemId === '0') continue
-    result.push({ slot, ...parsePobItem(text) })
+    if (!gearSlot || !text || attrs.itemId === '0') continue
+    result.push({ gearSlot, item: parsePobItem(text, ITEM_SLOT[gearSlot]) })
   }
   return result
 }
 
 const RANGE = /\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g
 
-export function parsePobItem(text: string): { name: string; mods: Mod[] } {
+const RARITIES: Record<string, Rarity> = { NORMAL: 'Normal', MAGIC: 'Magic', RARE: 'Rare', UNIQUE: 'Unique' }
+const ARMOUR_PROPERTIES: Record<string, string> = {
+  Armour: 'Armour',
+  Evasion: 'Evasion Rating',
+  'Energy Shield': 'Energy Shield',
+  Spirit: 'Spirit',
+}
+
+export function parsePobItem(text: string, slot: Slot): ParsedItem {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
   const rarityIndex = lines.findIndex((line) => line.startsWith('Rarity:'))
+  const rarity = RARITIES[lines[rarityIndex]?.slice('Rarity:'.length).trim().toUpperCase()] ?? 'Unknown'
+  const named = rarity === 'Rare' || rarity === 'Unique'
   const name = lines[rarityIndex + 1] ?? 'Unknown item'
-  const variant = /^Selected Variant: (\d+)$/m.exec(text)?.[1]
   const start = lines.findIndex((line) => /^Implicits: \d+$/.test(line))
-  if (start < 0) return { name, mods: [] }
+  const header = lines.slice(rarityIndex + 1, start < 0 ? undefined : start)
+  const field = (key: string) => header.find((line) => line.startsWith(`${key}: `))?.slice(key.length + 2)
 
+  const mods = start < 0 ? [] : parsePobMods(lines.slice(start + 1), /^Selected Variant: (\d+)$/m.exec(text)?.[1])
+  const baseType = named ? lines[rarityIndex + 2] : findWeaponBase(name)
+  const quality = Number(field('Quality')) || 0
+
+  const properties: Property[] = []
+  for (const [key, property] of Object.entries(ARMOUR_PROPERTIES)) {
+    const value = field(key)
+    if (value) properties.push({ name: property, value, augmented: false })
+  }
+  const base = baseType ? BASES[baseType] : undefined
+  if (slot === 'weapon' && base) properties.push(...weaponProperties(base, mods, quality))
+
+  return {
+    itemClass: '',
+    slot,
+    rarity,
+    name,
+    baseType,
+    itemLevel: Number(field('Item Level')) || undefined,
+    quality: quality || undefined,
+    properties,
+    requirements: { level: Number(field('LevelReq')) || undefined },
+    mods,
+    corrupted: false,
+    unidentified: false,
+    mirrored: false,
+  }
+}
+
+function findWeaponBase(name: string): string | undefined {
+  return Object.keys(BASES)
+    .filter((base) => name.includes(base))
+    .sort((a, b) => b.length - a.length)[0]
+}
+
+function parsePobMods(lines: string[], variant: string | undefined): Mod[] {
   const mods: Mod[] = []
-  for (const raw of lines.slice(start + 1)) {
+  for (const raw of lines) {
     const tags = new Map<string, string>()
     const line = raw.replace(/^(?:\{([\w]+)(?::([^}]*))?\})+/, (prefix) => {
       for (const [, key, value] of prefix.matchAll(/\{(\w+)(?::([^}]*))?\}/g)) tags.set(key, value ?? '')
@@ -137,5 +207,35 @@ export function parsePobItem(text: string): { name: string; mods: Mod[] } {
     const type = tags.has('rune') ? 'rune' : tags.has('enchant') ? 'enchant' : 'explicit'
     mods.push(parseModLine(resolved, type))
   }
-  return { name, mods }
+  return mods
+}
+
+function weaponProperties(base: WeaponBase, mods: Mod[], quality: number): Property[] {
+  const sum = (template: string) =>
+    mods.filter((mod) => mod.template === template).reduce((total, mod) => total + (mod.values[0] ?? 0), 0)
+  const added = (type: DamageType): [number, number] =>
+    mods
+      .filter((mod) => mod.template === `Adds # to # ${type} Damage`)
+      .reduce<[number, number]>((total, mod) => [total[0] + mod.values[0], total[1] + mod.values[1]], [0, 0])
+  const damage = (type: DamageType, multiplier = 1): [number, number] | null => {
+    const [baseMin, baseMax] = base.damage[type] ?? [0, 0]
+    const [addMin, addMax] = added(type)
+    const range: [number, number] = [Math.round((baseMin + addMin) * multiplier), Math.round((baseMax + addMax) * multiplier)]
+    return range[1] > 0 ? range : null
+  }
+  const format = ([min, max]: [number, number]) => `${min}-${max}`
+
+  const properties: Property[] = []
+  const physical = damage('Physical', 1 + (sum('#% increased Physical Damage') + quality) / 100)
+  if (physical) properties.push({ name: 'Physical Damage', value: format(physical), augmented: true })
+  const elemental = (['Fire', 'Cold', 'Lightning'] as const).map((type) => damage(type)).filter((range) => range !== null)
+  if (elemental.length > 0) properties.push({ name: 'Elemental Damage', value: elemental.map(format).join(', '), augmented: true })
+  const chaos = damage('Chaos')
+  if (chaos) properties.push({ name: 'Chaos Damage', value: format(chaos), augmented: true })
+
+  const crit = base.crit + sum('+#% to Critical Hit Chance')
+  properties.push({ name: 'Critical Hit Chance', value: `${Number(crit.toFixed(2))}%`, augmented: crit !== base.crit })
+  const aps = base.aps * (1 + sum('#% increased Attack Speed') / 100)
+  properties.push({ name: 'Attacks per Second', value: aps.toFixed(2), augmented: aps !== base.aps })
+  return properties
 }

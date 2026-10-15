@@ -44,7 +44,9 @@ Works anywhere you can hover an item: your inventory, stash, vendors, or the gro
 1. Get your build's Path of Building code. On **Mobalytics**, open the build and click **Copy Code** next to Path of Building. In **Path of Building**, use **Import/Export Build → Generate**. A **pobb.in**, **poe.ninja** or **Maxroll** link works too.
 2. Open **Settings**, paste it under **Build**, and click **Import build**.
 
-The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it. The popup shows **Scored for …** with your build's name.
+The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it.
+
+With a build added, **Alt+D** always compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. If you've also saved your own item for that slot, a second comparison against it shows underneath.
 
 **Reading the popup**
 

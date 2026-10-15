@@ -9,7 +9,13 @@ const VERDICT_LABELS: Record<Verdict, string> = {
   sidegrade: '≈ Sidegrade',
 }
 
-export function ComparisonView({ result, buildName }: { result: GearComparison; buildName?: string }) {
+interface Props {
+  result: GearComparison
+  against: 'gear' | 'build'
+  buildName: string | undefined | null
+}
+
+export function ComparisonView({ result, against, buildName }: Props) {
   const { comparison, equipped, slot } = result
   const scored = comparison.rows.filter((row) => row.weight !== 0)
   const unscored = comparison.rows.filter((row) => row.weight === 0)
@@ -25,11 +31,14 @@ export function ComparisonView({ result, buildName }: { result: GearComparison; 
         </span>
       </header>
       <p className="compare-against">
-        vs your {GEAR_SLOT_LABELS[slot]}: <span className="item-value">{equipped.name}</span>
+        vs your {against === 'build' ? "build's " : ''}
+        {GEAR_SLOT_LABELS[slot]}: <span className="item-value">{equipped.name}</span>
       </p>
-      <p className="compare-build">
-        {buildName ? `Scored for ${buildName}` : 'General weights. Add your build in Settings.'}
-      </p>
+      {buildName !== null && (
+        <p className="compare-build">
+          {buildName ? `Scored for ${buildName}` : 'General weights. Add your build in Settings.'}
+        </p>
+      )}
       {comparison.rows.length === 0 ? (
         <p className="compare-empty">Same stats as your equipped item</p>
       ) : (

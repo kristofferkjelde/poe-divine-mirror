@@ -13,6 +13,7 @@ export type OverlayState =
       status: 'item'
       item: ParsedItem
       comparison: GearComparison | null
+      buildComparison: GearComparison | null
       equippedTo?: GearSlot
       build: BuildProfile | null
       hotkeys: Settings['hotkeys']
@@ -27,8 +28,10 @@ const listeners = new Set<() => void>()
 function toState({ text, capturedAt, gear, equippedTo, hotkeys, locked, build }: CapturedItem): OverlayState {
   try {
     const item = parseItem(text)
-    const comparison = equippedTo ? null : compareWithGear(item, parseGear(gear), rulesForProfile(build))
-    return { status: 'item', item, comparison, equippedTo, build, hotkeys, locked, capturedAt }
+    const rules = rulesForProfile(build)
+    const comparison = equippedTo ? null : compareWithGear(item, parseGear(gear), rules)
+    const buildComparison = equippedTo || !build?.items ? null : compareWithGear(item, build.items, rules)
+    return { status: 'item', item, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt }
   } catch (error) {
     const message = error instanceof ItemParseError ? error.message : 'Could not read that item'
     return { status: 'error', message, hotkeys, locked, capturedAt }
