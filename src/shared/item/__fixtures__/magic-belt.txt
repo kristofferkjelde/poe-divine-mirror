@@ -1,0 +1,11 @@
+Item Class: Belts
+Rarity: Magic
+Heavy Belt of the Bear
+--------
+Requires: Level 8
+--------
+Item Level: 14
+--------
+Flasks gain 0.17 charges per Second (implicit)
+--------
++14 to Strength

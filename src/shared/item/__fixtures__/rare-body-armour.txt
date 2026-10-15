@@ -1,0 +1,21 @@
+Item Class: Body Armours
+Rarity: Rare
+Havoc Shell
+Full Plate
+--------
+Quality: +20% (augmented)
+Armour: 512 (augmented)
+--------
+Requires: Level 52, 86 (augmented) Str
+--------
+Sockets: S S
+--------
+Item Level: 68
+--------
++15% to Fire Resistance (rune)
+--------
++52 to maximum Life
+36% increased Armour
++18% to Cold Resistance
++11% to Lightning Resistance
+-7% to Chaos Resistance

@@ -1,0 +1,21 @@
+Item Class: Spears
+Rarity: Rare
+Storm Fang
+Hardwood Spear
+--------
+Spear
+Physical Damage: 20-38 (augmented)
+Critical Hit Chance: 5.00%
+Attacks per Second: 1.50
+--------
+Requires: Level 16, 18 Str, 31 Dex
+--------
+Item Level: 22
+--------
+Grants Skill: Spear Throw
+--------
+Adds 5 to 9 Physical Damage
+12% increased Attack Speed
++31 to Accuracy Rating
+--------
+Corrupted
