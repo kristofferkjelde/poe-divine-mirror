@@ -94,6 +94,11 @@ describe('compareItems', () => {
     expect(result.rows.slice(1).map((row) => row.deltaDisplay).sort()).toEqual(['+3', 'Lost'])
   })
 
+  it('scores the game\'s lowercase "Fire damage to Attacks" wording', () => {
+    const result = compareItems(item(['Adds 16 to 32 Fire damage to Attacks']), item([]))
+    expect(result.rows[0]).toMatchObject({ weight: 1.5, contribution: 36 })
+  })
+
   it('treats near-identical items as a sidegrade', () => {
     const result = compareItems(item(['+80 to maximum Life']), item(['+79 to maximum Life']))
     expect(result.verdict).toBe('sidegrade')

@@ -39,9 +39,12 @@ body {
   color: var(--text-value);
 }
 
-.panel {
+.panel-scroll {
   max-height: 100vh;
   overflow-y: auto;
+}
+
+.panel {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   box-shadow:

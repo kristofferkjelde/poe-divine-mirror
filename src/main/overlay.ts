@@ -2,13 +2,12 @@ import { BrowserWindow, ipcMain, screen } from 'electron'
 import { IPC, type CapturedItem } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 
-const WIDTH = 420
-const MAX_HEIGHT = 720
-const CURSOR_OFFSET = 24
+const WIDTH = 440
+const SCREEN_MARGIN = 24
 
 export class Overlay {
   private readonly window: BrowserWindow
-  private height = MAX_HEIGHT
+  private height = 600
   private anchor = { x: 0, y: 0 }
 
   constructor() {
@@ -41,7 +40,7 @@ export class Overlay {
     ipcMain.on(IPC.overlayHide, () => this.hide())
     ipcMain.on(IPC.overlayResize, (_event, height: unknown) => {
       if (typeof height !== 'number' || !Number.isFinite(height)) return
-      this.height = Math.min(Math.ceil(height), MAX_HEIGHT)
+      this.height = Math.ceil(height)
       this.reposition()
     })
 
@@ -68,9 +67,12 @@ export class Overlay {
 
   private reposition(): void {
     const { workArea } = screen.getDisplayNearestPoint(this.anchor)
-    const fitsRight = this.anchor.x + CURSOR_OFFSET + WIDTH <= workArea.x + workArea.width
-    const x = fitsRight ? this.anchor.x + CURSOR_OFFSET : this.anchor.x - CURSOR_OFFSET - WIDTH
-    const y = Math.min(Math.max(this.anchor.y - this.height / 2, workArea.y), workArea.y + workArea.height - this.height)
-    this.window.setBounds({ x: Math.round(x), y: Math.round(y), width: WIDTH, height: this.height })
+    const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
+    this.window.setBounds({
+      x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
+      y: Math.round(workArea.y + (workArea.height - height) / 2),
+      width: WIDTH,
+      height,
+    })
   }
 }
