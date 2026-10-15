@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   windows:
@@ -19,6 +20,29 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - run: npx electron-builder --win --publish always
+      - run: npx electron-builder --win --publish never
+      - id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: release/Divine-Mirror-Setup-*.exe
+          if-no-files-found: error
+      - if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: release
+      - name: Attach the installer to the release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Divine Mirror ${TAG#v}" --generate-notes
+          gh release upload "$TAG" release/Divine-Mirror-Setup-*.exe --clobber
