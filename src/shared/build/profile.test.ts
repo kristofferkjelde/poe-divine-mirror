@@ -121,8 +121,8 @@ describe('profileFromPob', () => {
     expect(weightFor('#% increased Cast Speed', 'ring', rules)).toBe(0)
     expect(weightFor(DERIVED.energyShield, 'helmet', rules)).toBeCloseTo(0.06)
     expect(weightFor(DERIVED.evasion, 'helmet', rules)).toBeCloseTo(0.075)
-    expect(weightFor('+# to Level of all Melee Skills', 'amulet', rules)).toBe(15)
-    expect(weightFor('+# to Level of all Spell Skills', 'amulet', rules)).toBe(1)
+    expect(weightFor('+# to Level of all Melee Skills', 'amulet', rules)).toBe(22.5)
+    expect(weightFor('+# to Level of all Spell Skills', 'amulet', rules)).toBe(0)
     expect(weightFor('+# to Level of all Projectile Skills', 'amulet', rules)).toBe(15)
   })
 

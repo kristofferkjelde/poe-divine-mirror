@@ -1,5 +1,5 @@
-import { slotForItemClass } from './slots'
-import type { Affix, Mod, ModType, ParsedItem, Property, Rarity, Requirements } from './types'
+import { itemClass as lookupItemClass } from './slots'
+import type { Affix, DamageRange, Mod, ModType, ParsedItem, Property, Rarity, Requirements, WeaponStats } from './types'
 
 const SEPARATOR = /^-{8,}$/
 const FLAGS = new Set(['Corrupted', 'Unidentified', 'Mirrored', 'Split', 'Unmodifiable'])
@@ -63,7 +63,28 @@ export function parseItem(raw: string): ParsedItem {
     seenMods = true
   }
 
+  if (item.slot === 'weapon') item.weapon = weaponStats(item.properties)
   return item
+}
+
+const damageRanges = (value: string): DamageRange[] =>
+  [...value.matchAll(/(\d+)(?:-| or )(\d+)/g)].map(([, min, max]) => [Number(min), Number(max)])
+
+function firstNumber(value: string): number | undefined {
+  const match = /-?\d+(?:\.\d+)?/.exec(value)
+  return match ? Number(match[0]) : undefined
+}
+
+function weaponStats(properties: Property[]): WeaponStats {
+  const weapon: WeaponStats = { elemental: [] }
+  for (const { name, value } of properties) {
+    if (name === 'Physical Damage') weapon.physical = damageRanges(value)[0]
+    else if (name === 'Chaos Damage') weapon.chaos = damageRanges(value)[0]
+    else if (/Damage$/.test(name)) weapon.elemental.push(...damageRanges(value))
+    else if (name === 'Critical Hit Chance') weapon.critChance = firstNumber(value)
+    else if (name === 'Attacks per Second') weapon.attacksPerSecond = firstNumber(value)
+  }
+  return weapon
 }
 
 function isInstruction(line: string): boolean {
@@ -108,7 +129,7 @@ function parseHeader(lines: string[]): ParsedItem {
 
   return {
     itemClass,
-    slot: slotForItemClass(itemClass),
+    slot: lookupItemClass(itemClass)?.slot,
     rarity,
     name,
     baseType,

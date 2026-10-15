@@ -1,4 +1,9 @@
-export type HotkeyAction = 'compare' | 'equip' | 'price'
+export const HOTKEY_ACTIONS = ['compare', 'equip', 'price'] as const
+
+export type HotkeyAction = (typeof HOTKEY_ACTIONS)[number]
+
+export const isHotkeyAction = (value: unknown): value is HotkeyAction =>
+  HOTKEY_ACTIONS.includes(value as HotkeyAction)
 
 export interface Point {
   x: number
@@ -39,11 +44,12 @@ export function normalizeSettings(value: unknown): Settings {
   const input = value as Partial<Settings> | null
   const hotkeys = input?.hotkeys
   return {
-    hotkeys: {
-      compare: typeof hotkeys?.compare === 'string' ? hotkeys.compare : DEFAULT_SETTINGS.hotkeys.compare,
-      equip: typeof hotkeys?.equip === 'string' ? hotkeys.equip : DEFAULT_SETTINGS.hotkeys.equip,
-      price: typeof hotkeys?.price === 'string' ? hotkeys.price : DEFAULT_SETTINGS.hotkeys.price,
-    },
+    hotkeys: Object.fromEntries(
+      HOTKEY_ACTIONS.map((action) => {
+        const value = hotkeys?.[action]
+        return [action, typeof value === 'string' ? value : DEFAULT_SETTINGS.hotkeys[action]]
+      }),
+    ) as Settings['hotkeys'],
     overlayPosition: isPoint(input?.overlayPosition) ? input.overlayPosition : null,
     overlayLocked: input?.overlayLocked === true,
     league: typeof input?.league === 'string' && input.league.trim() !== '' ? input.league : null,

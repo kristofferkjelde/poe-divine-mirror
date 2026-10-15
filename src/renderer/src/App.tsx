@@ -1,5 +1,5 @@
 import { PROFILE_VERSION } from '../../shared/build/profile'
-import { GEAR_SLOT_LABELS, gearSlotsFor } from '../../shared/gear'
+import { GEAR_SLOTS, gearSlotsFor } from '../../shared/gear'
 import { SLOT_LABELS } from '../../shared/item/slots'
 import { ComparisonView } from './components/ComparisonView'
 import { GearHint } from './components/GearHint'
@@ -37,7 +37,7 @@ export function App() {
 
   return (
     <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
-      {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
+      {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOTS[equippedTo].label}</GearHint>}
       {buildComparison && <ComparisonView result={buildComparison} against="build" buildName={buildName} />}
       {comparison && (
         <ComparisonView result={comparison} against="gear" buildName={buildComparison ? null : buildName} />

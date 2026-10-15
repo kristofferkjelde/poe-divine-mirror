@@ -1,6 +1,6 @@
 import { app, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
 import { uIOhook } from 'uiohook-napi'
-import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
+import { isGearSlot } from '../shared/gear'
 import { IPC } from '../shared/ipc'
 import { HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
 import { BuildStore } from './buildStore'
@@ -42,7 +42,7 @@ function start(): void {
     if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
   })
   ipcMain.handle(IPC.gearForget, async (_event, slot: unknown) => {
-    if (typeof slot === 'string' && slot in GEAR_SLOT_LABELS) await gearStore.forget(slot as GearSlot)
+    if (isGearSlot(slot)) await gearStore.forget(slot)
   })
   let busy = false
   let queued: HotkeyAction | null = null

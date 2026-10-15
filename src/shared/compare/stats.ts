@@ -1,4 +1,6 @@
-import type { Mod, ParsedItem, Slot } from '../item/types'
+import type { DamageRange, Mod, ParsedItem, Slot } from '../item/types'
+import { isRangeMod, modValue } from '../item/mods'
+import { isArmourSlot } from '../item/slots'
 
 export interface StatValue {
   value: number
@@ -22,7 +24,6 @@ export const DERIVED = {
   block: 'Block Chance',
 } as const
 
-const ARMOUR_SLOTS = new Set<Slot>(['helmet', 'body', 'gloves', 'boots', 'offhand'])
 const DEFENCES = '(?:Armour|Evasion Rating|Energy Shield)'
 const LOCAL_DEFENCE = [
   new RegExp(`^#% increased ${DEFENCES}(?: and ${DEFENCES})?$`),
@@ -44,7 +45,7 @@ export function extractStats(item: ParsedItem): StatMap {
 
   for (const mod of item.mods) {
     const local = isLocal(mod.template, item.slot)
-    const entries: Array<[string, number]> = local ? [[mod.template, modValue(mod)]] : expandMod(mod)
+    const entries: Array<[string, number]> = local ? [[mod.template, valueOf(mod)]] : expandMod(mod)
     for (const [key, value] of entries) add(stats, key, value, mod, local)
   }
 
@@ -58,18 +59,14 @@ export function statKeys(mod: Mod, slot: Slot | undefined): string[] {
 
 export function isLocal(template: string, slot: Slot | undefined): boolean {
   if (slot === 'weapon') return LOCAL_WEAPON.some((pattern) => pattern.test(template))
-  if (slot && ARMOUR_SLOTS.has(slot)) return LOCAL_DEFENCE.some((pattern) => pattern.test(template))
+  if (isArmourSlot(slot)) return LOCAL_DEFENCE.some((pattern) => pattern.test(template))
   return false
 }
 
-function modValue(mod: Mod): number {
-  if (mod.values.length === 0) return 1
-  if (mod.values.length === 2 && mod.template.startsWith('Adds')) return (mod.values[0] + mod.values[1]) / 2
-  return mod.values[0]
-}
+const valueOf = (mod: Mod): number => modValue(mod) ?? 1
 
 function expandMod(mod: Mod): Array<[string, number]> {
-  const value = modValue(mod)
+  const value = valueOf(mod)
   const template = mod.template
 
   const reduced = /^#% reduced (.+)$/.exec(template)
@@ -99,7 +96,7 @@ function add(stats: StatMap, key: string, value: number, mod: Mod, local: boolea
 
   if (mod.values.length === 0) {
     stats.set(key, { value: total, display: 'Yes', ...(local && { local }) })
-  } else if (mod.values.length === 2 && mod.template.startsWith('Adds')) {
+  } else if (isRangeMod(mod)) {
     const range: [number, number] = [
       (existing?.range?.[0] ?? 0) + mod.values[0],
       (existing?.range?.[1] ?? 0) + mod.values[1],
@@ -124,18 +121,19 @@ function addProperties(item: ParsedItem, stats: StatMap): void {
     if (value !== undefined) stats.set(key, { value, display: formatNumber(value) })
   }
 
-  if (item.slot !== 'weapon') return
+  const weapon = item.slot === 'weapon' ? item.weapon : undefined
+  if (!weapon) return
 
-  const attacksPerSecond = firstNumber(property('Attacks per Second'))
-  const critical = firstNumber(property('Critical Hit Chance'))
-  if (critical !== undefined) stats.set(DERIVED.criticalHitChance, { value: critical, display: `${critical}%` })
+  const { critChance, attacksPerSecond } = weapon
+  if (critChance !== undefined) stats.set(DERIVED.criticalHitChance, { value: critChance, display: `${formatNumber(critChance)}%` })
   if (attacksPerSecond === undefined) return
   stats.set(DERIVED.attacksPerSecond, { value: attacksPerSecond, display: formatNumber(attacksPerSecond) })
 
-  const physical = averageDamage(property('Physical Damage'))
-  const elemental = item.properties
-    .filter((entry) => entry.name !== 'Physical Damage' && /Damage$/.test(entry.name))
-    .reduce((sum, entry) => sum + averageDamage(entry.value), 0)
+  const physical = averageDamage(weapon.physical)
+  const elemental = [...weapon.elemental, ...(weapon.chaos ? [weapon.chaos] : [])].reduce(
+    (sum, range) => sum + averageDamage(range),
+    0,
+  )
 
   const physicalDps = physical * attacksPerSecond
   const elementalDps = elemental * attacksPerSecond
@@ -150,14 +148,7 @@ function firstNumber(value: string | undefined): number | undefined {
   return match ? Number(match[0]) : undefined
 }
 
-function averageDamage(value: string | undefined): number {
-  if (!value) return 0
-  let total = 0
-  for (const [, min, max] of value.matchAll(/(\d+)(?:-| or )(\d+)/g)) {
-    total += (Number(min) + Number(max)) / 2
-  }
-  return total
-}
+const averageDamage = (range: DamageRange | undefined): number => (range ? (range[0] + range[1]) / 2 : 0)
 
 export function formatNumber(value: number): string {
   const digits = Math.abs(value) >= 100 ? 0 : Math.abs(value) >= 10 ? 1 : 2

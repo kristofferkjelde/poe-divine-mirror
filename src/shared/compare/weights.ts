@@ -5,7 +5,7 @@ export type WeightTag = 'attack' | 'spell' | 'minion' | 'armour' | 'evasion' | '
 
 export interface WeightRule {
   stat: string | RegExp
-  weight: number
+  weight: number | ((stat: string) => number)
   slots?: Slot[]
   tag?: WeightTag
 }
@@ -58,5 +58,9 @@ export function matchingRule(stat: string, slot: Slot | undefined, rules: Weight
 }
 
 export function weightFor(stat: string, slot: Slot | undefined, rules: WeightRule[] = DEFAULT_WEIGHTS): number {
-  return matchingRule(stat, slot, rules)?.weight ?? 0
+  const rule = matchingRule(stat, slot, rules)
+  return rule ? ruleWeight(rule, stat) : 0
 }
+
+export const ruleWeight = (rule: WeightRule, stat: string): number =>
+  typeof rule.weight === 'number' ? rule.weight : rule.weight(stat)

@@ -1,5 +1,7 @@
 import { DERIVED, extractStats, isLocal } from '../compare/stats'
 import type { Mod, ModType, ParsedItem, Slot } from '../item/types'
+import { modValue } from '../item/mods'
+import { isArmourSlot, itemClass } from '../item/slots'
 
 export interface TradeStatEntry {
   id: string
@@ -104,7 +106,6 @@ const UNSCALED = new Set(['rune_sockets', 'ilvl'])
 
 const MOD_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated', 'implicit', 'rune', 'enchant'])
 const ENABLED_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated'])
-const ARMOUR_SLOTS: ReadonlySet<Slot> = new Set(['helmet', 'body', 'gloves', 'boots', 'offhand'])
 
 const GROUPS: Record<ModType, string[]> = {
   explicit: ['explicit'],
@@ -121,43 +122,12 @@ const PROPERTIES: Array<{ stat: string; label: string; target: PropertyTarget; e
   { stat: DERIVED.elementalDps, label: 'Elemental DPS', target: { group: 'equipment_filters', filter: 'edps' }, enabled: () => false },
   { stat: DERIVED.criticalHitChance, label: 'Critical Hit Chance', target: { group: 'equipment_filters', filter: 'crit' }, enabled: () => false },
   { stat: DERIVED.attacksPerSecond, label: 'Attacks per Second', target: { group: 'equipment_filters', filter: 'aps' }, enabled: () => false },
-  { stat: DERIVED.armour, label: 'Armour', target: { group: 'equipment_filters', filter: 'ar' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
-  { stat: DERIVED.evasion, label: 'Evasion', target: { group: 'equipment_filters', filter: 'ev' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
-  { stat: DERIVED.energyShield, label: 'Energy Shield', target: { group: 'equipment_filters', filter: 'es' }, enabled: (slot) => !!slot && ARMOUR_SLOTS.has(slot) },
+  { stat: DERIVED.armour, label: 'Armour', target: { group: 'equipment_filters', filter: 'ar' }, enabled: isArmourSlot },
+  { stat: DERIVED.evasion, label: 'Evasion', target: { group: 'equipment_filters', filter: 'ev' }, enabled: isArmourSlot },
+  { stat: DERIVED.energyShield, label: 'Energy Shield', target: { group: 'equipment_filters', filter: 'es' }, enabled: isArmourSlot },
   { stat: DERIVED.block, label: 'Block', target: { group: 'equipment_filters', filter: 'block' }, enabled: () => false },
   { stat: DERIVED.spirit, label: 'Spirit', target: { group: 'equipment_filters', filter: 'spirit' }, enabled: () => true },
 ]
-
-const CATEGORIES: Record<string, string> = {
-  Claws: 'weapon.claw',
-  Daggers: 'weapon.dagger',
-  Wands: 'weapon.wand',
-  'One Hand Swords': 'weapon.onesword',
-  'One Hand Axes': 'weapon.oneaxe',
-  'One Hand Maces': 'weapon.onemace',
-  Sceptres: 'weapon.sceptre',
-  Spears: 'weapon.spear',
-  Flails: 'weapon.flail',
-  Bows: 'weapon.bow',
-  Staves: 'weapon.staff',
-  'Two Hand Swords': 'weapon.twosword',
-  'Two Hand Axes': 'weapon.twoaxe',
-  'Two Hand Maces': 'weapon.twomace',
-  Quarterstaves: 'weapon.warstaff',
-  Crossbows: 'weapon.crossbow',
-  Shields: 'armour.shield',
-  Bucklers: 'armour.buckler',
-  Foci: 'armour.focus',
-  Quivers: 'armour.quiver',
-  Helmets: 'armour.helmet',
-  'Body Armours': 'armour.chest',
-  Gloves: 'armour.gloves',
-  Boots: 'armour.boots',
-  Belts: 'accessory.belt',
-  Amulets: 'accessory.amulet',
-  Rings: 'accessory.ring',
-  Jewels: 'jewel',
-}
 
 const FLIPPED: Array<[RegExp, string]> = [
   [/\breduced\b/, 'increased'],
@@ -191,12 +161,6 @@ function indexStats(groups: TradeStatGroup[]): StatIndex {
   }
   indexes.set(groups, index)
   return index
-}
-
-function modValue(mod: Mod): number | undefined {
-  if (mod.values.length === 0) return undefined
-  if (mod.values.length === 2 && /# to #/.test(mod.template)) return (mod.values[0] + mod.values[1]) / 2
-  return mod.values[0]
 }
 
 function pick(entries: TradeStatEntry[], local: boolean): TradeStatEntry {
@@ -281,7 +245,7 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
       filters.push({ key, label: mod.text, kind: 'unsearchable', enabled: false, min: null, max: null, modType: mod.type })
       continue
     }
-    const coveredByProperty = local && (item.slot === 'weapon' || (!!item.slot && ARMOUR_SLOTS.has(item.slot)))
+    const coveredByProperty = local && (item.slot === 'weapon' || isArmourSlot(item.slot))
     filters.push({
       key,
       label: mod.text,
@@ -295,7 +259,7 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
     })
   }
 
-  const category = CATEGORIES[item.itemClass]
+  const category = itemClass(item.itemClass)?.tradeCategory
   return {
     ...(unique && { name: item.name }),
     ...(item.baseType && { type: item.baseType }),
