@@ -133,6 +133,21 @@ npm run dist       # build a Windows installer into release/
 
 **Releasing:** bump `version` in `package.json`, then push a tag like `v0.1.0`. GitHub Actions builds the Windows installer and publishes it on the Releases page.
 
+## Code signing policy
+
+Windows releases are built from this repository by [GitHub Actions](.github/workflows/release.yml) and signed for free by SignPath. Free code signing is provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- Committers and reviewers: [Kristoffer Kjelde](https://github.com/kristofferkjelde)
+- Approvers: [Kristoffer Kjelde](https://github.com/kristofferkjelde)
+
+## Privacy policy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It only connects to the internet when you ask it to: a price check sends searches to the official Path of Exile trade site, and importing a build fetches the link you paste. Your settings, saved gear and build stay on your PC.
+
+## License
+
+[MIT](LICENSE)
+
 ## Credits
 
 Inspired by [PoE Overlay](https://github.com/PoE-Overlay-Community/PoE-Overlay-Community-Fork) and [Exiled Exchange 2](https://github.com/Kvan7/Exiled-Exchange-2). Not affiliated with or endorsed by Grinding Gear Games.
