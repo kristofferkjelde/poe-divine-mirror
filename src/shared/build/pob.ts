@@ -1,6 +1,6 @@
 import type { GearSlot } from '../gear'
 import { parseModLine } from '../item/parse'
-import type { Mod, ParsedItem, Property, Rarity, Slot } from '../item/types'
+import type { Mod, ModType, ParsedItem, Property, Rarity, Slot } from '../item/types'
 import WEAPON_BASES from './weaponBases.json'
 
 export interface PobItem {
@@ -154,7 +154,7 @@ export function parsePobItem(text: string, slot: Slot): ParsedItem {
   const header = lines.slice(rarityIndex + 1, start < 0 ? undefined : start)
   const field = (key: string) => header.find((line) => line.startsWith(`${key}: `))?.slice(key.length + 2)
 
-  const mods = start < 0 ? [] : parsePobMods(lines.slice(start + 1), /^Selected Variant: (\d+)$/m.exec(text)?.[1])
+  const mods = start < 0 ? [] : parsePobMods(lines.slice(start + 1), Number(/^Implicits: (\d+)$/.exec(lines[start])?.[1] ?? 0), /^Selected Variant: (\d+)$/m.exec(text)?.[1])
   const baseType = named ? lines[rarityIndex + 2] : findWeaponBase(name)
   const quality = Number(field('Quality')) || 0
 
@@ -189,25 +189,123 @@ function findWeaponBase(name: string): string | undefined {
     .sort((a, b) => b.length - a.length)[0]
 }
 
-function parsePobMods(lines: string[], variant: string | undefined): Mod[] {
-  const mods: Mod[] = []
-  for (const raw of lines) {
-    const tags = new Map<string, string>()
+interface PobLine {
+  text: string
+  type: ModType
+  tags: Set<string>
+}
+
+interface Magnitude {
+  type?: ModType
+  tags: string[]
+  anyTags?: string[]
+  increase: number
+  multiplier: number
+}
+
+const MAGNITUDE = /^(\d+)% (increased|reduced) (?:([a-z ]+?) modifier magnitudes|effect of (prefix|suffix)es)$/i
+const DOUBLED = /^([a-z ]+?) modifier magnitudes are doubled$/i
+const MAGNITUDE_TAGS: Record<string, string> = { defence: 'defences', enchantment: 'enchant' }
+const INFERRED_TAGS: Array<[string, RegExp]> = [
+  ['attack', /Attack|Accuracy/i],
+  ['caster', /Spell|Cast/i],
+  ['speed', /Speed/i],
+  ['damage', /Damage/i],
+  ['physical', /Physical/i],
+  ['elemental', /Fire|Cold|Lightning|Elemental/i],
+  ['fire', /Fire/i],
+  ['cold', /Cold/i],
+  ['lightning', /Lightning/i],
+  ['chaos', /Chaos/i],
+  ['life', /Life/i],
+  ['mana', /Mana/i],
+  ['defences', /Armour|Evasion|Energy Shield/i],
+  ['resistance', /Resistance/i],
+  ['critical', /Critical/i],
+  ['attribute', /Strength|Dexterity|Intelligence|Attributes/i],
+]
+
+function parsePobMods(lines: string[], implicitCount: number, variant: string | undefined): Mod[] {
+  const parsed: PobLine[] = []
+  lines.forEach((raw, index) => {
+    const flags = new Map<string, string>()
     const line = raw.replace(/^(?:\{([\w]+)(?::([^}]*))?\})+/, (prefix) => {
-      for (const [, key, value] of prefix.matchAll(/\{(\w+)(?::([^}]*))?\}/g)) tags.set(key, value ?? '')
+      for (const [, key, value] of prefix.matchAll(/\{(\w+)(?::([^}]*))?\}/g)) flags.set(key, value ?? '')
       return ''
     })
-    if (!line || tags.has('disabled') || line.startsWith('Grants Skill:')) continue
-    if (tags.has('variant') && variant && !tags.get('variant')!.split(',').includes(variant)) continue
+    if (!line || flags.has('disabled') || line.startsWith('Grants Skill:')) return
+    if (flags.has('variant') && variant && !flags.get('variant')!.split(',').includes(variant)) return
 
-    const range = Number(tags.get('range') ?? 0.5)
-    const resolved = line.replace(RANGE, (_match, min: string, max: string) =>
+    const range = Number(flags.get('range') ?? 0.5)
+    const text = line.replace(RANGE, (_match, min: string, max: string) =>
       String(Math.round(Number(min) + (Number(max) - Number(min)) * range)),
     )
-    const type = tags.has('rune') ? 'rune' : tags.has('enchant') ? 'enchant' : 'explicit'
-    mods.push(parseModLine(resolved, type))
+    const type: ModType = flags.has('rune')
+      ? 'rune'
+      : flags.has('enchant')
+        ? 'enchant'
+        : flags.has('desecrated')
+          ? 'desecrated'
+          : index < implicitCount
+            ? 'implicit'
+            : 'explicit'
+    const tags = new Set(
+      flags.get('tags')
+        ? flags.get('tags')!.split(',').map((tag) => tag.trim().toLowerCase())
+        : INFERRED_TAGS.filter(([, pattern]) => pattern.test(text)).map(([tag]) => tag),
+    )
+    for (const flag of ['prefix', 'suffix', 'desecrated']) if (flags.has(flag)) tags.add(flag)
+    parsed.push({ text, type, tags })
+  })
+
+  const magnitudes = parsed.map(({ text }) => parseMagnitude(text)).filter((entry) => entry !== null)
+  return parsed.map((line) => {
+    const scalar = isMagnitude(line.text) || line.type === 'rune' ? 1 : magnitudeScalar(line, magnitudes)
+    return parseModLine(scalar === 1 ? line.text : scaleNumbers(line.text, scalar), line.type)
+  })
+}
+
+const isMagnitude = (text: string) => MAGNITUDE.test(text) || DOUBLED.test(text)
+
+function parseMagnitude(text: string): Magnitude | null {
+  const doubled = DOUBLED.exec(text)
+  const match = MAGNITUDE.exec(text)
+  if (!doubled && !match) return null
+
+  const increase = match ? Number(match[1]) * (match[2].toLowerCase() === 'reduced' ? -1 : 1) : 0
+  const multiplier = doubled ? 2 : 1
+  if (match?.[4]) return { tags: [match[4].toLowerCase()], increase, multiplier }
+
+  const words = (doubled?.[1] ?? match![3]).toLowerCase()
+  if (words === 'explicit physical and chaos damage') {
+    return { type: 'explicit', tags: ['damage'], anyTags: ['physical', 'chaos'], increase, multiplier }
   }
-  return mods
+  const magnitude: Magnitude = { tags: [], increase, multiplier }
+  for (const word of words.split(/\s+/)) {
+    if (word === 'implicit' || word === 'explicit' || word === 'enchant') magnitude.type = word
+    else magnitude.tags.push(MAGNITUDE_TAGS[word] ?? word)
+  }
+  return magnitude
+}
+
+function magnitudeScalar(line: PobLine, magnitudes: Magnitude[]): number {
+  let increase = 0
+  let multiplier = 1
+  for (const magnitude of magnitudes) {
+    if (magnitude.type && magnitude.type !== line.type) continue
+    if (!magnitude.type && !['implicit', 'explicit', 'enchant', 'desecrated'].includes(line.type)) continue
+    if (!magnitude.tags.every((tag) => line.tags.has(tag))) continue
+    if (magnitude.anyTags && !magnitude.anyTags.some((tag) => line.tags.has(tag))) continue
+    increase += magnitude.increase
+    multiplier *= magnitude.multiplier
+  }
+  return (1 + increase / 100) * multiplier
+}
+
+function scaleNumbers(text: string, scalar: number): string {
+  return text.replace(/\d+(?:\.\d+)?/g, (value) =>
+    value.includes('.') ? String(Number((Number(value) * scalar).toFixed(2))) : String(Math.round(Number(value) * scalar)),
+  )
 }
 
 function weaponProperties(base: WeaponBase, mods: Mod[], quality: number): Property[] {

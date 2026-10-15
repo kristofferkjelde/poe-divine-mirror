@@ -7,7 +7,7 @@ import { compareWithGear } from '../compare/gear'
 import { DERIVED, extractStats } from '../compare/stats'
 import { DEFAULT_WEIGHTS, weightFor } from '../compare/weights'
 import { parseItem } from '../item/parse'
-import { parsePobXml, PobParseError } from './pob'
+import { parsePobItem, parsePobXml, PobParseError } from './pob'
 import { profileFromPob, profileWeights, rulesForProfile, type BuildProfile } from './profile'
 
 const fixture = (name: string) => readFileSync(new URL(`./__fixtures__/${name}`, import.meta.url), 'utf8')
@@ -51,6 +51,33 @@ describe('parsePobXml', () => {
     const stats = extractStats(weapon)
     expect(stats.get(DERIVED.physicalDps)?.value).toBeCloseTo(121.2, 0)
     expect(stats.get(DERIVED.totalDps)?.value).toBeCloseTo(221.2, 0)
+  })
+
+  it('applies modifier magnitudes to the mods they boost', () => {
+    const spear = parsePobItem(
+      [
+        'Rarity: RARE',
+        'Doom Skewer',
+        'Soaring Spear',
+        'Quality: 20',
+        'Implicits: 1',
+        'Grants Skill: Spear Throw',
+        '{tags:attack}+(327-427) to Accuracy Rating',
+        '{tags:attack,speed}{range:0.5}(5-8)% increased Attack Speed',
+        '{range:0.5}(25-30)% increased Explicit Speed Modifier magnitudes',
+        '{range:0.5}(26-28)% increased Attack Speed',
+        '(20-30)% increased effect of Socketed Augment Items',
+      ].join('\n'),
+      'weapon',
+    )
+    expect(spear.mods.map((mod) => mod.text)).toEqual([
+      '+377 to Accuracy Rating',
+      '9% increased Attack Speed',
+      '28% increased Explicit Speed Modifier magnitudes',
+      '35% increased Attack Speed',
+      '25% increased effect of Socketed Augment Items',
+    ])
+    expect(spear.properties.find((property) => property.name === 'Attacks per Second')?.value).toBe('2.45')
   })
 
   it('keeps armour values from the build', () => {
