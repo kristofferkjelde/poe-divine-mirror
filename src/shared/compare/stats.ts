@@ -56,7 +56,7 @@ export function statKeys(mod: Mod, slot: Slot | undefined): string[] {
   return expandMod(mod).map(([key]) => key)
 }
 
-function isLocal(template: string, slot: Slot | undefined): boolean {
+export function isLocal(template: string, slot: Slot | undefined): boolean {
   if (slot === 'weapon') return LOCAL_WEAPON.some((pattern) => pattern.test(template))
   if (slot && ARMOUR_SLOTS.has(slot)) return LOCAL_DEFENCE.some((pattern) => pattern.test(template))
   return false

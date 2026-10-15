@@ -1,0 +1,30 @@
+{
+  "result": [
+    {
+      "id": "pseudo",
+      "label": "Pseudo",
+      "entries": [{ "id": "pseudo.pseudo_total_life", "text": "+# total maximum Life", "type": "pseudo" }]
+    },
+    {
+      "id": "explicit",
+      "label": "Explicit",
+      "entries": [
+        { "id": "explicit.stat_3299347043", "text": "+# to maximum Life", "type": "explicit" },
+        { "id": "explicit.stat_3032590688", "text": "Adds # to # Physical Damage to Attacks", "type": "explicit" },
+        { "id": "explicit.stat_3372524247", "text": "+#% to Fire Resistance", "type": "explicit" },
+        { "id": "explicit.stat_1940865751", "text": "Adds # to # Physical Damage (Local)", "type": "explicit" },
+        { "id": "explicit.stat_960081730", "text": "Adds # to # Physical Damage", "type": "explicit" },
+        { "id": "explicit.stat_210067635", "text": "#% increased Attack Speed (Local)", "type": "explicit" },
+        { "id": "explicit.stat_681332047", "text": "#% increased Attack Speed", "type": "explicit" },
+        { "id": "explicit.stat_803737631", "text": "+# to Accuracy Rating", "type": "explicit" },
+        { "id": "explicit.stat_2891184298", "text": "#% increased Cast Speed", "type": "explicit" },
+        { "id": "explicit.stat_1050105434", "text": "Grants Skill: #", "type": "explicit", "option": { "options": [{ "id": 1, "text": "Spear Throw" }] } }
+      ]
+    },
+    {
+      "id": "implicit",
+      "label": "Implicit",
+      "entries": [{ "id": "implicit.stat_3032590688", "text": "Adds # to # Physical Damage to Attacks", "type": "implicit" }]
+    }
+  ]
+}

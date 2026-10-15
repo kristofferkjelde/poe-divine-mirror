@@ -12,6 +12,8 @@ const overlay: OverlayApi = {
   openSettings: () => ipcRenderer.send(IPC.settingsOpen),
   setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
   forgetGear: (slot) => ipcRenderer.invoke(IPC.gearForget, slot),
+  checkPrice: (text) => ipcRenderer.invoke(IPC.priceCheck, text),
+  openTrade: (url) => ipcRenderer.send(IPC.openTrade, url),
 }
 
 const settings: SettingsApi = {
@@ -25,6 +27,8 @@ const settings: SettingsApi = {
   removeBuild: () => ipcRenderer.invoke(IPC.buildRemove),
   setBuildWeight: (stat, weight) => ipcRenderer.invoke(IPC.buildSetWeight, stat, weight),
   resetBuildWeights: () => ipcRenderer.invoke(IPC.buildResetWeights),
+  listLeagues: () => ipcRenderer.invoke(IPC.tradeLeagues),
+  setLeague: (league) => ipcRenderer.invoke(IPC.settingsSetLeague, league),
 }
 
 contextBridge.exposeInMainWorld('overlay', overlay)

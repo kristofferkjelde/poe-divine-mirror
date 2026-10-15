@@ -2,9 +2,10 @@ import type { HotkeyAction } from '../../../shared/settings'
 import { BuildSettings } from './BuildSettings'
 import { HotkeyField } from './HotkeyField'
 import { OverlaySettings } from './OverlaySettings'
+import { TradeSettings } from './TradeSettings'
 import { setSettingsState, useSettingsState } from './settingsStore'
 
-const ACTIONS: HotkeyAction[] = ['compare', 'equip']
+const ACTIONS: HotkeyAction[] = ['compare', 'equip', 'price']
 
 export function SettingsApp() {
   const state = useSettingsState()
@@ -38,6 +39,12 @@ export function SettingsApp() {
         <section className="settings-section">
           <h2>Overlay</h2>
           <OverlaySettings settings={state.settings} />
+        </section>
+      )}
+      {state && (
+        <section className="settings-section">
+          <h2>Trade</h2>
+          <TradeSettings settings={state.settings} />
         </section>
       )}
       <footer className="settings-footer">

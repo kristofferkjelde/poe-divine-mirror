@@ -511,3 +511,93 @@ tr[data-direction='down'] .compare-delta {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+.price {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--panel-border);
+  background: linear-gradient(180deg, rgba(200, 170, 110, 0.12), transparent 70%);
+  font-size: 13px;
+  text-align: center;
+}
+
+.price-idle {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--gold);
+  border-top: 1px solid var(--panel-border);
+  border-bottom: none;
+  background: none;
+}
+
+.price-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.price-link {
+  color: var(--gold);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.price-summary {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 6px;
+  color: var(--text-value);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-summary small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.price-listings {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  margin-top: 6px;
+  list-style: none;
+  color: var(--text-value);
+  font-variant-numeric: tabular-nums;
+}
+
+.price-listings small,
+.price-note {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.price-note {
+  margin-top: 4px;
+}
+
+.price-error {
+  color: var(--delta-down);
+}
+
+.settings-select {
+  min-width: 160px;
+  max-width: 200px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-value);
+  background: #120d06;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+}

@@ -5,6 +5,7 @@ import { ComparisonView } from './components/ComparisonView'
 import { GearHint } from './components/GearHint'
 import { ItemCard } from './components/ItemCard'
 import { Panel } from './components/Panel'
+import { PriceView } from './components/PriceView'
 import { useOverlayState } from './overlayStore'
 
 export function App() {
@@ -20,13 +21,14 @@ export function App() {
     )
   }
 
-  const { item, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt } = state
+  const { item, price, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt } = state
   const comparable = gearSlotsFor(item.slot).length > 0
   const buildName =
     build && build.version !== PROFILE_VERSION ? `${build.name} (outdated: re-import it in Settings)` : build?.name
 
   return (
     <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
+      {price.status !== 'idle' && <PriceView price={price} hotkey={hotkeys.price} />}
       {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
       {buildComparison && <ComparisonView result={buildComparison} against="build" buildName={buildName} />}
       {comparison && (
@@ -38,6 +40,7 @@ export function App() {
         </GearHint>
       )}
       <ItemCard item={item} />
+      {price.status === 'idle' && <PriceView price={price} hotkey={hotkeys.price} />}
     </Panel>
   )
 }

@@ -6,8 +6,9 @@ import type { BuildStore } from './buildStore'
 import type { Hotkeys } from './hotkeys'
 import { ICON_PATH, loadRenderer, PRELOAD_PATH } from './renderer'
 import type { SettingsStore } from './settingsStore'
+import type { TradeClient } from './trade'
 
-const ACTIONS = new Set<HotkeyAction>(['compare', 'equip'])
+const ACTIONS = new Set<HotkeyAction>(['compare', 'equip', 'price'])
 
 export class SettingsWindow {
   private window: BrowserWindow | null = null
@@ -16,7 +17,13 @@ export class SettingsWindow {
     private readonly store: SettingsStore,
     private readonly hotkeys: Hotkeys,
     private readonly builds: BuildStore,
+    trade: TradeClient,
   ) {
+    ipcMain.handle(IPC.tradeLeagues, () => trade.listLeagues().catch(() => []))
+    ipcMain.handle(IPC.settingsSetLeague, async (_event, league: unknown) => {
+      await store.update({ league: typeof league === 'string' && league.trim() !== '' ? league : null })
+      return this.state
+    })
     ipcMain.handle(IPC.settingsGet, () => this.state)
     ipcMain.handle(IPC.settingsReset, async () => {
       await hotkeys.reset()
