@@ -1,5 +1,4 @@
 import { GEAR_SLOT_LABELS, gearSlotsFor } from '../../shared/gear'
-import { HOTKEYS } from '../../shared/ipc'
 import { SLOT_LABELS } from '../../shared/item/slots'
 import { ComparisonView } from './components/ComparisonView'
 import { GearHint } from './components/GearHint'
@@ -14,22 +13,22 @@ export function App() {
 
   if (state.status === 'error') {
     return (
-      <Panel>
+      <Panel hotkeys={state.hotkeys}>
         <p className="panel-message">{state.message}</p>
       </Panel>
     )
   }
 
-  const { item, comparison, equippedTo, capturedAt } = state
+  const { item, comparison, equippedTo, hotkeys, capturedAt } = state
   const comparable = gearSlotsFor(item.slot).length > 0
 
   return (
-    <Panel key={capturedAt}>
+    <Panel key={capturedAt} hotkeys={hotkeys}>
       {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
       {comparison && <ComparisonView result={comparison} />}
       {!equippedTo && !comparison && comparable && item.slot && (
         <GearHint>
-          No equipped {SLOT_LABELS[item.slot].toLowerCase()} saved yet. Hover yours and press {HOTKEYS.equip}.
+          No equipped {SLOT_LABELS[item.slot].toLowerCase()} saved yet. Hover yours and press {hotkeys.equip}.
         </GearHint>
       )}
       <ItemCard item={item} />

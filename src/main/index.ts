@@ -1,9 +1,11 @@
 import { app, globalShortcut, Menu, nativeImage, Tray } from 'electron'
 import { join } from 'node:path'
-import { HOTKEYS } from '../shared/ipc'
+import { HOTKEY_LABELS } from '../shared/settings'
 import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
+import { Hotkeys } from './hotkeys'
 import { Overlay } from './overlay'
+import { SettingsWindow } from './settingsWindow'
 
 const FOCUS_RETURN_MS = 60
 
@@ -30,31 +32,41 @@ function start(): void {
       const text = await copyHoveredItem()
       if (!text) return
       const equippedTo = equip ? await gearStore.equip(text).catch(() => undefined) : undefined
-      overlay.show({ text, capturedAt: Date.now(), gear: gearStore.current, equippedTo })
+      overlay.show({ text, capturedAt: Date.now(), gear: gearStore.current, hotkeys: hotkeys.current, equippedTo })
     } finally {
       busy = false
     }
   }
 
-  const failed = Object.values(HOTKEYS).filter(
-    (hotkey) => !globalShortcut.register(hotkey, () => void capture(hotkey === HOTKEYS.equip)),
-  )
+  const hotkeys = new Hotkeys({
+    compare: () => void capture(false),
+    equip: () => void capture(true),
+  })
+  const settingsWindow = new SettingsWindow(hotkeys)
 
   tray = new Tray(nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')))
-  tray.setToolTip(
-    failed.length === 0
-      ? `PoE Item Checker: hover an item and press ${HOTKEYS.compare}`
-      : `PoE Item Checker: ${failed.join(' and ')} taken by another app`,
-  )
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: `${HOTKEYS.compare}: compare hovered item`, enabled: false },
-      { label: `${HOTKEYS.equip}: save hovered item as equipped`, enabled: false },
-      { type: 'separator' },
-      { label: 'Clear saved gear', click: () => void gearStore.clear() },
-      { label: 'Quit', click: () => app.quit() },
-    ]),
-  )
+  const refreshTray = () => {
+    const { settings, unavailable } = hotkeys.state
+    tray?.setToolTip(
+      unavailable.length === 0
+        ? `PoE Item Checker: hover an item and press ${settings.hotkeys.compare}`
+        : 'PoE Item Checker: a hotkey is taken by another app. Open Settings to change it.',
+    )
+    tray?.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: `${settings.hotkeys.compare}: ${HOTKEY_LABELS.compare.toLowerCase()}`, enabled: false },
+        { label: `${settings.hotkeys.equip}: ${HOTKEY_LABELS.equip.toLowerCase()}`, enabled: false },
+        { type: 'separator' },
+        { label: 'Settings…', click: () => settingsWindow.open() },
+        { label: 'Clear saved gear', click: () => void gearStore.clear() },
+        { label: 'Quit', click: () => app.quit() },
+      ]),
+    )
+  }
+  refreshTray()
+  hotkeys.onChange(refreshTray)
+  tray.on('double-click', () => settingsWindow.open())
+  if (hotkeys.state.unavailable.length > 0) settingsWindow.open()
 }
 
 app.on('window-all-closed', () => {})

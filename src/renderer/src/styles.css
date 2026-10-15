@@ -66,7 +66,7 @@ body {
   color: var(--text-muted);
 }
 
-.panel-close {
+.panel-link {
   font: inherit;
   color: inherit;
   background: none;
@@ -74,7 +74,7 @@ body {
   cursor: pointer;
 }
 
-.panel-close:hover {
+.panel-link:hover {
   color: var(--gold);
 }
 
@@ -303,4 +303,99 @@ tr[data-direction='up'] .compare-delta {
 
 tr[data-direction='down'] .compare-delta {
   color: var(--delta-down);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.settings {
+  min-height: 100vh;
+  padding: 20px 24px;
+  background: var(--panel-bg);
+  user-select: none;
+}
+
+.settings h1 {
+  font-size: 22px;
+  font-weight: normal;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+.settings h2 {
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.settings-help {
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hotkey-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hotkey-field label {
+  color: var(--text-value);
+}
+
+.hotkey-button,
+.settings-reset {
+  min-width: 150px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--gold);
+  background: linear-gradient(180deg, #2a1f10, #120d06);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.hotkey-button:hover,
+.settings-reset:hover,
+.hotkey-button:focus-visible,
+.settings-reset:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.hotkey-button[data-recording='true'] {
+  color: var(--text-value);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(200, 170, 110, 0.4);
+}
+
+.hotkey-button[data-error='true'] {
+  border-color: var(--delta-down);
+}
+
+.hotkey-status {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--delta-down);
+}
+
+.settings-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-reset {
+  min-width: 0;
+  color: var(--text-muted);
 }

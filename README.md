@@ -33,6 +33,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover an item you're **wearing** and press **Alt+Shift+D** | It's saved as your equipped item for that slot (do this once per slot) |
 | Hover any other item and press **Alt+D** | It pops up next to your cursor with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
 | Press **Esc** or click the game | The popup closes |
+| Right-click the tray icon → **Settings…** (or double-click the icon) | Change the hotkeys: click one and press the new keys |
 | Right-click the tray icon → **Quit** | The app closes |
 
 Works anywhere you can hover an item: your inventory, stash, vendors, or the ground.
@@ -59,7 +60,7 @@ Your clipboard is put back the way it was right after the item is read.
 ## Troubleshooting
 
 **Nothing happens when I press Alt+D**
-- Check that the tray icon is there. Hover it: if it says the hotkey is taken, another app (often another overlay) already uses Alt+D. Close that app or let us know.
+- Check that the tray icon is there. Hover it: if it says a hotkey is taken, another app (often another overlay) already uses it. Open **Settings…** from the tray and pick a different combination. The Settings window also opens by itself when this happens.
 - Make sure your mouse is actually over an item and the game window is focused.
 
 **The popup appears behind the game**

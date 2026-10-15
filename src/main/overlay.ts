@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, screen } from 'electron'
-import { join } from 'node:path'
 import { IPC, type CapturedItem } from '../shared/ipc'
+import { loadRenderer, PRELOAD_PATH } from './renderer'
 
 const WIDTH = 420
 const MAX_HEIGHT = 720
@@ -25,7 +25,7 @@ export class Overlay {
       fullscreenable: false,
       hasShadow: false,
       webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
+        preload: PRELOAD_PATH,
         sandbox: true,
       },
     })
@@ -45,11 +45,7 @@ export class Overlay {
       this.reposition()
     })
 
-    if (process.env.ELECTRON_RENDERER_URL) {
-      void this.window.loadURL(process.env.ELECTRON_RENDERER_URL)
-    } else {
-      void this.window.loadFile(join(__dirname, '../renderer/index.html'))
-    }
+    void loadRenderer(this.window)
   }
 
   get visible(): boolean {
