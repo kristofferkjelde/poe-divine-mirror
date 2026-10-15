@@ -12,6 +12,7 @@ export interface ComparisonRow {
   deltaDisplay: string
   weight: number
   contribution: number
+  local: boolean
 }
 
 export interface Comparison {
@@ -40,8 +41,10 @@ export function compareItems(
     const delta = (next?.value ?? 0) - (current?.value ?? 0)
     if (delta === 0 && next?.display === current?.display) continue
 
-    const weight = weightFor(stat, candidate.slot, rules)
+    const local = Boolean(next?.local || current?.local)
+    const weight = local ? 0 : weightFor(stat, candidate.slot, rules)
     rows.push({
+      local,
       stat,
       candidate: next,
       equipped: current,
@@ -52,8 +55,9 @@ export function compareItems(
     })
   }
 
+  const rank = (row: ComparisonRow) => (row.weight !== 0 ? 0 : row.local ? 1 : 2)
   rows.sort((a, b) => {
-    if ((a.weight === 0) !== (b.weight === 0)) return a.weight === 0 ? 1 : -1
+    if (rank(a) !== rank(b)) return rank(a) - rank(b)
     return Math.abs(b.contribution) - Math.abs(a.contribution)
   })
 
@@ -68,7 +72,7 @@ export function compareItems(
 
 function weightedTotal(stats: StatMap, slot: Slot | undefined, rules: WeightRule[]): number {
   let total = 0
-  for (const [stat, { value }] of stats) total += value * weightFor(stat, slot, rules)
+  for (const [stat, { value, local }] of stats) if (!local) total += value * weightFor(stat, slot, rules)
   return total
 }
 

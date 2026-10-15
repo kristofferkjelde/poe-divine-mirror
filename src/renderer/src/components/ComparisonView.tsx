@@ -18,8 +18,6 @@ interface Props {
 
 export function ComparisonView({ result, against, buildName }: Props) {
   const { comparison, equipped, slot } = result
-  const scored = comparison.rows.filter((row) => row.weight !== 0)
-  const unscored = comparison.rows.filter((row) => row.weight === 0)
 
   return (
     <section className="compare" data-verdict={comparison.verdict}>
@@ -63,10 +61,7 @@ export function ComparisonView({ result, against, buildName }: Props) {
             </tr>
           </thead>
           <tbody>
-            {scored.map((row) => (
-              <Row key={row.stat} row={row} />
-            ))}
-            {unscored.map((row) => (
+            {comparison.rows.map((row) => (
               <Row key={row.stat} row={row} />
             ))}
           </tbody>
@@ -79,7 +74,11 @@ export function ComparisonView({ result, against, buildName }: Props) {
 function Row({ row }: { row: ComparisonRow }) {
   const direction = row.delta > 0 ? 'up' : row.delta < 0 ? 'down' : 'same'
   return (
-    <tr data-direction={direction} data-scored={row.weight !== 0} title={row.weight === 0 ? 'Not scored' : undefined}>
+    <tr
+      data-direction={direction}
+      data-scored={row.weight !== 0 || row.local}
+      title={row.local ? 'Already counted in DPS or defences above' : row.weight === 0 ? 'Not scored' : undefined}
+    >
       <th scope="row">{row.stat}</th>
       <td>{row.equipped?.display ?? '–'}</td>
       <td>{row.candidate?.display ?? '–'}</td>
