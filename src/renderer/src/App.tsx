@@ -1,3 +1,8 @@
+import { PROFILE_VERSION } from '../../shared/build/profile'
+import { GEAR_SLOT_LABELS, gearSlotsFor } from '../../shared/gear'
+import { SLOT_LABELS } from '../../shared/item/slots'
+import { ComparisonView } from './components/ComparisonView'
+import { GearHint } from './components/GearHint'
 import { ItemCard } from './components/ItemCard'
 import { Panel } from './components/Panel'
 import { useOverlayState } from './overlayStore'
@@ -7,13 +12,32 @@ export function App() {
 
   if (state.status === 'idle') return null
 
-  return (
-    <Panel>
-      {state.status === 'item' ? (
-        <ItemCard key={state.capturedAt} item={state.item} />
-      ) : (
+  if (state.status === 'error') {
+    return (
+      <Panel hotkeys={state.hotkeys} locked={state.locked}>
         <p className="panel-message">{state.message}</p>
+      </Panel>
+    )
+  }
+
+  const { item, comparison, buildComparison, equippedTo, build, hotkeys, locked, capturedAt } = state
+  const comparable = gearSlotsFor(item.slot).length > 0
+  const buildName =
+    build && build.version !== PROFILE_VERSION ? `${build.name} (outdated: re-import it in Settings)` : build?.name
+
+  return (
+    <Panel key={capturedAt} hotkeys={hotkeys} locked={locked}>
+      {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOT_LABELS[equippedTo]}</GearHint>}
+      {buildComparison && <ComparisonView result={buildComparison} against="build" buildName={buildName} />}
+      {comparison && (
+        <ComparisonView result={comparison} against="gear" buildName={buildComparison ? null : buildName} />
       )}
+      {!equippedTo && !comparison && comparable && item.slot && (
+        <GearHint>
+          No equipped {SLOT_LABELS[item.slot].toLowerCase()} saved yet. Hover yours and press {hotkeys.equip}.
+        </GearHint>
+      )}
+      <ItemCard item={item} />
     </Panel>
   )
 }

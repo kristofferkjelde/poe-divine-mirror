@@ -1,0 +1,24 @@
+Item Class: Spears
+Rarity: Unique
+Skysliver
+Runeforged Winged Spear
+--------
+Spear
+Quality: +20% (augmented)
+Lightning Damage: 1 or 194 (augmented)
+Critical Hit Chance: 5.00%
+Attacks per Second: 2.11 (augmented)
+--------
+Requires: Level 40, 23 Str, 56 Dex
+--------
+Item Level: 80
+--------
+Grants Skill: Spear Throw
+--------
+No Physical Damage
+Adds 1 to 69 Lightning Damage
+24% increased Attack Speed
+68% increased chance to Shock
+Rolls only the minimum or maximum Damage value for each Damage Type
+--------
+Corrupted

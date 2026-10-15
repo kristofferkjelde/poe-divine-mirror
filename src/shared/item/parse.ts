@@ -8,7 +8,7 @@ const MOD_SUFFIX = /\s\((implicit|rune|enchant|desecrated|fractured|crafted)\)$/
 const NUMBER = /([+-]?)(\d+(?:\.\d+)?)(?:\((-?\d+(?:\.\d+)?)(?:-(-?\d+(?:\.\d+)?))?\))?/g
 const ADVANCED_NOTE = /\s+—\s+Unscalable Value$/
 const PROPERTY = /^([^:{}]+): (.+)$/
-const INSTRUCTION = /^(Right click|Place into|Can only|Used when|Shift click|Travel to|Stack Size)/
+const INSTRUCTION = /^(Right click|Place into|Can only|Used when|Shift click|Travel to|Stack Size|Can roll .+ modifiers$)/
 
 export class ItemParseError extends Error {}
 
@@ -56,14 +56,18 @@ export function parseItem(raw: string): ParsedItem {
       parseProperties(section, item)
       continue
     }
-    if (section.every((line) => INSTRUCTION.test(line))) continue
+    if (section.every(isInstruction)) continue
     if (seenMods && isFlavourText(section, item.rarity, sections.slice(index + 1))) continue
 
-    item.mods.push(...section.filter((line) => !INSTRUCTION.test(line)).map((line) => parseModLine(line)))
+    item.mods.push(...section.filter((line) => !isInstruction(line)).map((line) => parseModLine(line)))
     seenMods = true
   }
 
   return item
+}
+
+function isInstruction(line: string): boolean {
+  return INSTRUCTION.test(line.replace(ADVANCED_NOTE, '').replace(MOD_SUFFIX, '').trim())
 }
 
 function splitSections(raw: string): string[][] {
@@ -216,6 +220,7 @@ function parseAdvancedMods(section: string[]): Mod[] {
       continue
     }
     if (line.startsWith('(') && line.endsWith(')')) continue
+    if (isInstruction(line)) continue
 
     const mod = parseModLine(line, header.type)
     if (MOD_SUFFIX.test(line)) {
