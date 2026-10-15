@@ -1,0 +1,18 @@
+Item Class: Rings
+Rarity: Rare
+Dusk Knuckle
+Iron Ring
+--------
+Requires: Level 29
+--------
+Item Level: 47
+--------
+{ Implicit Modifier }
+Adds 1(1-2) to 4(3-5) Physical Damage to Attacks (implicit)
+--------
+{ Prefix Modifier "Hale" (Tier: 5) — Life }
++28(25-34) to maximum Life
+{ Prefix Modifier "Glinting" (Tier: 6) — Damage, Physical, Attack }
+Adds 3(2-4) to 7(6-8) Physical Damage to Attacks
+{ Suffix Modifier "of the Whelpling" (Tier: 7) — Elemental, Fire, Resistance }
++18(16-20)% to Fire Resistance

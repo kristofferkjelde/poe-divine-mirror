@@ -1,0 +1,33 @@
+Item Class: Spears
+Rarity: Unique
+Tangletongue
+Forked Spear
+--------
+Quality: +20% (augmented)
+Physical Damage: 37-96 (augmented)
+Critical Hit Chance: 10.84%, 10.84% (augmented)
+Attacks per Second: 1.55
+--------
+Requires: Level 26, 17 Str, 38 Dex
+--------
+Sockets: S 
+--------
+Item Level: 83
+--------
+Grants Skill: Spear Throw
+--------
+{ Unique Modifier — Damage, Physical, Attack }
+Adds 18(14-18) to 42(30-36) Physical Damage
+{ Unique Modifier — Critical }
+Bifurcates Critical Hits — Unscalable Value
+{ Unique Modifier — Attribute }
++22(15-25) to Intelligence
+{ Unique Modifier — Life }
+11(10)% of Skill Mana Costs Converted to Life Costs
+{ Unique Modifier — Attack, Critical }
++5.84(5-8)% to Critical Hit Chance
+--------
+"In the hands of Orbala, it made a god bleed."
+- Wranga, tale-woman of the Wahida akhara
+--------
+Corrupted

@@ -1,0 +1,66 @@
+{
+  "name": "poe-item-checker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Path of Exile 2 overlay that compares hovered items against your equipped gear",
+  "main": "out/main/index.js",
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "dist": "electron-vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^6.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  },
+  "build": {
+    "appId": "io.kjelde.poe-item-checker",
+    "productName": "Divine Mirror",
+    "files": [
+      "out/**",
+      "resources/**"
+    ],
+    "asarUnpack": [
+      "**/node_modules/uiohook-napi/**"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "resources/icon.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "kristofferkjelde",
+      "repo": "poe-item-checker",
+      "releaseType": "release"
+    },
+    "nsis": {
+      "oneClick": true,
+      "artifactName": "Divine-Mirror-Setup-${version}.${ext}"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

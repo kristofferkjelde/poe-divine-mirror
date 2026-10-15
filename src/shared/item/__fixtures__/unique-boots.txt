@@ -1,0 +1,18 @@
+Item Class: Boots
+Rarity: Unique
+Wanderlust
+Rawhide Boots
+--------
+Evasion Rating: 25
+--------
+Item Level: 12
+--------
++5 to Dexterity
+10% increased Mana Regeneration Rate
+20% increased Movement Speed
+Cannot be Frozen
+--------
+All the world is my home
+And every road leads me there
+--------
+Note: ~price 1 exalted
