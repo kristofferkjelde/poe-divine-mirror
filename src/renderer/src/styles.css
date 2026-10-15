@@ -505,3 +505,9 @@ tr[data-direction='down'] .compare-delta {
   color: var(--gold);
 }
 
+
+.compare-forget {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

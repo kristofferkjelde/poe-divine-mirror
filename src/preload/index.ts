@@ -11,6 +11,7 @@ const overlay: OverlayApi = {
   hide: () => ipcRenderer.send(IPC.overlayHide),
   openSettings: () => ipcRenderer.send(IPC.settingsOpen),
   setLocked: (locked) => ipcRenderer.invoke(IPC.overlaySetLocked, locked),
+  forgetGear: (slot) => ipcRenderer.invoke(IPC.gearForget, slot),
 }
 
 const settings: SettingsApi = {

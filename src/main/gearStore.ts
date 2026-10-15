@@ -21,6 +21,12 @@ export class GearStore {
     return slot
   }
 
+  async forget(slot: GearSlot): Promise<void> {
+    const { [slot]: _forgotten, ...rest } = this.gear
+    this.gear = rest
+    await this.file.write(this.gear)
+  }
+
   async clear(): Promise<void> {
     this.gear = {}
     await this.file.write(this.gear)

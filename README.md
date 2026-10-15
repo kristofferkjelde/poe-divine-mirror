@@ -53,7 +53,7 @@ With a build added, **Alt+D** always compares the item against your build's item
 - The **verdict** at the top adds up every stat difference, weighted by how much it matters to your build (or in general, if you haven't added one). The percentage next to it is how much better or worse the new item is overall, e.g. **+57%**. Within ±2% counts as a sidegrade.
 - The table lists each stat that changes: what you have **now**, what the **new** item has, and the difference in green or red. Greyed-out rows aren't counted in the score yet.
 - Rings compare against whichever of your two rings is weaker, since that's the one you'd swap out.
-- Saved gear survives restarts. Right-click the tray icon → **Clear saved gear** to start over.
+- Saved gear survives restarts. Click **✕ Forget** next to "vs your …" to forget that one item, or right-click the tray icon → **Clear saved gear** to start over.
 - **P1–P6 / S1–S7** badges show whether a mod is a **P**refix or **S**uffix and its tier. Tier 1 is the best roll. T1 and T2 are highlighted in gold.
 - Mod colors match the game: blue for normal mods, light blue for runes, red for corrupted.
 

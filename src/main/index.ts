@@ -1,5 +1,7 @@
-import { app, globalShortcut, Menu, nativeImage, Tray } from 'electron'
+import { app, globalShortcut, ipcMain, Menu, nativeImage, Tray } from 'electron'
 import { join } from 'node:path'
+import { GEAR_SLOT_LABELS, type GearSlot } from '../shared/gear'
+import { IPC } from '../shared/ipc'
 import { HOTKEY_LABELS } from '../shared/settings'
 import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
@@ -26,6 +28,9 @@ function start(): void {
   const overlay = new Overlay(store)
   const gearStore = new GearStore()
   const builds = new BuildStore()
+  ipcMain.handle(IPC.gearForget, async (_event, slot: unknown) => {
+    if (typeof slot === 'string' && slot in GEAR_SLOT_LABELS) await gearStore.forget(slot as GearSlot)
+  })
   let busy = false
 
   const capture = async (equip: boolean) => {

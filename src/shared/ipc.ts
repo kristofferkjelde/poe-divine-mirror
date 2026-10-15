@@ -13,6 +13,7 @@ export const IPC = {
   settingsRecording: 'settings:recording',
   settingsOpen: 'settings:open',
   overlaySetLocked: 'overlay:set-locked',
+  gearForget: 'gear:forget',
   buildImport: 'build:import',
   buildRemove: 'build:remove',
   buildSetWeight: 'build:set-weight',
@@ -44,6 +45,7 @@ export interface OverlayApi {
   hide: () => void
   openSettings: () => void
   setLocked: (locked: boolean) => Promise<void>
+  forgetGear: (slot: GearSlot) => Promise<void>
 }
 
 export interface SettingsApi {

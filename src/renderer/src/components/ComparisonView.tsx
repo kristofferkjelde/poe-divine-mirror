@@ -2,6 +2,7 @@ import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared
 import type { GearComparison } from '../../../shared/compare/gear'
 import { GEAR_SLOT_LABELS } from '../../../shared/gear'
 import { formatNumber } from '../../../shared/compare/stats'
+import { forgetGear } from '../overlayStore'
 
 const VERDICT_LABELS: Record<Verdict, string> = {
   upgrade: '▲ Upgrade',
@@ -33,6 +34,16 @@ export function ComparisonView({ result, against, buildName }: Props) {
       <p className="compare-against">
         vs your {against === 'build' ? "build's " : ''}
         {GEAR_SLOT_LABELS[slot]}: <span className="item-value">{equipped.name}</span>
+        {against === 'gear' && (
+          <button
+            type="button"
+            className="panel-link compare-forget"
+            title={`Forget your saved ${GEAR_SLOT_LABELS[slot]}`}
+            onClick={() => void forgetGear(slot)}
+          >
+            ✕ Forget
+          </button>
+        )}
       </p>
       {buildName !== null && (
         <p className="compare-build">

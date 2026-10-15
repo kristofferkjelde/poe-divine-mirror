@@ -45,6 +45,11 @@ function setState(next: OverlayState) {
 
 window.overlay.onItemCaptured((captured) => setState(toState(captured)))
 
+export async function forgetGear(slot: GearSlot): Promise<void> {
+  await window.overlay.forgetGear(slot)
+  if (state.status === 'item' && state.comparison?.slot === slot) setState({ ...state, comparison: null })
+}
+
 export async function setOverlayLocked(locked: boolean): Promise<void> {
   if (state.status !== 'idle') setState({ ...state, locked })
   await window.overlay.setLocked(locked)
