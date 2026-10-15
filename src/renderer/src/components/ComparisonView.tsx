@@ -2,6 +2,7 @@ import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared
 import type { GearComparison } from '../../../shared/compare/gear'
 import { GEAR_SLOT_LABELS } from '../../../shared/gear'
 import { formatNumber } from '../../../shared/compare/stats'
+import { itemLabel } from '../../../shared/item/label'
 import { forgetGear } from '../overlayStore'
 
 const VERDICT_LABELS: Record<Verdict, string> = {
@@ -31,7 +32,7 @@ export function ComparisonView({ result, against, buildName }: Props) {
       </header>
       <p className="compare-against">
         vs your {against === 'build' ? "build's " : ''}
-        {GEAR_SLOT_LABELS[slot]}: <span className="item-value">{equipped.name}</span>
+        {GEAR_SLOT_LABELS[slot]}: <span className="item-value">{itemLabel(equipped)}</span>
         {against === 'gear' && (
           <button
             type="button"
