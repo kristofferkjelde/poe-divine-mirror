@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type MouseEvent } from 'react'
 import { formatNumber } from '../../../shared/compare/stats'
 import { estimate, formatAge, formatPrice, type PriceCheckResult } from '../../../shared/trade/price'
 import {
+  BROAD_SCALE,
   CORRUPTED_OPTIONS,
   CURRENCY_OPTIONS,
   LISTED_OPTIONS,
@@ -82,6 +83,14 @@ function SearchForm({ search, searching, result }: FormProps) {
           <FilterRow key={filter.key} filter={filter} />
         ))}
       </ul>
+      <div className="evaluate-presets" role="group" aria-label="Search preset">
+        <button type="button" aria-pressed={search.scale === 0} onClick={() => setSearchScale(0)}>
+          Quick price
+        </button>
+        <button type="button" aria-pressed={search.scale === BROAD_SCALE} onClick={() => setSearchScale(BROAD_SCALE)}>
+          Broad (−10%)
+        </button>
+      </div>
       <div className="evaluate-scale">
         <button type="button" className="panel-link" onClick={() => setSearchScale(search.scale - SCALE_STEP)} aria-label="Lower minimums by 5%">
           −
@@ -168,6 +177,16 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
           onChange={(event) => updateFilter(filter.key, { enabled: event.target.checked })}
         />
         <span>
+          {filter.kind !== 'property' && filter.affix && (
+            <span
+              className="item-tier"
+              data-best={filter.tier !== undefined && filter.tier <= 2}
+              title={`${filter.affix === 'prefix' ? 'Prefix' : 'Suffix'}${filter.tier === undefined ? '' : `, tier ${filter.tier}`}`}
+            >
+              {filter.affix === 'prefix' ? 'P' : 'S'}
+              {filter.tier}
+            </span>
+          )}
           {filter.label}
           {filter.kind === 'property' && <span className="evaluate-value"> {formatNumber(filter.value)}</span>}
         </span>
