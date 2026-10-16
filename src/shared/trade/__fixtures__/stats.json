@@ -3,7 +3,12 @@
     {
       "id": "pseudo",
       "label": "Pseudo",
-      "entries": [{ "id": "pseudo.pseudo_total_life", "text": "+# total maximum Life", "type": "pseudo" }]
+      "entries": [
+        { "id": "pseudo.pseudo_total_life", "text": "+# total maximum Life", "type": "pseudo" },
+        { "id": "pseudo.pseudo_total_mana", "text": "+# total maximum Mana", "type": "pseudo" },
+        { "id": "pseudo.pseudo_total_elemental_resistance", "text": "+#% total Elemental Resistance", "type": "pseudo" },
+        { "id": "pseudo.pseudo_total_attributes", "text": "+# total to Attributes", "type": "pseudo" }
+      ]
     },
     {
       "id": "explicit",
@@ -18,7 +23,12 @@
         { "id": "explicit.stat_681332047", "text": "#% increased Attack Speed", "type": "explicit" },
         { "id": "explicit.stat_803737631", "text": "+# to Accuracy Rating", "type": "explicit" },
         { "id": "explicit.stat_2891184298", "text": "#% increased Cast Speed", "type": "explicit" },
-        { "id": "explicit.stat_1050105434", "text": "Grants Skill: #", "type": "explicit", "option": { "options": [{ "id": 1, "text": "Spear Throw" }] } }
+        { "id": "explicit.stat_1050105434", "text": "Grants Skill: #", "type": "explicit", "option": {"options": [{"id": 1, "text": "Spear Throw"}]} },
+        { "id": "explicit.stat_maximum_mana", "text": "+# to maximum Mana", "type": "explicit" },
+        { "id": "explicit.stat_local_evasion_es", "text": "#% increased Evasion and Energy Shield (Local)", "type": "explicit" },
+        { "id": "explicit.stat_stun_threshold", "text": "+# to Stun Threshold", "type": "explicit" },
+        { "id": "explicit.stat_intelligence", "text": "+# to Intelligence", "type": "explicit" },
+        { "id": "explicit.stat_lightning_resistance", "text": "+#% to Lightning Resistance", "type": "explicit" }
       ]
     },
     {

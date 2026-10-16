@@ -24,7 +24,7 @@ export const DERIVED = {
   block: 'Block Chance',
 } as const
 
-const DEFENCES = '(?:Armour|Evasion Rating|Energy Shield)'
+const DEFENCES = '(?:Armour|Evasion(?: Rating)?|Energy Shield)'
 const LOCAL_DEFENCE = [
   new RegExp(`^#% increased ${DEFENCES}(?: and ${DEFENCES})?$`),
   /^\+# to (?:Armour|Evasion Rating|maximum Energy Shield)$/,
