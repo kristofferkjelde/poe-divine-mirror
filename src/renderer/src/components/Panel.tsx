@@ -42,7 +42,7 @@ export function Panel({ hotkeys, locked, children }: Props) {
             </button>
           </span>
         </footer>
-                <button type="button" className="panel-close" aria-label="Close" title="Close (Esc)" onClick={() => void window.overlay.hide()}>
+        <button type="button" className="panel-close" aria-label="Close" title="Close (Esc)" onClick={() => void window.overlay.hide()}>
           ✕
         </button>
       </div>
