@@ -2,7 +2,6 @@ import { useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import type { Settings } from '../../../shared/settings'
 import { setOverlayLocked } from '../overlayStore'
 
-const TYPING_FIELDS = 'input:not([type="checkbox"]):not([type="range"]), select, textarea'
 const DRAG_HANDLES = '.ember-tabs, .item-header, .panel-footer'
 const DRAG_THRESHOLD = 4
 
@@ -31,24 +30,16 @@ export function Panel({ hotkeys, locked, children }: Props) {
 
   const moveDrag = (event: PointerEvent<HTMLDivElement>) => {
     const current = drag.current
-    if (!current) return
-    if (!current.moving) {
-      if (Math.hypot(event.clientX - current.x, event.clientY - current.y) < DRAG_THRESHOLD) return
-      current.moving = true
-      event.currentTarget.setPointerCapture(event.pointerId)
-      void window.overlay.startDrag()
-    }
-    void window.overlay.drag()
+    if (!current || current.moving) return
+    if (Math.hypot(event.clientX - current.x, event.clientY - current.y) < DRAG_THRESHOLD) return
+    current.moving = true
+    event.currentTarget.setPointerCapture(event.pointerId)
+    void window.overlay.startDrag()
   }
 
   return (
     <>
-      <div
-        className="panel-scroll"
-        onPointerDownCapture={(event) => {
-          if (event.target instanceof Element && event.target.closest(TYPING_FIELDS)) void window.overlay.startTyping()
-        }}
-      >
+      <div className="panel-scroll">
         <div
           ref={reportHeight}
           className="panel"

@@ -48,13 +48,11 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     openTrade: (url) => {
       if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
     },
-    startTyping: () => overlay.startTyping(),
     rendered: (height) => {
       if (isFiniteNumber(height)) overlay.rendered(height)
     },
     painted: () => overlay.painted(),
     startDrag: () => overlay.startDrag(),
-    drag: () => overlay.drag(),
     endDrag: () => overlay.endDrag(),
   }
 }

@@ -15,6 +15,12 @@ export const THEME_LABELS: Record<Theme, { name: string; hint: string }> = {
   iron: { name: 'Iron', hint: 'Gunmetal and pale gold' },
 }
 
+export const THEME_BACKGROUNDS: Record<Theme, string> = {
+  ember: '#0a0807',
+  mana: '#060912',
+  iron: '#0c0c0a',
+}
+
 export const isTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
 
 export const UI_SCALES = [100, 110, 120] as const

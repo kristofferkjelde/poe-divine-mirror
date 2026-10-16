@@ -10,7 +10,7 @@ export class SettingsWindow {
     private readonly hotkeys: Hotkeys,
     private readonly store: SettingsStore,
   ) {
-    store.onChange(() => this.window?.webContents.setZoomFactor(this.scale))
+    store.watch((settings) => settings.uiScale, () => this.window?.webContents.setZoomFactor(this.scale))
   }
 
   private get scale(): number {

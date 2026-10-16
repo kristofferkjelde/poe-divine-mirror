@@ -7,6 +7,7 @@ type Handlers = Record<HotkeyAction, () => void>
 
 export class Hotkeys {
   private unavailable: HotkeyAction[] = []
+  private registered: string[] = []
 
   constructor(
     private readonly store: SettingsStore,
@@ -44,7 +45,7 @@ export class Hotkeys {
   }
 
   suspend(): void {
-    globalShortcut.unregisterAll()
+    this.unregister()
   }
 
   resume(): void {
@@ -52,13 +53,20 @@ export class Hotkeys {
   }
 
   private register(hotkeys: Settings['hotkeys']): HotkeyAction[] {
-    globalShortcut.unregisterAll()
+    this.unregister()
     return HOTKEY_ACTIONS.filter((action) => {
       try {
-        return !globalShortcut.register(hotkeys[action], this.handlers[action])
+        if (!globalShortcut.register(hotkeys[action], this.handlers[action])) return true
+        this.registered.push(hotkeys[action])
+        return false
       } catch {
         return true
       }
     })
+  }
+
+  private unregister(): void {
+    this.registered.forEach((accelerator) => globalShortcut.unregister(accelerator))
+    this.registered = []
   }
 }

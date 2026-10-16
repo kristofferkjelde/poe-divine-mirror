@@ -18,7 +18,8 @@ export interface OverlayContext {
 
 export interface OverlayMessages {
   event: OverlayEvent
-  context: OverlayContext
+  preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme'>
+  gear: Pick<OverlayContext, 'gear' | 'build'>
   revealed: null
 }
 
@@ -41,11 +42,9 @@ export interface OverlayApi {
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   openTrade: (url: string) => Promise<void>
-  startTyping: () => Promise<void>
   rendered: (height: number) => Promise<void>
   painted: () => Promise<void>
   startDrag: () => Promise<void>
-  drag: () => Promise<void>
   endDrag: () => Promise<void>
 }
 
@@ -81,11 +80,9 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   prepareSearch: true,
   runSearch: true,
   openTrade: true,
-  startTyping: true,
   rendered: true,
   painted: true,
   startDrag: true,
-  drag: true,
   endDrag: true,
 }
 

@@ -11,8 +11,14 @@ export class SettingsStore {
     return this.settings
   }
 
-  onChange(listener: () => void): void {
-    this.listeners.add(listener)
+  watch<T>(select: (settings: Settings) => T, listener: (value: T) => void): void {
+    let last = select(this.settings)
+    this.listeners.add(() => {
+      const next = select(this.settings)
+      if (sameValues(next, last)) return
+      last = next
+      listener(next)
+    })
   }
 
   async update(patch: Partial<Settings>): Promise<void> {
@@ -23,4 +29,9 @@ export class SettingsStore {
       this.listeners.notify()
     }
   }
+}
+
+function sameValues(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((value, index) => Object.is(value, b[index]))
+  return Object.is(a, b)
 }
