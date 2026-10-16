@@ -1609,3 +1609,104 @@ tr[data-direction='down'] .compare-delta {
     animation: none;
   }
 }
+
+.window.inventory {
+  animation: open-window 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.window.inventory .ember-plate {
+  animation: open-plate 520ms cubic-bezier(0.34, 1.4, 0.5, 1) 90ms both;
+}
+.window.inventory .ember-tabs > span {
+  animation: open-fade 400ms ease-out 200ms both;
+}
+.window.inventory .decision-slot {
+  animation: open-slot 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.window.inventory .decision-slot:nth-child(1) {
+  animation-delay: 170ms;
+}
+.window.inventory .decision-slot:nth-child(2) {
+  animation:
+    open-slot-center 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 110ms both,
+    open-flare 900ms ease-out 260ms;
+}
+.window.inventory .decision-slot:nth-child(3) {
+  animation-delay: 230ms;
+}
+.window.inventory .decision-verdict {
+  animation: open-verdict 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 320ms both;
+}
+.window.inventory .decision-verdict strong {
+  animation: open-spacing 760ms cubic-bezier(0.2, 0.8, 0.2, 1) 320ms both;
+}
+.window.inventory .decision-ledger,
+.window.inventory .decision-warning,
+.window.inventory .decision-note,
+.window.inventory .decision-toggle,
+.window.inventory .evaluate-open {
+  animation: open-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 400ms both;
+}
+@keyframes open-window {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+@keyframes open-plate {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scaleX(0.85);
+  }
+}
+@keyframes open-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes open-slot {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes open-slot-center {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes open-flare {
+  0% {
+    filter: brightness(1);
+  }
+  30% {
+    filter: brightness(1.45) drop-shadow(0 0 14px var(--tone));
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+@keyframes open-verdict {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes open-spacing {
+  from {
+    letter-spacing: 0.32em;
+  }
+}
+@keyframes open-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .window.inventory,
+  .window.inventory * {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}
