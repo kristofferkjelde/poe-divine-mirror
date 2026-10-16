@@ -23,8 +23,13 @@ export function Panel({ hotkeys, locked, children }: Props) {
   const hints = `${hotkeys.compare} compare · ${hotkeys.equip} equip · ${hotkeys.price} price`
   const drag = useRef<{ x: number; y: number; moving: boolean } | null>(null)
 
+  const dragged = useRef(false)
+
   const endDrag = () => {
-    if (drag.current?.moving) void window.overlay.endDrag()
+    if (drag.current?.moving) {
+      dragged.current = true
+      void window.overlay.endDrag()
+    }
     drag.current = null
   }
 
@@ -45,9 +50,16 @@ export function Panel({ hotkeys, locked, children }: Props) {
           className="panel"
           data-locked={locked}
           onPointerDown={(event) => {
+            dragged.current = false
             const handle = event.target instanceof Element && event.target.closest(DRAG_HANDLES)
             if (locked || event.button !== 0 || !handle) return
             drag.current = { x: event.clientX, y: event.clientY, moving: false }
+          }}
+          onClickCapture={(event) => {
+            if (!dragged.current) return
+            dragged.current = false
+            event.stopPropagation()
+            event.preventDefault()
           }}
           onPointerMove={moveDrag}
           onPointerUp={endDrag}
