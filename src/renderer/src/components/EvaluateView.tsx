@@ -161,11 +161,12 @@ const numberFrom = (event: ChangeEvent<HTMLInputElement>) => {
 
 function FilterRow({ filter }: { filter: SearchFilter }) {
   const searchable = filter.kind !== 'unsearchable'
+  const origin = filter.kind === 'mod' || filter.kind === 'unsearchable' ? filter : undefined
   return (
     <li
       className="evaluate-filter"
       data-kind={filter.kind}
-      data-type={filter.kind === 'property' ? undefined : filter.modType}
+      data-type={origin?.modType}
       data-enabled={filter.enabled}
       title={searchable ? undefined : 'The trade site has no filter for this mod'}
     >
@@ -177,14 +178,19 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
           onChange={(event) => updateFilter(filter.key, { enabled: event.target.checked })}
         />
         <span>
-          {filter.kind !== 'property' && filter.affix && (
+          {origin?.affix && (
             <span
               className="item-tier"
-              data-best={filter.tier !== undefined && filter.tier <= 2}
-              title={`${filter.affix === 'prefix' ? 'Prefix' : 'Suffix'}${filter.tier === undefined ? '' : `, tier ${filter.tier}`}`}
+              data-best={origin.tier !== undefined && origin.tier <= 2}
+              title={`${origin.affix === 'prefix' ? 'Prefix' : 'Suffix'}${origin.tier === undefined ? '' : `, tier ${origin.tier}`}`}
             >
-              {filter.affix === 'prefix' ? 'P' : 'S'}
-              {filter.tier}
+              {origin.affix === 'prefix' ? 'P' : 'S'}
+              {origin.tier}
+            </span>
+          )}
+          {filter.kind === 'pseudo' && (
+            <span className="item-tier" title="Adds up every mod that gives this, like the trade site's pseudo stats">
+              Σ
             </span>
           )}
           {filter.label}

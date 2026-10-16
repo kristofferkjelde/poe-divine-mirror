@@ -3,6 +3,7 @@ import type { Affix, Mod, ModType, ParsedItem, Slot } from '../item/types'
 import { UserFacingError } from '../errors'
 import { modValue } from '../item/mods'
 import { isArmourSlot, itemClass } from '../item/slots'
+import { pseudoTotals, type PseudoSource } from './pseudo'
 
 export interface TradeStatEntry {
   id: string
@@ -75,6 +76,7 @@ export type SearchFilter = FilterBase &
     | { kind: 'property'; target: PropertyTarget; value: number }
     | ({ kind: 'mod'; statId: string; value?: number } & ModOrigin)
     | ({ kind: 'unsearchable' } & ModOrigin)
+    | { kind: 'pseudo'; statId: string; value: number }
   )
 
 interface ModOrigin {
@@ -123,6 +125,8 @@ export const SCALE_STEP = 5
 export const SCALE_LIMIT = 50
 export const BROAD_SCALE = -10
 const UNSCALED = new Set(['rune_sockets', 'ilvl'])
+const MAX_QUALITY = 20
+const LOW_VALUE = [/Stun Threshold/, /Light Radius/, /Attribute Requirements/]
 
 const MOD_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated', 'implicit', 'rune', 'enchant'])
 const ENABLED_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated'])
@@ -221,6 +225,36 @@ export function minimumFor(value: number | undefined, scale: number): number | n
 export const clampScale = (scale: number) =>
   Math.max(-SCALE_LIMIT, Math.min(SCALE_LIMIT, Math.round(scale / SCALE_STEP) * SCALE_STEP))
 
+const LOCAL_INCREASE: Partial<Record<string, RegExp>> = {
+  [DERIVED.armour]: /^#% increased .*Armour/,
+  [DERIVED.evasion]: /^#% increased .*Evasion/,
+  [DERIVED.energyShield]: /^#% increased .*Energy Shield/,
+  [DERIVED.physicalDps]: /^#% increased Physical Damage$/,
+}
+
+const localIncrease = (item: ParsedItem, pattern: RegExp) =>
+  item.mods
+    .filter((mod) => pattern.test(mod.template) && isLocal(mod.template, item.slot))
+    .reduce((sum, mod) => sum + (modValue(mod) ?? 0), 0)
+
+function qualityScale(item: ParsedItem, stat: string): number {
+  const quality = item.quality ?? 0
+  const pattern = LOCAL_INCREASE[stat]
+  if (quality >= MAX_QUALITY || !pattern) return 1
+  const increase = localIncrease(item, pattern)
+  return (100 + increase + MAX_QUALITY) / (100 + increase + quality)
+}
+
+export function atMaxQuality(item: ParsedItem, stat: string, value: number, physicalDps = 0): number {
+  if (stat === DERIVED.totalDps) {
+    const boost = physicalDps * (qualityScale(item, DERIVED.physicalDps) - 1)
+    return Math.floor((value + boost) * 10) / 10
+  }
+  const scale = qualityScale(item, stat)
+  if (scale === 1) return value
+  return stat === DERIVED.physicalDps ? Math.floor(value * scale * 10) / 10 : Math.floor(value * scale)
+}
+
 function property(key: string, label: string, value: number, enabled: boolean, target: PropertyTarget, scale: number): SearchFilter {
   return { key, label, kind: 'property', enabled, value, min: minimumFor(value, UNSCALED.has(key) ? 0 : scale), max: null, target }
 }
@@ -235,10 +269,13 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
   const filters: SearchFilter[] = []
   const stats = extractStats(item)
 
+  const physicalDps = stats.get(DERIVED.physicalDps)?.value ?? 0
   for (const entry of PROPERTIES) {
     const stat = stats.get(entry.stat)
     if (stat && stat.value > 0) {
-      filters.push(property(entry.target.filter, entry.label, stat.value, !unique && entry.enabled(item.slot), entry.target, scale))
+      const value = unique ? stat.value : atMaxQuality(item, entry.stat, stat.value, physicalDps)
+      const label = value === stat.value ? entry.label : `${entry.label} (at 20% quality)`
+      filters.push(property(entry.target.filter, label, value, !unique && entry.enabled(item.slot), entry.target, scale))
     }
   }
   const craftingBase = item.rarity === 'Normal'
@@ -254,6 +291,27 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
   const sockets = item.sockets?.split(/\s+/).filter(Boolean).length
   if (sockets) {
     filters.push(property('rune_sockets', 'Rune Sockets', sockets, false, { group: 'equipment_filters', filter: 'rune_sockets' }, 0))
+  }
+
+  const pseudoSources: PseudoSource[] = item.mods.flatMap((mod, index) => {
+    const value = modValue(mod)
+    return MOD_TYPES.has(mod.type) && value !== undefined && !isLocal(mod.template, item.slot)
+      ? [{ index, template: mod.template, value }]
+      : []
+  })
+  const pseudos = unique ? [] : pseudoTotals(pseudoSources, groups)
+  const coveredByPseudo = new Set(pseudos.flatMap((pseudo) => pseudo.sources))
+  for (const pseudo of pseudos) {
+    filters.push({
+      key: pseudo.key,
+      label: pseudo.label,
+      kind: 'pseudo',
+      enabled: true,
+      value: pseudo.value,
+      min: minimumFor(pseudo.value, scale),
+      max: null,
+      statId: pseudo.statId,
+    })
   }
 
   for (const [index, mod] of item.mods.entries()) {
@@ -275,7 +333,12 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
       key,
       label: mod.text,
       kind: 'mod',
-      enabled: !unique && ENABLED_TYPES.has(mod.type) && !coveredByProperty,
+      enabled:
+        !unique &&
+        ENABLED_TYPES.has(mod.type) &&
+        !coveredByProperty &&
+        !coveredByPseudo.has(index) &&
+        !LOW_VALUE.some((pattern) => pattern.test(mod.template)),
       value: stat.value,
       min: minimumFor(stat.value, scale),
       max: null,
@@ -289,8 +352,8 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
     ...(unique && { name: item.name }),
     ...(item.baseType && { type: item.baseType }),
     ...(!item.baseType && category && { category }),
-    rarity: unique ? 'unique' : craftingBase ? 'normal' : 'nonunique',
-    corrupted: item.corrupted ? 'yes' : 'no',
+    rarity: unique ? 'unique' : craftingBase ? 'normal' : item.rarity === 'Magic' ? 'magic' : item.rarity === 'Rare' ? 'rare' : 'nonunique',
+    corrupted: item.corrupted ? 'yes' : 'any',
     status: 'securable',
     listed: 'any',
     currency: 'any',
@@ -353,7 +416,7 @@ export function toTradeQuery(search: ItemSearch): TradeQuery {
         {
           type: 'and',
           filters: enabled.flatMap((filter) => {
-            if (filter.kind !== 'mod') return []
+            if (filter.kind !== 'mod' && filter.kind !== 'pseudo') return []
             const value = range(filter)
             return [value ? { id: filter.statId, value } : { id: filter.statId }]
           }),

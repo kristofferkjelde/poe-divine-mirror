@@ -51,9 +51,40 @@ body {
 }
 
 .panel {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+}
+
+.panel-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--gold);
+  background: #0c0b0a;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.panel-close:hover,
+.panel-close:focus-visible {
+  color: var(--text-value);
+  border-color: var(--gold);
+}
+
+.window.inventory::after {
+  display: none;
 }
 
 .window,
@@ -1138,7 +1169,8 @@ tr[data-direction='down'] .compare-delta {
 
 .panel input,
 .panel select,
-.panel label {
+.panel label,
+.evaluate-listings {
   -webkit-app-region: no-drag;
 }
 

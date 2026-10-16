@@ -1,0 +1,22 @@
+Item Class: Boots
+Rarity: Rare
+Damnation Urge
+Wanderer Shoes
+--------
+Evasion Rating: 159 (augmented)
+Energy Shield: 48 (augmented)
+--------
+Requires: Level 65, 41 Dex, 41 Int
+--------
+Item Level: 74
+--------
+{ Prefix Modifier "Thaumaturgist's" (Tier: 6) — Mana }
++54(45-54) to maximum Mana
+{ Prefix Modifier "Shadowed" (Tier: 5) — Defences, Evasion, Energy Shield }
+30(27-32)% increased Evasion and Energy Shield
+{ Prefix Modifier "Stalwart" (Tier: 5) }
++59(51-68) to Stun Threshold
+{ Suffix Modifier "of the Prodigy" (Tier: 5) — Attribute }
++18(17-20) to Intelligence
+{ Suffix Modifier "of the Lightning" (Tier: 3) — Elemental, Lightning, Resistance }
++34(31-35)% to Lightning Resistance
