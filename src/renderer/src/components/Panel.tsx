@@ -19,6 +19,9 @@ export function Panel({ hotkeys, locked, children }: Props) {
   return (
     <div className="panel-scroll">
       <div ref={reportHeight} className="panel" data-locked={locked}>
+        <button type="button" className="panel-close" aria-label="Close" title="Close (Esc)" onClick={() => void window.overlay.hide()}>
+          ✕
+        </button>
         {children}
         <footer className="panel-footer">
           <span>
