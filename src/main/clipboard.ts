@@ -6,7 +6,8 @@ import { delay } from './delay'
 
 const POLL_INTERVAL_MS = 16
 const KEY_GAP_MS = 12
-const RETRY_AFTER_MS = 400
+const RETRY_EVERY_MS = 150
+const MAX_PRESSES = 3
 const TIMEOUT_MS = 1200
 
 const isItemText = (text: string) => text.startsWith('Item Class:') || text.startsWith('Rarity:')
@@ -32,7 +33,7 @@ export async function copyHoveredItem(): Promise<string | null> {
   let presses = 0
   try {
     while (Date.now() - started < TIMEOUT_MS) {
-      if (presses === 0 || (presses === 1 && Date.now() - started >= RETRY_AFTER_MS)) {
+      if (presses === 0 || (presses < MAX_PRESSES && Date.now() - started >= presses * RETRY_EVERY_MS)) {
         await pressCopy()
         presses++
       }

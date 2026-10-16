@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { flushSync } from 'react-dom'
 import { rulesForProfile } from '../../shared/build/profile'
 import { compareWithGear, parseGear, type GearComparison } from '../../shared/compare/gear'
 import { UserFacingError } from '../../shared/errors'
@@ -15,6 +16,8 @@ import {
   type ItemSearch,
   type SearchOptions,
 } from '../../shared/trade/query'
+
+const ART_DECODE_LIMIT_MS = 100
 
 const MISSED_ITEM = "Couldn't read an item. Hover it in the game and press the hotkey again."
 
@@ -92,7 +95,7 @@ window.overlay.on('context', (next) => {
   render()
 })
 
-window.overlay.on('event', (event) => {
+function handleEvent(event: OverlayEvent) {
   if (event.kind === 'item') {
     setView(show(event))
     if (event.mode === 'price') void openEvaluate()
@@ -101,6 +104,22 @@ window.overlay.on('event', (event) => {
   } else {
     setView({ status: 'error', id: nextId++, message: MISSED_ITEM })
   }
+}
+
+async function reportRendered() {
+  const panel = document.querySelector<HTMLElement>('.panel')
+  const images = [...(panel?.querySelectorAll('img') ?? [])].map((image) => image.decode().catch(() => {}))
+  await Promise.race([Promise.all(images), new Promise((resolve) => setTimeout(resolve, ART_DECODE_LIMIT_MS))])
+  await window.overlay.rendered(document.querySelector<HTMLElement>('.panel')?.offsetHeight ?? 0)
+}
+
+window.overlay.on('event', (event) => {
+  flushSync(() => handleEvent(event))
+  void reportRendered()
+})
+
+window.overlay.on('revealed', () => {
+  requestAnimationFrame(() => requestAnimationFrame(() => void window.overlay.painted()))
 })
 
 function setEvaluate(id: number, update: (evaluate: EvaluateState) => EvaluateState) {

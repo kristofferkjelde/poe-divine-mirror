@@ -1306,7 +1306,7 @@ tr[data-direction='down'] .compare-delta {
   background: var(--accent-ink);
   box-shadow: 0 0 6px 1px var(--accent);
   opacity: 0;
-  animation: ember-rise 2.6s ease-in infinite;
+  animation: ember-rise 2.6s ease-in 4 forwards;
 }
 @keyframes ember-rise {
   0% {
@@ -1724,7 +1724,7 @@ tr[data-direction='down'] .compare-delta {
   margin: -75px 0 0 -75px;
   border-radius: 50%;
   background: radial-gradient(circle, color-mix(in srgb, var(--accent) 42%, transparent), color-mix(in srgb, var(--accent) 12%, transparent) 45%, transparent 70%);
-  animation: ember-breathe 4.8s ease-in-out infinite;
+  animation: ember-breathe 4.8s ease-in-out 3 forwards;
 }
 .decision-slot[data-highlight='true']::after {
   background: radial-gradient(circle, color-mix(in srgb, var(--tone) 40%, transparent), transparent 70%);
@@ -1739,7 +1739,7 @@ tr[data-direction='down'] .compare-delta {
     color-mix(in srgb, var(--accent) 8%, transparent) 200deg,
     transparent 260deg
   );
-  animation: ember-swirl 18s linear infinite;
+  animation: ember-swirl 18s linear 1;
 }
 @keyframes ember-breathe {
   0%,
@@ -1820,9 +1820,19 @@ tr[data-direction='down'] .compare-delta {
   animation-delay: 170ms;
 }
 .window.inventory .decision-slot:nth-child(2) {
-  animation:
-    open-slot-center 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 110ms both,
-    open-flare 900ms ease-out 260ms;
+  animation: open-slot-center 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 110ms both;
+}
+.decision-flare {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 18px 2px var(--tone),
+    inset 0 0 24px color-mix(in srgb, var(--tone) 45%, transparent);
+}
+.window.inventory .decision-flare {
+  animation: open-flare 900ms ease-out 260ms;
 }
 .window.inventory .decision-slot:nth-child(3) {
   animation-delay: 230ms;
@@ -1870,14 +1880,8 @@ tr[data-direction='down'] .compare-delta {
   }
 }
 @keyframes open-flare {
-  0% {
-    filter: brightness(1);
-  }
   30% {
-    filter: brightness(1.45) drop-shadow(0 0 14px var(--tone));
-  }
-  100% {
-    filter: brightness(1);
+    opacity: 1;
   }
 }
 @keyframes open-verdict {
@@ -1888,7 +1892,8 @@ tr[data-direction='down'] .compare-delta {
 }
 @keyframes open-spacing {
   from {
-    letter-spacing: 0.32em;
+    opacity: 0;
+    transform: scaleX(1.25);
   }
 }
 @keyframes open-rise {

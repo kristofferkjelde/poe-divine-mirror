@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { cachedImageUrl } from '../../../shared/imageCache'
 import { itemArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
 
@@ -14,7 +15,7 @@ const GLYPHS: Array<[RegExp, string]> = [
 const glyph = (itemClass: string) => GLYPHS.find(([pattern]) => pattern.test(itemClass))?.[1] ?? '◆'
 
 export function ItemArt({ item }: { item: ParsedItem }) {
-  const src = itemArt(item)
+  const src = cachedImageUrl(itemArt(item))
   const [failed, setFailed] = useState<string>()
   if (!src || failed === src) {
     return (

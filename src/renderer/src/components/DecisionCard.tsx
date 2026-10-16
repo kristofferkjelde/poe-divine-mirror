@@ -101,6 +101,7 @@ function Slot({ item, caption, result, highlight = false }: SlotProps) {
       <strong data-rarity={item.rarity.toLowerCase()}>{item.name}</strong>
       {item.baseType && item.baseType !== item.name && <small>{item.baseType}</small>}
       {result && <span className="decision-badge">{score(result)}</span>}
+      {highlight && <span className="decision-flare" aria-hidden />}
     </figure>
   )
 }
