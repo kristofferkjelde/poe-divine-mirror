@@ -322,6 +322,10 @@ function Download() {
             overlay can draw on top.
           </li>
         </ol>
+        <p className="download-note">
+          From version 0.5.0 on, Divine Mirror tells you when a new version is out. Click the notification, or use
+          the tray menu, to update without leaving the app.
+        </p>
         <div className="hero-actions">
           <a className="btn btn-primary" href={DOWNLOAD_URL}>
             <WindowsLogo /> Download for Windows
