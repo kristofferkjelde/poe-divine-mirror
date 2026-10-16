@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react'
+import { useState, type ChangeEvent, type MouseEvent } from 'react'
 import { formatNumber } from '../../../shared/compare/stats'
 import { estimate, formatAge, formatPrice, type PriceCheckResult } from '../../../shared/trade/price'
 import {
@@ -13,6 +13,7 @@ import {
   type SearchFilter,
 } from '../../../shared/trade/query'
 import { useCountdown } from '../countdown'
+import { ItemCard } from './ItemCard'
 import {
   closeEvaluate,
   runSearch,
@@ -249,10 +250,27 @@ function EstimateBox({ searching, result, wait }: EstimateProps) {
   )
 }
 
+interface Preview {
+  index: number
+  placement: { top: number } | { bottom: number }
+}
+
+const PREVIEW_GAP = 6
+
+function placeBeside(row: HTMLElement): Preview['placement'] {
+  const { top, bottom } = row.getBoundingClientRect()
+  return top > window.innerHeight / 2 ? { bottom: window.innerHeight - top + PREVIEW_GAP } : { top: bottom + PREVIEW_GAP }
+}
+
 function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> }) {
+  const [preview, setPreview] = useState<Preview | null>(null)
   const now = Date.now()
+  const previewed = preview && result.listings[preview.index]?.item
+  const show = (index: number) => (event: MouseEvent<HTMLTableRowElement>) =>
+    setPreview({ index, placement: placeBeside(event.currentTarget) })
+
   return (
-    <div className="evaluate-listings">
+    <div className="evaluate-listings" onMouseLeave={() => setPreview(null)}>
       <table>
         <thead>
           <tr>
@@ -265,7 +283,7 @@ function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> 
         </thead>
         <tbody>
           {result.listings.map((listing, index) => (
-            <tr key={index}>
+            <tr key={index} data-previewed={preview?.index === index} onMouseEnter={show(index)}>
               <td>{formatPrice(listing)}</td>
               <td>{listing.itemLevel ?? '–'}</td>
               <td>{listing.quality ?? 0}%</td>
@@ -275,6 +293,11 @@ function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> 
           ))}
         </tbody>
       </table>
+      {previewed && (
+        <div className="window listing-preview" style={preview.placement}>
+          <ItemCard item={previewed} />
+        </div>
+      )}
     </div>
   )
 }
