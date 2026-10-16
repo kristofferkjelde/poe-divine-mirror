@@ -39,6 +39,7 @@ export interface OverlayApi {
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   openTrade: (url: string) => Promise<void>
+  startTyping: () => Promise<void>
 }
 
 export interface SettingsApi {
@@ -70,6 +71,7 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   prepareSearch: true,
   runSearch: true,
   openTrade: true,
+  startTyping: true,
 }
 
 const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {

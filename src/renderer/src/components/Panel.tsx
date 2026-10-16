@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import type { Settings } from '../../../shared/settings'
 import { setOverlayLocked } from '../overlayStore'
 
+const TYPING_FIELDS = 'input:not([type="checkbox"]):not([type="range"]), select, textarea'
+
 const reportHeight = (node: HTMLElement | null) => {
   if (!node) return
   const observer = new ResizeObserver(([entry]) => void window.overlay.resize(entry.borderBoxSize[0].blockSize))
@@ -18,7 +20,12 @@ interface Props {
 export function Panel({ hotkeys, locked, children }: Props) {
   return (
     <>
-      <div className="panel-scroll">
+      <div
+        className="panel-scroll"
+        onPointerDownCapture={(event) => {
+          if (event.target instanceof Element && event.target.closest(TYPING_FIELDS)) void window.overlay.startTyping()
+        }}
+      >
         <div ref={reportHeight} className="panel" data-locked={locked}>
           {children}
           <footer className="panel-footer">

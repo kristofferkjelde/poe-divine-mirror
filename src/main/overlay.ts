@@ -24,6 +24,7 @@ export class Overlay {
       resizable: false,
       movable: !store.current.overlayLocked,
       skipTaskbar: true,
+      focusable: false,
       alwaysOnTop: true,
       fullscreenable: false,
       hasShadow: false,
@@ -93,9 +94,16 @@ export class Overlay {
     }
   }
 
+  startTyping(): void {
+    if (!this.window.isVisible() || this.window.isFocused()) return
+    this.window.setFocusable(true)
+    this.window.focus()
+  }
+
   hide(): void {
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
+    this.window.setFocusable(false)
   }
 
   private contains({ x, y }: { x: number; y: number }): boolean {
