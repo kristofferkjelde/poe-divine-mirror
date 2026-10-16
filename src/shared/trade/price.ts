@@ -36,7 +36,7 @@ export const TRADE_ORIGIN = 'https://www.pathofexile.com'
 export const tradeUrl = (league: string, searchId: string) =>
   `${TRADE_ORIGIN}/trade2/search/poe2/${encodeURIComponent(league)}/${encodeURIComponent(searchId)}`
 
-const CURRENCY_LABELS: Record<string, string> = {
+const CURRENCY_LABELS: Partial<Record<string, string>> = {
   exalted: 'ex',
   divine: 'div',
   chaos: 'chaos',

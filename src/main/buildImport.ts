@@ -114,7 +114,7 @@ function variantItemSet(html: string, url: string, itemSets: ItemSet[] = []): st
     const start = Math.max(0, at - VARIANT_WINDOW)
     const near = page.slice(start, at + VARIANT_WINDOW)
     for (const { id, title } of itemSets) {
-      const pattern = new RegExp(`(?:"|&quot;)${escapeRegExp(title.toLowerCase())}(?:\\\\?"|&quot;)`, 'g')
+      const pattern = new RegExp(`(?:"|&quot;)${RegExp.escape(title.toLowerCase())}(?:\\\\?"|&quot;)`, 'g')
       for (const match of near.matchAll(pattern)) {
         const position = start + match.index
         const between = position < at ? page.slice(position, at) : page.slice(at, position)
@@ -135,4 +135,3 @@ function safeDecode(value: string): string {
   }
 }
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

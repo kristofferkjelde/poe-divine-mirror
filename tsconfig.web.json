@@ -1,17 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2023",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "target": "ES2025",
+    "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "noUncheckedSideEffectImports": true,
     "jsx": "react-jsx",
     "types": [],
     "strict": true,
     "skipLibCheck": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true,
-    "resolveJsonModule": true
+    "noEmit": true
   },
   "include": ["src/renderer/src/**/*", "src/shared/**/*"],
   "exclude": ["src/shared/**/*.test.ts"]

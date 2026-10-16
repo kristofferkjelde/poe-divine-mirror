@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { API_METHODS, apiChannel, messageChannel, type ApiScope, type OverlayBridge, type SettingsApi } from '../shared/ipc'
+import { API_METHODS, apiChannel, messageChannel, type ApiScope, SETTINGS_ARGUMENT, type OverlayBridge, type SettingsApi } from '../shared/ipc'
 
 function proxy<T>(scope: ApiScope): T {
   return Object.fromEntries(
@@ -16,5 +16,8 @@ const overlay: OverlayBridge = {
   },
 }
 
-contextBridge.exposeInMainWorld('overlay', overlay)
-contextBridge.exposeInMainWorld('settings', proxy<SettingsApi>('settings'))
+if (process.argv.includes(SETTINGS_ARGUMENT)) {
+  contextBridge.exposeInMainWorld('settings', proxy<SettingsApi>('settings'))
+} else {
+  contextBridge.exposeInMainWorld('overlay', overlay)
+}

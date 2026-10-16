@@ -8,7 +8,7 @@ export interface KeyLike {
 }
 
 const MODIFIER_CODES = /^(Control|Alt|Shift|Meta|OS)(Left|Right)?$/
-const NAMED_CODES: Record<string, string> = {
+const NAMED_CODES: Partial<Record<string, string>> = {
   Space: 'Space',
   Enter: 'Enter',
   Tab: 'Tab',

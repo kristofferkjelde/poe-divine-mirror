@@ -111,5 +111,7 @@ export const API_METHODS = {
 
 export type ApiScope = keyof typeof API_METHODS
 
+export const SETTINGS_ARGUMENT = '--divine-mirror-settings'
+
 export const apiChannel = (scope: ApiScope, method: string) => `${scope}:${method}`
 export const messageChannel = (name: keyof OverlayMessages) => `overlay:message:${name}`

@@ -5,8 +5,8 @@ import type { ParsedItem } from './types'
 
 export { ART_ORIGIN }
 
-const bases: Record<string, string> = art.bases
-const uniques: Record<string, string> = art.uniques
+const bases: Partial<Record<string, string>> = art.bases
+const uniques: Partial<Record<string, string>> = art.uniques
 const baseNames = Object.keys(bases)
 const foundInName = new Map<string, string | undefined>()
 

@@ -17,7 +17,7 @@ interface WeaponBase {
 
 type DamageType = 'Physical' | 'Fire' | 'Cold' | 'Lightning' | 'Chaos'
 
-const BASES = WEAPON_BASES as unknown as Record<string, WeaponBase>
+const BASES = WEAPON_BASES as unknown as Partial<Record<string, WeaponBase>>
 
 export interface ItemSet {
   id: string
@@ -38,7 +38,7 @@ export interface PobBuild {
 
 export class PobParseError extends UserFacingError {}
 
-const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+const ENTITIES: Partial<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
 function decodeEntities(value: string): string {
   return value.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (match, entity: string) => {
@@ -116,7 +116,7 @@ function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | '
 
 const RANGE = /\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g
 
-const RARITIES: Record<string, Rarity> = { NORMAL: 'Normal', MAGIC: 'Magic', RARE: 'Rare', UNIQUE: 'Unique' }
+const RARITIES: Partial<Record<string, Rarity>> = { NORMAL: 'Normal', MAGIC: 'Magic', RARE: 'Rare', UNIQUE: 'Unique' }
 const ARMOUR_PROPERTIES: Record<string, string> = {
   Armour: 'Armour',
   Evasion: 'Evasion Rating',
@@ -190,7 +190,7 @@ interface Magnitude {
 
 const MAGNITUDE = /^(\d+)% (increased|reduced) (?:([a-z ]+?) modifier magnitudes|effect of (prefix|suffix)es)$/i
 const DOUBLED = /^([a-z ]+?) modifier magnitudes are doubled$/i
-const MAGNITUDE_TAGS: Record<string, string> = { defence: 'defences', enchantment: 'enchant' }
+const MAGNITUDE_TAGS: Partial<Record<string, string>> = { defence: 'defences', enchantment: 'enchant' }
 const INFERRED_TAGS: Array<[string, RegExp]> = [
   ['attack', /Attack|Accuracy/i],
   ['caster', /Spell|Cast/i],

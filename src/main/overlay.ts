@@ -70,6 +70,10 @@ export class Overlay {
     void loadRenderer(this.window, store.current.theme)
   }
 
+  get ipc(): Electron.WebContents['ipc'] {
+    return this.window.webContents.ipc
+  }
+
   private get scale(): number {
     return this.store.current.uiScale / 100
   }

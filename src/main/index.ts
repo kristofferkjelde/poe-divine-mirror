@@ -1,6 +1,6 @@
 import { app, globalShortcut, Menu, nativeImage, Notification, session, Tray } from 'electron'
 import { uIOhook } from 'uiohook-napi'
-import type { OverlayApi, SettingsApi } from '../shared/ipc'
+import type { OverlayApi } from '../shared/ipc'
 import { HOTKEY_ACTIONS, HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
 import { overlayHandlers, settingsHandlers } from './api'
 import { BuildStore } from './buildStore'
@@ -84,10 +84,8 @@ function start(): void {
     store,
     Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
   )
-  const settingsWindow = new SettingsWindow(hotkeys, store)
-  const services = { store, gear, builds, hotkeys, trade, overlay, settingsWindow }
-  registerHandlers<OverlayApi>('overlay', overlayHandlers(services))
-  registerHandlers<SettingsApi>('settings', settingsHandlers(services))
+  const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, hotkeys, trade }))
+  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, hotkeys, trade, overlay, settingsWindow }))
 
   const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))

@@ -57,7 +57,7 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
   }
 }
 
-export function settingsHandlers({ store, builds, hotkeys, trade }: Services): Handlers<SettingsApi> {
+export function settingsHandlers({ store, builds, hotkeys, trade }: Pick<Services, 'store' | 'builds' | 'hotkeys' | 'trade'>): Handlers<SettingsApi> {
   const state = (): SettingsState => ({
     settings: store.current,
     unavailable: hotkeys.unavailableActions,
@@ -101,7 +101,7 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Services): H
     },
     setBuildWeight: async (stat, weight) => {
       const valid = weight === null || (isFiniteNumber(weight) && Math.abs(weight) <= MAX_WEIGHT)
-      if (typeof stat === 'string' && valid) await builds.setWeight(stat, weight as number | null)
+      if (typeof stat === 'string' && valid) await builds.setWeight(stat, weight)
       return state()
     },
     resetBuildWeights: async () => {

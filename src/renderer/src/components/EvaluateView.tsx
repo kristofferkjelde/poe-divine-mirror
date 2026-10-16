@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
@@ -252,7 +252,7 @@ function Filters({ search }: { search: ItemSearch }) {
           value={search.scale}
           aria-label="Scale every minimum"
           aria-valuetext={scaleLabel(search.scale)}
-          style={{ '--fill': `${((search.scale + SCALE_LIMIT) / (2 * SCALE_LIMIT)) * 100}%` } as CSSProperties}
+          style={{ '--fill': `${((search.scale + SCALE_LIMIT) / (2 * SCALE_LIMIT)) * 100}%` }}
           onChange={(event) => setSearchScale(Number(event.target.value))}
         />
         <button type="button" onClick={() => setSearchScale(search.scale + SCALE_STEP)} aria-label="Raise minimums by 5%">

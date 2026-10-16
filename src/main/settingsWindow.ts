@@ -1,6 +1,8 @@
 import { BrowserWindow } from 'electron'
 import { THEME_BACKGROUNDS } from '../shared/settings'
+import { SETTINGS_ARGUMENT, type SettingsApi } from '../shared/ipc'
 import type { Hotkeys } from './hotkeys'
+import { registerHandlers, type Handlers } from './ipc'
 import type { SettingsStore } from './settingsStore'
 import { ICON_PATH, loadRenderer, PRELOAD_PATH } from './renderer'
 
@@ -10,6 +12,7 @@ export class SettingsWindow {
   constructor(
     private readonly hotkeys: Hotkeys,
     private readonly store: SettingsStore,
+    private readonly handlers: Handlers<SettingsApi>,
   ) {
     store.watch((settings) => settings.uiScale, () => this.window?.webContents.setZoomFactor(this.scale))
     store.watch(
@@ -41,9 +44,10 @@ export class SettingsWindow {
       show: false,
       title: 'Divine Mirror Settings',
       backgroundColor: THEME_BACKGROUNDS[this.store.current.theme],
-      webPreferences: { preload: PRELOAD_PATH, sandbox: true, zoomFactor: this.scale },
+      webPreferences: { preload: PRELOAD_PATH, sandbox: true, zoomFactor: this.scale, additionalArguments: [SETTINGS_ARGUMENT] },
     })
     this.window.once('ready-to-show', () => this.window?.show())
+    registerHandlers<SettingsApi>(this.window.webContents.ipc, 'settings', this.handlers)
     this.window.on('closed', () => {
       this.window = null
       this.hotkeys.resume()
