@@ -54,19 +54,22 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
 
   return (
     <>
-      <div className="window">
+      <div className={decided ? 'window inventory' : 'window'}>
         {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOTS[equippedTo].label}</GearHint>}
-        <ItemCard item={item} compact={decided} />
-        {decided && (
+        {decided ? (
           <DecisionCard
+            item={item}
             gear={comparison}
             build={buildComparison}
             weightsNote={weightsNote}
+            equipHotkey={hotkeys.equip}
             detailsOpen={detailsOpen}
             onToggleDetails={() => setDetailsOpen(!detailsOpen)}
           />
+        ) : (
+          <ItemCard item={item} />
         )}
-        {!equippedTo && !comparison && comparable && item.slot && (
+        {!decided && !equippedTo && comparable && item.slot && (
           <GearHint>
             No equipped {SLOT_LABELS[item.slot].toLowerCase()} saved yet. Hover yours and press {hotkeys.equip}.
           </GearHint>

@@ -1,39 +1,67 @@
-import { formatPercent } from '../../../shared/compare/compare'
-import { breakdown, decide } from '../../../shared/compare/decision'
+import { formatPercent, type ComparisonRow } from '../../../shared/compare/compare'
+import { breakdown, decide, describeChange, shortStat } from '../../../shared/compare/decision'
 import type { GearComparison } from '../../../shared/compare/gear'
 import { formatNumber } from '../../../shared/compare/stats'
-import { itemLabel } from '../../../shared/item/label'
+import type { ParsedItem } from '../../../shared/item/types'
 
-const MAX_LISTED = 4
-const METER_RANGE = 50
+const LEDGER_ROWS = 7
 
 interface Props {
+  item: ParsedItem
   gear: GearComparison | null
   build: GearComparison | null
   weightsNote: string
+  equipHotkey: string
   detailsOpen: boolean
   onToggleDetails: () => void
 }
 
-export function DecisionCard({ gear, build, weightsNote, detailsOpen, onToggleDetails }: Props) {
+export function DecisionCard({ item, gear, build, weightsNote, equipHotkey, detailsOpen, onToggleDetails }: Props) {
   const decision = decide(gear, build)
   const focus = gear ?? build
   if (!decision || !focus) return null
-  const { gains, losses, warnings, unscored } = breakdown(focus.comparison)
+  const { warnings, unscored } = breakdown(focus.comparison)
+  const stats = ledger(gear, build)
 
   return (
     <section className="decision" data-tone={decision.tone}>
-      <h3 className="decision-title">{decision.title}</h3>
-      <p className="decision-detail">{decision.detail}</p>
-      <div className="decision-meters">
-        {gear && <Meter result={gear} caption="vs what you wear" />}
-        {build && <Meter result={build} caption="vs your build" />}
+      <header className="decision-tabs">
+        <span className="decision-tab">Worn</span>
+        <h3 className="gold-plate">
+          <span>Compare</span>
+        </h3>
+        <span className="decision-tab">Build</span>
+      </header>
+      <div className="decision-slots">
+        {gear ? <Slot item={gear.equipped} caption="You wear" result={gear} /> : <EmptySlot caption="You wear" hint={`Hover yours and press ${equipHotkey}`} />}
+        <Slot item={item} caption="This item" highlight />
+        {build ? <Slot item={build.equipped} caption="Your build" result={build} /> : <EmptySlot caption="Your build" hint="Add your build in Settings" />}
       </div>
-      {(gains.length > 0 || losses.length > 0) && (
-        <div className="decision-changes">
-          <ChangeList title="Gains" tone="good" changes={gains} />
-          <ChangeList title="Losses" tone="bad" changes={losses} />
-        </div>
+      <div className="decision-verdict">
+        <strong>{decision.title}</strong>
+        <span>{decision.detail}</span>
+      </div>
+      {stats.length > 0 && (
+        <table className="decision-ledger">
+          <thead>
+            <tr>
+              <th scope="col">Stat</th>
+              <th scope="col">Worn</th>
+              <th scope="col">This</th>
+              <th scope="col">Build</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.slice(0, LEDGER_ROWS).map(({ stat, gearRow, buildRow }) => (
+              <tr key={stat}>
+                <td title={stat}>{shortStat(stat)}</td>
+                <OtherCell row={gearRow} />
+                <td className="decision-this">{(gearRow ?? buildRow)?.candidate?.display ?? '–'}</td>
+                <OtherCell row={buildRow} />
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
       {warnings.map((warning) => (
         <p key={warning} className="decision-warning">
@@ -45,46 +73,81 @@ export function DecisionCard({ gear, build, weightsNote, detailsOpen, onToggleDe
         {unscored > 0 && ` · ${unscored} ${unscored === 1 ? 'stat' : 'stats'} not scored`}
       </p>
       <button type="button" className="panel-link decision-toggle" aria-expanded={detailsOpen} onClick={onToggleDetails}>
-        {detailsOpen ? 'Hide full comparison' : 'Show full comparison'}
+        {detailsOpen ? 'Hide full comparison' : stats.length > LEDGER_ROWS ? `Show all ${stats.length} stats` : 'Show full comparison'}
       </button>
     </section>
   )
 }
 
-function ChangeList({ title, tone, changes }: { title: string; tone: 'good' | 'bad'; changes: string[] }) {
-  const hidden = changes.length - MAX_LISTED
+interface SlotProps {
+  item: ParsedItem
+  caption: string
+  result?: GearComparison
+  highlight?: boolean
+}
+
+function Slot({ item, caption, result, highlight = false }: SlotProps) {
   return (
-    <div>
-      <h4>{title}</h4>
-      <ul data-tone={tone}>
-        {changes.length === 0 && <li className="decision-none">None</li>}
-        {changes.slice(0, MAX_LISTED).map((change) => (
-          <li key={change}>{change}</li>
-        ))}
-        {hidden > 0 && <li className="decision-none">+{hidden} more</li>}
-      </ul>
-    </div>
+    <figure className="item-slot-frame decision-slot" data-highlight={highlight} data-verdict={result?.comparison.verdict}>
+      <figcaption>{caption}</figcaption>
+      <span className="decision-glyph" aria-hidden>
+        {glyph(item.itemClass)}
+      </span>
+      <strong data-rarity={item.rarity.toLowerCase()}>{item.name}</strong>
+      {item.baseType && item.baseType !== item.name && <small>{item.baseType}</small>}
+      {result && <span className="decision-badge">{score(result)}</span>}
+    </figure>
   )
 }
 
-function Meter({ result, caption }: { result: GearComparison; caption: string }) {
-  const { percent, score, verdict } = result.comparison
-  const value = percent ?? score
-  const width = Math.min(Math.abs(value), METER_RANGE)
+function EmptySlot({ caption, hint }: { caption: string; hint: string }) {
   return (
-    <div className="decision-meter" data-verdict={verdict}>
-      <strong>{percent === null ? `${score > 0 ? '+' : ''}${formatNumber(score)}` : formatPercent(percent)}</strong>
-      <div className="decision-track" aria-hidden>
-        <span
-          className="decision-fill"
-          style={value >= 0 ? { left: '50%', width: `${width}%` } : { right: '50%', width: `${width}%` }}
-        />
-      </div>
-      <small>
-        {caption}
-        <br />
-        <span className="item-value">{itemLabel(result.equipped)}</span>
-      </small>
-    </div>
+    <figure className="item-slot-frame decision-slot" data-empty>
+      <figcaption>{caption}</figcaption>
+      <small>{hint}</small>
+    </figure>
   )
 }
+
+function OtherCell({ row }: { row?: ComparisonRow }) {
+  if (!row) return <td className="decision-absent">–</td>
+  const beaten = row.delta > 0 ? 'worse' : row.delta < 0 ? 'better' : undefined
+  return (
+    <td data-compared={beaten} title={`This item: ${describeChange(row)}`}>
+      {row.equipped?.display ?? '–'}
+    </td>
+  )
+}
+
+const score = ({ comparison }: GearComparison) =>
+  comparison.percent === null ? `${comparison.score > 0 ? '+' : ''}${formatNumber(comparison.score)}` : formatPercent(comparison.percent)
+
+interface LedgerRow {
+  stat: string
+  gearRow?: ComparisonRow
+  buildRow?: ComparisonRow
+  weight: number
+}
+
+function ledger(gear: GearComparison | null, build: GearComparison | null): LedgerRow[] {
+  const byStat = new Map<string, LedgerRow>()
+  for (const row of gear?.comparison.rows ?? []) {
+    byStat.set(row.stat, { stat: row.stat, gearRow: row, weight: Math.abs(row.contribution) })
+  }
+  for (const row of build?.comparison.rows ?? []) {
+    const entry = byStat.get(row.stat) ?? { stat: row.stat, weight: 0 }
+    byStat.set(row.stat, { ...entry, buildRow: row, weight: Math.max(entry.weight, Math.abs(row.contribution)) })
+  }
+  return [...byStat.values()].sort((a, b) => b.weight - a.weight)
+}
+
+const GLYPHS: Array<[RegExp, string]> = [
+  [/sceptre|wand|staff|talisman/i, '⚚'],
+  [/spear|bow|sword|axe|mace|flail|quarterstaff|crossbow|claw|dagger/i, '⚔'],
+  [/ring/i, '◯'],
+  [/amulet/i, '❖'],
+  [/helmet/i, '⛑'],
+  [/shield|buckler|focus|quiver/i, '⛨'],
+]
+
+const glyph = (itemClass: string) => GLYPHS.find(([pattern]) => pattern.test(itemClass))?.[1] ?? '◆'
