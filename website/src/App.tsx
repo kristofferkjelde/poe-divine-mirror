@@ -1,48 +1,68 @@
-import type { ReactNode } from 'react'
-import { BuildPanel } from './components/BuildPanel'
-import { ComparePanel } from './components/ComparePanel'
+import { useState, type ReactNode } from 'react'
 import { Divider } from './components/Divider'
-import { EvaluatePanel } from './components/EvaluatePanel'
+import { EvaluateShots } from './components/EvaluateShots'
 import { HeroDemo } from './components/HeroDemo'
-import { ItemArtDefs } from './components/ItemArt'
 import { Keys } from './components/Keys'
+import { Screen } from './components/Screen'
 import { DOWNLOAD_URL, ISSUES_URL, REPO_URL } from './links'
+import { savedTheme, saveTheme, THEME_INFO, THEMES, type Theme } from './theme'
+
+type ThemeProps = { theme: Theme; onTheme: (theme: Theme) => void }
 
 export function App() {
+  const [theme, setTheme] = useState<Theme>(savedTheme)
+
+  const chooseTheme = (next: Theme) => {
+    setTheme(next)
+    saveTheme(next)
+  }
+
   return (
-    <>
-      <ItemArtDefs />
+    <div className="site" data-theme={theme}>
       <div className="embers" aria-hidden>
         {Array.from({ length: 18 }, (_, i) => (
           <span key={i} />
         ))}
       </div>
-      <Nav />
+      <Nav theme={theme} onTheme={chooseTheme} />
       <main>
-        <Hero />
+        <Hero theme={theme} />
         <Steps />
         <Feature
           id="compare"
           eyebrow="Compare"
-          title="Upgrade, downgrade or sidegrade. Instantly."
-          panel={<ComparePanel compact />}
+          title="Equip it or skip it. One look."
+          panel={
+            <Screen
+              name="compare"
+              theme={theme}
+              alt="Compare window: the boots you wear, the new boots and your build's boots side by side, with the verdict Equip it and a stat ledger"
+            />
+          }
         >
           <p>
             Press <Keys keys={['Alt', 'D']} /> on any item: in your inventory, a stash tab, a vendor or on the
-            ground. Divine Mirror lines it up against what you're wearing and tells you, in one word and one
-            number, whether it's better.
+            ground. Divine Mirror sets it between what you wear and what your build wants, and gives you one
+            answer: <b>Equip it</b>, <b>Wear it for now</b>, <b>Your call</b> or <b>Skip it</b>.
           </p>
           <ul className="ticks">
-            <li>Every stat that changes, with what you have now and what you'd get</li>
+            <li>Real item art for all three, so you see at a glance what you're comparing</li>
+            <li>A stat ledger with what you wear, this item and your build's item, column by column</li>
             <li>Rings are compared against your weaker ring, the one you'd swap out</li>
-            <li>Prefix and suffix tiers on every mod, with T1 and T2 rolls in gold</li>
+            <li>Show all stats for the full breakdown, with prefix and suffix tiers on every mod</li>
           </ul>
         </Feature>
         <Feature
           id="build"
           eyebrow="Your build"
           title="Weighted for the stats your build actually uses."
-          panel={<BuildPanel />}
+          panel={
+            <Screen
+              name="build"
+              theme={theme}
+              alt="Upgrade by 120 percent against the build's boots, scored for Spirit Walker Twister, with the gain or loss on every stat"
+            />
+          }
           flip
         >
           <p>
@@ -51,36 +71,38 @@ export function App() {
           </p>
           <ul className="ticks">
             <li>Cast speed won't count on an attack build, energy shield won't count on evasion</li>
-            <li>Every item is also compared against your build's item for that slot</li>
-            <li>Fine-tune any weight yourself</li>
+            <li>Every item is also scored against your build's item for that slot</li>
+            <li>Fine-tune any weight yourself in Settings</li>
           </ul>
         </Feature>
         <Feature
           id="evaluate"
           eyebrow="Price check"
           title="What is it worth? Ask the trade site."
-          panel={<EvaluatePanel />}
-          note="Try it: tick a few mods and drag the slider."
+          panel={<EvaluateShots theme={theme} />}
+          note="Switch between the Filters and Listings tabs."
         >
           <p>
             Press <Keys keys={['Ctrl', 'D']} /> and Divine Mirror searches the official trade site for items like
-            yours in the current league, then shows the cheapest and typical price.
+            yours in the current league. The price is right at the top, with the real currency icons.
           </p>
           <ul className="ticks">
-            <li>Toggle which mods count and set your own min and max</li>
-            <li>Loosen or tighten every roll at once with one slider</li>
+            <li>Filters: pick the mods that count, with pseudo totals, mod tiers and values at 20% quality</li>
+            <li>Loosen or tighten every roll at once with one slider, or switch between Quick and Broad</li>
+            <li>Listings: the cheapest matches with item level, quality and when they were listed</li>
             <li>Open the same search on the trade site to fine-tune it</li>
           </ul>
         </Feature>
+        <Themes theme={theme} onTheme={chooseTheme} />
         <Safety />
         <Download />
       </main>
       <Footer />
-    </>
+    </div>
   )
 }
 
-function Nav() {
+function Nav({ theme, onTheme }: ThemeProps) {
   return (
     <header className="nav">
       <a className="brand" href="#top">
@@ -91,7 +113,24 @@ function Nav() {
         <a href="#compare">Compare</a>
         <a href="#build">Build</a>
         <a href="#evaluate">Price check</a>
+        <a href="#themes">Themes</a>
         <a href="#safe">Is it safe?</a>
+        <span className="nav-themes" role="group" aria-label="Theme">
+          {THEMES.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className="theme-swatch"
+              data-swatch={id}
+              aria-pressed={theme === id}
+              aria-label={THEME_INFO[id].label}
+              title={THEME_INFO[id].label}
+              onClick={() => onTheme(id)}
+            >
+              <i />
+            </button>
+          ))}
+        </span>
         <a className="nav-cta" href={DOWNLOAD_URL}>
           Download
         </a>
@@ -100,7 +139,7 @@ function Nav() {
   )
 }
 
-function Hero() {
+function Hero({ theme }: { theme: Theme }) {
   return (
     <section className="hero" id="top">
       <div className="hero-copy">
@@ -112,8 +151,8 @@ function Hero() {
           Is this item <em>an upgrade?</em>
         </h1>
         <p className="lead">
-          Hover it, press <Keys keys={['Alt', 'D']} />, and know. Divine Mirror puts the item next to what you're
-          wearing, stat by stat, without leaving the game.
+          Hover it, press <Keys keys={['Alt', 'D']} />, and know. Divine Mirror puts the item between what you
+          wear and what your build wants, stat by stat, without leaving the game.
         </p>
         <div className="hero-actions">
           <a className="btn btn-primary" href={DOWNLOAD_URL}>
@@ -125,7 +164,7 @@ function Hero() {
         </div>
         <p className="hero-meta">Free and open source · Windows 10 and 11</p>
       </div>
-      <HeroDemo />
+      <HeroDemo theme={theme} />
     </section>
   )
 }
@@ -187,6 +226,42 @@ function Feature({ id, eyebrow, title, panel, note, flip, children }: FeaturePro
       <div className="feature-panel">
         <div className="panel-glow">{panel}</div>
         {note && <p className="panel-note">{note}</p>}
+      </div>
+    </section>
+  )
+}
+
+function Themes({ theme, onTheme }: ThemeProps) {
+  return (
+    <section className="themes" id="themes" aria-labelledby="themes-title">
+      <SectionTitle id="themes-title" eyebrow="Themes" title="Three looks. Pick yours." />
+      <div className="theme-picker" role="radiogroup" aria-label="Theme">
+        {THEMES.map((id) => (
+          <label key={id} className="theme-option card">
+            <input type="radio" name="theme" checked={theme === id} onChange={() => onTheme(id)} />
+            <span className="theme-swatch" data-swatch={id}>
+              <i />
+            </span>
+            <b>{THEME_INFO[id].label}</b>
+            <span>{THEME_INFO[id].text}</span>
+          </label>
+        ))}
+      </div>
+      <p className="themes-note">
+        Every screenshot on this page follows your pick. In the app it's one click in Settings, and every window
+        changes with it.
+      </p>
+      <div className="themes-gallery">
+        <Screen
+          name="item"
+          theme={theme}
+          alt="Item window: Storm Trail, Daggerfoot Shoes, with its properties and the tier of every mod"
+        />
+        <Screen
+          name="worn"
+          theme={theme}
+          alt="Upgrade by 145 percent against the boots you wear, with the gain or loss on every stat"
+        />
       </div>
     </section>
   )
