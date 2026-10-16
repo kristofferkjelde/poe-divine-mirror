@@ -1578,12 +1578,12 @@ tr[data-direction='down'] .compare-delta {
   max-height: 330px;
   overflow-y: auto;
 }
-.ember-listings ol {
+.ember-listings > ol {
   display: grid;
   gap: 2px;
   list-style: none;
 }
-.ember-listings li {
+.ember-listings > ol > li {
   display: grid;
   grid-template-columns: 72px 52px 32px minmax(0, 1fr) auto;
   gap: 8px;
@@ -1595,15 +1595,15 @@ tr[data-direction='down'] .compare-delta {
   color: var(--ink-dim);
   font-variant-numeric: tabular-nums;
 }
-.ember-listings li:nth-child(even) {
+.ember-listings > ol > li:nth-child(even) {
   background: var(--row-alt);
 }
-.ember-listings li[data-previewed='true'] {
+.ember-listings > ol > li[data-previewed='true'] {
   border-left-color: var(--accent);
   background: linear-gradient(90deg, var(--row-on), transparent 80%), var(--row);
   color: var(--ink);
 }
-.ember-listings strong {
+.ember-listings > ol strong {
   font-weight: normal;
   color: var(--price);
 }
