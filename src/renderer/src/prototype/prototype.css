@@ -14,6 +14,50 @@ body {
   max-height: none;
 }
 
+.prototype-stage[data-layout='side'] {
+  width: min(1280px, 100% - 32px);
+}
+
+.prototype-stage .panel {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.prototype-stage[data-layout='side'] .panel {
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+}
+
+.window,
+.prototype-stage .panel-footer {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.8),
+    inset 0 0 24px rgba(0, 0, 0, 0.9),
+    0 6px 18px rgba(0, 0, 0, 0.55);
+}
+
+.window > section,
+.window.pa,
+.window.pc {
+  border-bottom: none;
+}
+
+.prototype-stage .panel-footer {
+  grid-column: 1 / -1;
+}
+
+.prototype-layout {
+  width: auto !important;
+  padding: 0 12px;
+  border-radius: 999px !important;
+  font: 600 13px system-ui, sans-serif;
+}
+
 .prototype-switcher {
   position: fixed;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));

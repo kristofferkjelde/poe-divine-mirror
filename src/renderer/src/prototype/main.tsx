@@ -1,5 +1,5 @@
 import './stub'
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { rulesForProfile } from '../../../shared/build/profile'
 import { compareWithGear } from '../../../shared/compare/gear'
@@ -29,15 +29,20 @@ const props = {
 function Prototype() {
   const variant = useVariant(Object.keys(VARIANTS)) as keyof typeof COMPONENTS
   const Variant = COMPONENTS[variant]
+  const [layout, setLayout] = useState<'stacked' | 'side'>('stacked')
   return (
     <>
-      <div className="prototype-stage">
+      <div className="prototype-stage" data-layout={layout}>
         <Panel key={variant} hotkeys={DEFAULT_SETTINGS.hotkeys} locked={false}>
           <Variant {...props} />
         </Panel>
       </div>
       {import.meta.env.DEV || import.meta.env.MODE === 'prototype' ? (
-        <PrototypeSwitcher variants={VARIANTS} current={variant} />
+        <PrototypeSwitcher variants={VARIANTS} current={variant}>
+          <button type="button" className="prototype-layout" onClick={() => setLayout(layout === 'side' ? 'stacked' : 'side')}>
+            {layout === 'side' ? 'Stack windows' : 'Side by side'}
+          </button>
+        </PrototypeSwitcher>
       ) : null}
     </>
   )

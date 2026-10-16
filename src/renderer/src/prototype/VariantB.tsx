@@ -17,6 +17,7 @@ export function VariantB({ item, gear, build, buildName }: VariantProps) {
 
   return (
     <>
+      <div className="window">
       <ItemCard item={item} compact />
       <section className="pb" data-tone={decision.tone}>
         <h3 className="pb-title">{decision.title}</h3>
@@ -63,10 +64,19 @@ export function VariantB({ item, gear, build, buildName }: VariantProps) {
           {details ? 'Hide' : 'Show'} full comparison
         </button>
       </section>
+      </div>
       {details && (
         <>
-          {build && <ComparisonView result={build} against="build" weightsNote={`Scored for ${buildName}`} />}
-          {gear && <ComparisonView result={gear} against="gear" />}
+          {build && (
+            <div className="window">
+              <ComparisonView result={build} against="build" weightsNote={`Scored for ${buildName}`} />
+            </div>
+          )}
+          {gear && (
+            <div className="window">
+              <ComparisonView result={gear} against="gear" />
+            </div>
+          )}
         </>
       )}
     </>

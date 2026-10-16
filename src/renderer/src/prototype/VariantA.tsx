@@ -13,7 +13,9 @@ export function VariantA({ item, gear, build, buildName }: VariantProps) {
     <>
       {build && <Section result={build} against="build" note={`Scored for ${buildName}`} />}
       {gear && <Section result={gear} against="gear" />}
-      <ItemCard item={item} />
+      <div className="window">
+        <ItemCard item={item} />
+      </div>
     </>
   )
 }
@@ -22,7 +24,7 @@ function Section({ result, against, note }: { result: GearComparison; against: '
   const [open, setOpen] = useState(false)
   const summary = summarize(result, against)
   return (
-    <section className="pa" data-tone={summary.tone}>
+    <section className="pa window" data-tone={summary.tone}>
       <header className="pa-head">
         <span className="pa-label">{summary.label}</span>
         <span className="pa-percent">{summary.percent}</span>

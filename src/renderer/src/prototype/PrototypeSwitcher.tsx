@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 
 let current = new URLSearchParams(window.location.search).get('variant')
 const listeners = new Set<() => void>()
@@ -28,7 +28,13 @@ const editing = () => {
   return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || (target as HTMLElement | null)?.isContentEditable
 }
 
-export function PrototypeSwitcher({ variants, current }: { variants: Record<string, string>; current: string }) {
+interface SwitcherProps {
+  variants: Record<string, string>
+  current: string
+  children?: ReactNode
+}
+
+export function PrototypeSwitcher({ variants, current, children }: SwitcherProps) {
   const keys = Object.keys(variants)
   const step = (by: number) => go(keys[(keys.indexOf(current) + by + keys.length) % keys.length])
   const bindKeys = (node: HTMLElement | null) => {
@@ -53,6 +59,7 @@ export function PrototypeSwitcher({ variants, current }: { variants: Record<stri
       <button type="button" onClick={() => step(1)} aria-label="Next variant">
         →
       </button>
+      {children}
     </nav>
   )
 }

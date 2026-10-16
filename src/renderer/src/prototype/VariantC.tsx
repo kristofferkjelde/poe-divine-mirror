@@ -18,7 +18,7 @@ export function VariantC({ item, gear, build, buildName }: VariantProps) {
   return (
     <>
       {tab && (
-        <section className="pc">
+        <section className="pc window">
           <nav className="pc-tabs">
             {tabs.map((entry) => {
               const summary = summarize(entry.result, entry.key)
@@ -38,7 +38,9 @@ export function VariantC({ item, gear, build, buildName }: VariantProps) {
           <Breakdown result={tab.result} against={tab.key} buildName={buildName} />
         </section>
       )}
-      <ItemCard item={item} />
+      <div className="window">
+        <ItemCard item={item} />
+      </div>
     </>
   )
 }
