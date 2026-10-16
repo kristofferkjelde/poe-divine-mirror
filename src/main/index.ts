@@ -41,6 +41,7 @@ function start(): void {
       hotkeys: store.current.hotkeys,
       locked: store.current.overlayLocked,
       build: builds.current,
+      theme: store.current.theme,
     })
   overlay.onLoad(pushContext)
   store.onChange(pushContext)

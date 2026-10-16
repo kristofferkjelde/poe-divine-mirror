@@ -5,6 +5,18 @@ export type HotkeyAction = (typeof HOTKEY_ACTIONS)[number]
 export const isHotkeyAction = (value: unknown): value is HotkeyAction =>
   HOTKEY_ACTIONS.includes(value as HotkeyAction)
 
+export const THEMES = ['ember', 'mana', 'iron'] as const
+
+export type Theme = (typeof THEMES)[number]
+
+export const THEME_LABELS: Record<Theme, { name: string; hint: string }> = {
+  ember: { name: 'Ember', hint: 'Obsidian and glowing embers' },
+  mana: { name: 'Mana', hint: 'Sapphire glow in a bronze frame' },
+  iron: { name: 'Iron', hint: 'Gunmetal and pale gold' },
+}
+
+export const isTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
+
 export interface Point {
   x: number
   y: number
@@ -15,6 +27,7 @@ export interface Settings {
   overlayPosition: Point | null
   overlayLocked: boolean
   league: string | null
+  theme: Theme
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -26,6 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayPosition: null,
   overlayLocked: false,
   league: null,
+  theme: 'ember',
 }
 
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
@@ -53,5 +67,6 @@ export function normalizeSettings(value: unknown): Settings {
     overlayPosition: isPoint(input?.overlayPosition) ? input.overlayPosition : null,
     overlayLocked: input?.overlayLocked === true,
     league: typeof input?.league === 'string' && input.league.trim() !== '' ? input.league : null,
+    theme: isTheme(input?.theme) ? input.theme : DEFAULT_SETTINGS.theme,
   }
 }

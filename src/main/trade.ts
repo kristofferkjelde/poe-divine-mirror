@@ -15,6 +15,7 @@ import {
   type PriceCheckResult,
 } from '../shared/trade/price'
 import { baseTypeNames, magicBaseType } from '../shared/trade/baseTypes'
+import { currencyIcons, iconsFor, type CurrencyIcons } from '../shared/trade/currency'
 import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
 import { jsonFile } from './jsonFile'
 
@@ -44,6 +45,8 @@ export class TradeClient {
   private stats: Promise<TradeStatGroup[]> | null = null
   private readonly baseTypesFile = jsonFile('trade-base-types.json')
   private baseTypes: Promise<string[]> | null = null
+  private readonly iconsFile = jsonFile('trade-currency-icons.json')
+  private icons: Promise<CurrencyIcons> | null = null
   private leagues: Promise<string[]> | null = null
   private blockedUntil = 0
   private readonly cache = new Map<string, { at: number; result: PriceCheckResult }>()
@@ -98,7 +101,11 @@ export class TradeClient {
         )
       }
 
-      const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings }
+      const icons = iconsFor(
+        await this.loadCurrencyIcons().catch(() => ({})),
+        listings.map((listing) => listing.currency),
+      )
+      const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings, icons }
       this.cache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
@@ -144,6 +151,28 @@ export class TradeClient {
       const result = baseTypeNames(await this.request('/api/trade2/data/items'))
       if (result.length === 0) throw new TradeError('The trade site sent unexpected item data')
       await this.baseTypesFile.write({ fetchedAt: Date.now(), result })
+      return result
+    } catch (error) {
+      if (saved?.result) return saved.result
+      throw error
+    }
+  }
+
+  private async loadCurrencyIcons(): Promise<CurrencyIcons> {
+    this.icons ??= this.readCurrencyIcons().catch((error) => {
+      this.icons = null
+      throw error
+    })
+    return this.icons
+  }
+
+  private async readCurrencyIcons(): Promise<CurrencyIcons> {
+    const saved = this.iconsFile.read() as { fetchedAt?: number; result?: CurrencyIcons } | undefined
+    if (saved?.result && saved.fetchedAt && Date.now() - saved.fetchedAt < STATS_MAX_AGE_MS) return saved.result
+    try {
+      const result = currencyIcons(await this.request('/api/trade2/data/static'))
+      if (Object.keys(result).length === 0) throw new TradeError('The trade site sent unexpected currency data')
+      await this.iconsFile.write({ fetchedAt: Date.now(), result })
       return result
     } catch (error) {
       if (saved?.result) return saved.result

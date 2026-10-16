@@ -7,6 +7,7 @@ const listeners = new Set<() => void>()
 
 export function setSettingsState(next: SettingsState): void {
   state = next
+  document.documentElement.dataset.theme = next.settings.theme
   listeners.forEach((listener) => listener())
 }
 

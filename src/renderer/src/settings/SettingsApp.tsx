@@ -2,6 +2,7 @@ import { HOTKEY_ACTIONS } from '../../../shared/settings'
 import { BuildSettings } from './BuildSettings'
 import { HotkeyField } from './HotkeyField'
 import { OverlaySettings } from './OverlaySettings'
+import { ThemeSettings } from './ThemeSettings'
 import { TradeSettings } from './TradeSettings'
 import { setSettingsState, useSettingsState } from './settingsStore'
 
@@ -37,6 +38,12 @@ export function SettingsApp() {
         <section className="settings-section">
           <h2>Overlay</h2>
           <OverlaySettings settings={state.settings} />
+        </section>
+      )}
+      {state && (
+        <section className="settings-section">
+          <h2>Theme</h2>
+          <ThemeSettings theme={state.settings.theme} />
         </section>
       )}
       {state && (

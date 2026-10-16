@@ -1,10 +1,14 @@
-import { formatPercent, type ComparisonRow } from '../../../shared/compare/compare'
-import { breakdown, decide, describeChange, shortStat } from '../../../shared/compare/decision'
+import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared/compare/compare'
+import { breakdown, decide, describeChange, shortStat, type Tone } from '../../../shared/compare/decision'
 import type { GearComparison } from '../../../shared/compare/gear'
 import { formatNumber } from '../../../shared/compare/stats'
 import type { ParsedItem } from '../../../shared/item/types'
+import { ItemArt } from './ItemArt'
+import { VerdictMark } from './VerdictMark'
 
 const LEDGER_ROWS = 7
+
+const TONE_MARKS: Record<Tone, Verdict> = { good: 'upgrade', bad: 'downgrade', mixed: 'sidegrade' }
 
 interface Props {
   item: ParsedItem
@@ -25,12 +29,12 @@ export function DecisionCard({ item, gear, build, weightsNote, equipHotkey, deta
 
   return (
     <section className="decision" data-tone={decision.tone}>
-      <header className="decision-tabs">
-        <span className="decision-tab">Worn</span>
-        <h3 className="gold-plate">
+      <header className="ember-tabs">
+        <span>Worn</span>
+        <h3 className="ember-plate">
           <span>Compare</span>
         </h3>
-        <span className="decision-tab">Build</span>
+        <span>Build</span>
       </header>
       <div className="decision-slots">
         {gear ? <Slot item={gear.equipped} caption="You wear" result={gear} /> : <EmptySlot caption="You wear" hint={`Hover yours and press ${equipHotkey}`} />}
@@ -38,7 +42,10 @@ export function DecisionCard({ item, gear, build, weightsNote, equipHotkey, deta
         {build ? <Slot item={build.equipped} caption="Your build" result={build} /> : <EmptySlot caption="Your build" hint="Add your build in Settings" />}
       </div>
       <div className="decision-verdict">
-        <strong>{decision.title}</strong>
+        <strong>
+          <VerdictMark verdict={TONE_MARKS[decision.tone]} />
+          {decision.title}
+        </strong>
         <span>{decision.detail}</span>
       </div>
       {stats.length > 0 && (
@@ -90,9 +97,7 @@ function Slot({ item, caption, result, highlight = false }: SlotProps) {
   return (
     <figure className="item-slot-frame decision-slot" data-highlight={highlight} data-verdict={result?.comparison.verdict}>
       <figcaption>{caption}</figcaption>
-      <span className="decision-glyph" aria-hidden>
-        {glyph(item.itemClass)}
-      </span>
+      <ItemArt item={item} />
       <strong data-rarity={item.rarity.toLowerCase()}>{item.name}</strong>
       {item.baseType && item.baseType !== item.name && <small>{item.baseType}</small>}
       {result && <span className="decision-badge">{score(result)}</span>}
@@ -140,14 +145,3 @@ function ledger(gear: GearComparison | null, build: GearComparison | null): Ledg
   }
   return [...byStat.values()].sort((a, b) => b.weight - a.weight)
 }
-
-const GLYPHS: Array<[RegExp, string]> = [
-  [/sceptre|wand|staff|talisman/i, '⚚'],
-  [/spear|bow|sword|axe|mace|flail|quarterstaff|crossbow|claw|dagger/i, '⚔'],
-  [/ring/i, '◯'],
-  [/amulet/i, '❖'],
-  [/helmet/i, '⛑'],
-  [/shield|buckler|focus|quiver/i, '⛨'],
-]
-
-const glyph = (itemClass: string) => GLYPHS.find(([pattern]) => pattern.test(itemClass))?.[1] ?? '◆'
