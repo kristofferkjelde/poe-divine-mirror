@@ -3,7 +3,7 @@
 **Is this item an upgrade?** Hover it in Path of Exile 2, press **Alt+D**, and find out without leaving the game.
 
 <p align="center">
-  <img src="docs/overlay.png" alt="The overlay comparing a rare ring with the build's ring and the saved ring" width="420" />
+  <img src="docs/overlay.png" alt="The Compare popup: a rare ring between the ring you wear and your build's ring, with the verdict Equip it and a stat-by-stat ledger" width="420" />
 </p>
 
 Divine Mirror is a small overlay for Path of Exile 2. It shows the item under your cursor next to what you have equipped, stat by stat, and tells you whether it's an upgrade.
@@ -35,7 +35,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Do this | What happens |
 | --- | --- |
 | Hover an item you're **wearing** and press **Alt+Shift+D** | It's saved as your equipped item for that slot (do this once per slot) |
-| Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
+| Hover any other item and press **Alt+D** | It pops up in the middle of the screen next to the item you wear and your build's item, with a verdict (such as **Equip it** or **Keep yours**) and every stat that changes |
 | Hover an item and press **Ctrl+D** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
 | Drag the popup by its bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
@@ -51,14 +51,22 @@ Works anywhere you can hover an item: your inventory, stash, vendors, or the gro
 
 The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it.
 
-With a build added, **Alt+D** always compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. If you've also saved your own item for that slot, a second comparison against it shows underneath.
+With a build added, **Alt+D** also compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. The popup shows the item you wear, the new item and your build's item side by side. Click **Show full comparison** for every stat and the full item text.
+
+**Pick a theme**
+
+Open **Settings → Theme** and choose **Ember** (glowing embers on obsidian), **Mana** (a sapphire glow in a bronze frame, like the mana globe) or **Iron** (gunmetal and pale gold, like the in-game menu). Every window follows the theme you pick.
+
+<p align="center">
+  <img src="docs/themes.png" alt="The same comparison in the Ember, Mana and Iron themes" width="840" />
+</p>
 
 **Check the price**
 
 Press **Ctrl+D** on an item, or click **⚖ Evaluate price** at the bottom of any popup. With a popup already open, **Ctrl+D** switches it to Evaluate unless you're hovering a different item in the game. The popup switches to an Evaluate view, like PoE Overlay's:
 
 <p align="center">
-  <img src="docs/evaluate.png" alt="The Evaluate view for a rare spear with stat filters, the range slider, an estimated value and the cheapest listings" width="420" />
+  <img src="docs/evaluate.png" alt="The Evaluate view for a rare spear with its item art, an estimated value with currency icons, stat filters and the range slider" width="420" />
 </p>
 
 - Every property (DPS, defences, item level, quality, rune sockets) and mod gets a row with a checkbox and **min**/**max** boxes. Tick the ones that matter and adjust the numbers. Mods the trade site can't search for are shown in italics.
