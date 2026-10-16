@@ -1,6 +1,8 @@
 import { BrowserWindow, globalShortcut, screen, type Rectangle } from 'electron'
 import { EventType, uIOhook, type UiohookKeyboardEvent, type UiohookMouseEvent, type UiohookWheelEvent } from 'uiohook-napi'
 import { messageChannel, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
+import type { ParsedItem } from '../shared/item/types'
+import { Tooltip } from './tooltip'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 import { THEME_BACKGROUNDS } from '../shared/settings'
 import type { SettingsStore } from './settingsStore'
@@ -17,6 +19,7 @@ type HookEvent = UiohookKeyboardEvent | UiohookMouseEvent | UiohookWheelEvent
 
 export class Overlay {
   private readonly window: BrowserWindow
+  private readonly tooltip: Tooltip
   private height = 600
   private anchor = { x: 0, y: 0 }
   private placed: Rectangle | null = null
@@ -47,6 +50,7 @@ export class Overlay {
       },
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
+    this.window.webContents.on('did-finish-load', () => this.window.webContents.setZoomFactor(this.scale))
     uIOhook.on('mousedown', () => {
       if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
     })
@@ -68,6 +72,7 @@ export class Overlay {
       (theme) => this.window.setBackgroundColor(THEME_BACKGROUNDS[theme]),
     )
 
+    this.tooltip = new Tooltip(store, () => this.window.getBounds())
     void loadRenderer(this.window, store.current.theme)
   }
 
@@ -142,8 +147,17 @@ export class Overlay {
     }
   }
 
+  showTooltip(item: ParsedItem): void {
+    if (this.window.isVisible() && !this.stopDrag) this.tooltip.show(item)
+  }
+
+  hideTooltip(): void {
+    this.tooltip.hide()
+  }
+
   startDrag(): void {
     if (this.stopDrag || this.store.current.overlayLocked || !this.window.isVisible()) return
+    this.hideTooltip()
     this.watchClicks(true)
     const [x, y] = this.window.getPosition()
     const start = screen.getCursorScreenPoint()
@@ -172,6 +186,7 @@ export class Overlay {
   hide(): void {
     clearTimeout(this.revealTimer)
     this.endDrag()
+    this.hideTooltip()
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
     clearTimeout(this.hookIdle)

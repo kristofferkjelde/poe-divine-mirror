@@ -17,7 +17,7 @@ export type GearSlot = keyof typeof GEAR_SLOTS
 
 export type Gear = Partial<Record<GearSlot, string>>
 
-const GEAR_SLOT_IDS = Object.keys(GEAR_SLOTS) as GearSlot[]
+export const GEAR_SLOT_IDS = Object.keys(GEAR_SLOTS) as GearSlot[]
 
 export const isGearSlot = (value: unknown): value is GearSlot =>
   typeof value === 'string' && Object.hasOwn(GEAR_SLOTS, value)

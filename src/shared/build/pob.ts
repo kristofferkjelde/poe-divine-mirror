@@ -22,6 +22,7 @@ const BASES = WEAPON_BASES as unknown as Partial<Record<string, WeaponBase>>
 export interface ItemSet {
   id: string
   title: string
+  sameAs?: string
 }
 
 export interface PobBuild {
@@ -102,7 +103,20 @@ function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | '
   const sets = elements(items, 'ItemSet')
   const set = sets.find((entry) => entry.attrs.id === wanted) ?? sets.find((entry) => entry.attrs.id === active) ?? sets[0]
   const slots = set ? elements(set.body, 'Slot') : elements(items, 'Slot')
-  const itemSets = sets.map(({ attrs }) => ({ id: attrs.id, title: attrs.title?.trim() || `Set ${attrs.id}` }))
+  const gearOf = (body: string) =>
+    elements(body, 'Slot')
+      .filter(({ attrs }) => gearSlotForPob(attrs.name) && attrs.itemId !== '0' && byId.has(attrs.itemId))
+      .map(({ attrs }) => `${attrs.name}=${byId.get(attrs.itemId)}`)
+      .sort()
+      .join('\n')
+  const seen = new Map<string, string>()
+  const itemSets = sets.map(({ attrs, body }): ItemSet => {
+    const title = attrs.title?.trim() || `Set ${attrs.id}`
+    const gear = gearOf(body)
+    const sameAs = seen.get(gear)
+    if (!sameAs) seen.set(gear, title)
+    return sameAs ? { id: attrs.id, title, sameAs } : { id: attrs.id, title }
+  })
 
   const result: PobItem[] = []
   for (const { attrs } of slots) {

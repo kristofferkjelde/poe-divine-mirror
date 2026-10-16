@@ -1,5 +1,6 @@
 import type { BuildProfile } from './build/profile'
 import type { Gear, GearSlot } from './gear'
+import type { ParsedItem } from './item/types'
 import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
 import type { SearchEdit } from './trade/query'
@@ -47,6 +48,22 @@ export interface OverlayApi {
   painted: () => Promise<void>
   startDrag: () => Promise<void>
   endDrag: () => Promise<void>
+  showTooltip: (item: ParsedItem) => Promise<void>
+  hideTooltip: () => Promise<void>
+}
+
+export interface TooltipApi {
+  ready: () => Promise<void>
+  rendered: (id: number, height: number) => Promise<void>
+}
+
+export interface TooltipContent {
+  id: number
+  item: ParsedItem
+}
+
+export interface TooltipBridge extends TooltipApi {
+  onContent: (listener: (content: TooltipContent | null) => void) => () => void
 }
 
 export interface SettingsApi {
@@ -86,6 +103,8 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   painted: true,
   startDrag: true,
   endDrag: true,
+  showTooltip: true,
+  hideTooltip: true,
 }
 
 const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
@@ -106,14 +125,22 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setUiScale: true,
 }
 
+const TOOLTIP_METHODS: Record<keyof TooltipApi, true> = {
+  ready: true,
+  rendered: true,
+}
+
 export const API_METHODS = {
   overlay: Object.keys(OVERLAY_METHODS),
   settings: Object.keys(SETTINGS_METHODS),
+  tooltip: Object.keys(TOOLTIP_METHODS),
 }
 
 export type ApiScope = keyof typeof API_METHODS
 
 export const SETTINGS_ARGUMENT = '--divine-mirror-settings'
+export const TOOLTIP_ARGUMENT = '--divine-mirror-tooltip'
+export const TOOLTIP_CHANNEL = 'tooltip:content'
 
 export const apiChannel = (scope: ApiScope, method: string) => `${scope}:${method}`
 export const messageChannel = (name: keyof OverlayMessages) => `overlay:message:${name}`
