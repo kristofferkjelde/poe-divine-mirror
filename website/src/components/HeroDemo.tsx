@@ -29,7 +29,7 @@ export function HeroDemo({ theme }: { theme: Theme }) {
     <div
       className="demo"
       role="img"
-      aria-label="Animation: hovering a pair of boots in the inventory and pressing Alt+D opens the Compare window, which says Equip it"
+      aria-label="Animation: hovering a pair of boots in the inventory and pressing Alt+Z opens the Compare window, which says Equip it"
     >
       <div className="demo-scene">
         <div className="demo-inventory">
@@ -59,7 +59,7 @@ export function HeroDemo({ theme }: { theme: Theme }) {
           />
         </svg>
         <span className="demo-ping" aria-hidden />
-        <Keys keys={['Alt', 'D']} className="demo-keys" />
+        <Keys keys={['Alt', 'Z']} className="demo-keys" />
         <div className="demo-overlay">
           <Screen name="compare" theme={theme} alt="" eager />
         </div>
