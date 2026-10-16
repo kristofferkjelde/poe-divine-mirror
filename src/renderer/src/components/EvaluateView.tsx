@@ -12,6 +12,7 @@ import {
   type ItemSearch,
   type SearchFilter,
 } from '../../../shared/trade/query'
+import { useCountdown } from '../countdown'
 import {
   closeEvaluate,
   runSearch,
@@ -49,6 +50,7 @@ function SearchForm({ search, searching, result }: FormProps) {
   const properties = search.filters.filter((filter) => filter.kind === 'property')
   const mods = search.filters.filter((filter) => filter.kind !== 'property')
   const tradeUrl = result?.url
+  const wait = useCountdown(result?.ok === false ? result.retryAt : undefined)
 
   return (
     <form
@@ -106,7 +108,7 @@ function SearchForm({ search, searching, result }: FormProps) {
           {scaleLabel(search.scale)}
         </button>
       </div>
-      <EstimateBox searching={searching} result={result} />
+      <EstimateBox searching={searching} result={result} wait={wait} />
       <div className="evaluate-selects">
         <Select
           value={search.currency}
@@ -125,8 +127,8 @@ function SearchForm({ search, searching, result }: FormProps) {
         />
       </div>
       <div className="evaluate-actions">
-        <button type="submit" className="evaluate-search" disabled={searching}>
-          {searching ? 'Searching…' : 'Search'}
+        <button type="submit" className="evaluate-search" disabled={searching || wait > 0}>
+          {searching ? 'Searching…' : wait > 0 ? `Wait ${wait}s` : 'Search'}
         </button>
         {tradeUrl && (
           <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(tradeUrl)}>
@@ -201,9 +203,24 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
   )
 }
 
-function EstimateBox({ searching, result }: { searching: boolean; result: PriceCheckResult | null }) {
+interface EstimateProps {
+  searching: boolean
+  result: PriceCheckResult | null
+  wait: number
+}
+
+function EstimateBox({ searching, result, wait }: EstimateProps) {
   if (!result) {
     return <div className="evaluate-estimate evaluate-note">{searching ? 'Searching the trade site…' : 'Press Search'}</div>
+  }
+  if (!result.ok && result.retryAt !== undefined) {
+    return wait > 0 ? (
+      <div className="evaluate-estimate evaluate-error" role="timer">
+        The trade site asked us to slow down. You can search again in {wait}s.
+      </div>
+    ) : (
+      <div className="evaluate-estimate evaluate-note">Ready. Press Search again.</div>
+    )
   }
   if (!result.ok) return <div className="evaluate-estimate evaluate-error">{result.error}</div>
 

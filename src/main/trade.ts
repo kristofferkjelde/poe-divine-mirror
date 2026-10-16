@@ -25,6 +25,12 @@ const KEPT_SEARCHES = 20
 
 class TradeError extends UserFacingError {}
 
+class SlowDownError extends TradeError {
+  constructor(readonly retryAt: number) {
+    super(`The trade site asked us to slow down. Try again in ${Math.ceil((retryAt - Date.now()) / 1000)}s.`)
+  }
+}
+
 interface SearchResponse {
   id: string
   result: string[]
@@ -92,7 +98,11 @@ export class TradeClient {
       this.cache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
-      return { ...toResult(error, 'Could not reach the trade site'), url }
+      return {
+        ...toResult(error, 'Could not reach the trade site'),
+        url,
+        ...(error instanceof SlowDownError && { retryAt: error.retryAt }),
+      }
     }
   }
 
@@ -123,8 +133,7 @@ export class TradeClient {
   }
 
   private async request(path: string, body?: unknown): Promise<unknown> {
-    const wait = this.blockedUntil - Date.now()
-    if (wait > 0) throw new TradeError(`The trade site asked us to slow down. Try again in ${Math.ceil(wait / 1000)}s.`)
+    if (this.blockedUntil > Date.now()) throw new SlowDownError(this.blockedUntil)
 
     let response: Response
     try {
@@ -151,7 +160,7 @@ export class TradeClient {
     if (response.status === 429) {
       const retry = Number(response.headers.get('retry-after')) || 60
       this.blockedUntil = Math.max(this.blockedUntil, Date.now() + retry * 1000)
-      throw new TradeError(`The trade site asked us to slow down. Try again in ${retry}s.`)
+      throw new SlowDownError(this.blockedUntil)
     }
     if (!response.ok) {
       const message = await response
