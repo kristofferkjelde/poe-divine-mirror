@@ -41,7 +41,7 @@ export function App() {
           }
         >
           <p>
-            Press <Keys keys={['Alt', 'D']} /> on any item: in your inventory, a stash tab, a vendor or on the
+            Press <Keys keys={['Alt', 'Z']} /> on any item: in your inventory, a stash tab, a vendor or on the
             ground. Divine Mirror sets it between what you wear and what your build wants, and gives you one
             answer: <b>Equip it</b>, <b>Wear it for now</b>, <b>Your call</b> or <b>Skip it</b>.
           </p>
@@ -83,7 +83,7 @@ export function App() {
           note="Switch between the Filters and Listings tabs."
         >
           <p>
-            Press <Keys keys={['Ctrl', 'D']} /> and Divine Mirror searches the official trade site for items like
+            Press <Keys keys={['Ctrl', 'Alt', 'Z']} /> and Divine Mirror searches the official trade site for items like
             yours in the current league. The price is right at the top, with the real currency icons.
           </p>
           <ul className="ticks">
@@ -151,7 +151,7 @@ function Hero({ theme }: { theme: Theme }) {
           Is this item <em>an upgrade?</em>
         </h1>
         <p className="lead">
-          Hover it, press <Keys keys={['Alt', 'D']} />, and know. Divine Mirror puts the item between what you
+          Hover it, press <Keys keys={['Alt', 'Z']} />, and know. Divine Mirror puts the item between what you
           wear and what your build wants, stat by stat, without leaving the game.
         </p>
         <div className="hero-actions">
@@ -171,17 +171,17 @@ function Hero({ theme }: { theme: Theme }) {
 
 const steps = [
   {
-    keys: ['Alt', 'Shift', 'D'],
+    keys: ['Alt', 'Shift', 'Z'],
     title: 'Save what you wear',
     text: 'Hover each item you have equipped once. Divine Mirror remembers it, even after a restart.',
   },
   {
-    keys: ['Alt', 'D'],
+    keys: ['Alt', 'Z'],
     title: 'Compare anything',
     text: 'Hover any other item and the verdict pops up in the middle of your screen.',
   },
   {
-    keys: ['Ctrl', 'D'],
+    keys: ['Ctrl', 'Alt', 'Z'],
     title: 'Check the price',
     text: 'See what similar items sell for on the trade site before you vendor or list it.',
   },
