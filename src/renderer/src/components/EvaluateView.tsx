@@ -16,7 +16,7 @@ import {
   type SearchFilter,
 } from '../../../shared/trade/query'
 import { useCountdown } from '../countdown'
-import { glyph } from './DecisionCard'
+import { ItemArt } from './ItemArt'
 import { ItemCard } from './ItemCard'
 import {
   closeEvaluate,
@@ -68,9 +68,7 @@ export function EvaluateView({ item, evaluate }: { item: ParsedItem; evaluate: O
       <div className="ember-top">
         <figure className="ember-slot">
           <figcaption>This item</figcaption>
-          <span className="ember-glyph" aria-hidden>
-            {glyph(item.itemClass)}
-          </span>
+          <ItemArt item={item} />
           <strong data-rarity={item.rarity.toLowerCase()}>{item.name || item.baseType}</strong>
           <small>
             {[item.name && item.baseType, item.itemLevel !== undefined && `iLvl ${item.itemLevel}`].filter(Boolean).join(' · ')}

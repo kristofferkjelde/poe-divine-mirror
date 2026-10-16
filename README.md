@@ -142,7 +142,7 @@ Windows releases are built from this repository by [GitHub Actions](.github/work
 
 ## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It only connects to the internet when you ask it to: a price check sends searches to the official Path of Exile trade site, and importing a build fetches the link you paste. Your settings, saved gear and build stay on your PC.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It only connects to the internet when you ask it to: a price check sends searches to the official Path of Exile trade site, importing a build fetches the link you paste, and showing an item loads its picture (item art from GitHub, currency icons from the trade site's image server). Your settings, saved gear and build stay on your PC.
 
 ## License
 
@@ -150,4 +150,4 @@ This program will not transfer any information to other networked systems unless
 
 ## Credits
 
-Inspired by [PoE Overlay](https://github.com/PoE-Overlay-Community/PoE-Overlay-Community-Fork) and [Exiled Exchange 2](https://github.com/Kvan7/Exiled-Exchange-2). Not affiliated with or endorsed by Grinding Gear Games.
+Inspired by [PoE Overlay](https://github.com/PoE-Overlay-Community/PoE-Overlay-Community-Fork) and [Exiled Exchange 2](https://github.com/Kvan7/Exiled-Exchange-2). Item art comes from the game files via [RePoE](https://github.com/repoe-fork/poe2) and belongs to Grinding Gear Games. Headings use [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License). Not affiliated with or endorsed by Grinding Gear Games.
