@@ -38,11 +38,22 @@
     "productName": "Divine Mirror",
     "files": [
       "out/**",
-      "resources/**"
+      "resources/**",
+      "!**/node_modules/uiohook-napi/prebuilds/{darwin,linux}-*/**",
+      "!**/node_modules/uiohook-napi/{src,libuiohook}/**"
     ],
     "asarUnpack": [
       "**/node_modules/uiohook-napi/**"
     ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "directories": {
       "output": "release"
     },

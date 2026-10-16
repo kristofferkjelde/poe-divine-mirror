@@ -42,13 +42,13 @@ export class Overlay {
       webPreferences: {
         preload: PRELOAD_PATH,
         sandbox: true,
+        zoomFactor: store.current.uiScale / 100,
       },
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
     uIOhook.on('mousedown', () => {
       if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
     })
-    this.window.webContents.on('did-finish-load', () => this.window.webContents.setZoomFactor(this.scale))
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
         event.preventDefault()
@@ -67,7 +67,7 @@ export class Overlay {
       (theme) => this.window.setBackgroundColor(THEME_BACKGROUNDS[theme]),
     )
 
-    void loadRenderer(this.window)
+    void loadRenderer(this.window, store.current.theme)
   }
 
   private get scale(): number {

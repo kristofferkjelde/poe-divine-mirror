@@ -1,5 +1,5 @@
 import { app, Notification } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import type { AppUpdater } from 'electron-updater'
 import type { UpdateStatus } from './updateStatus'
 
 const FIRST_CHECK_MS = 15_000
@@ -9,8 +9,18 @@ export class Updates {
   private state: UpdateStatus = { kind: 'idle' }
   private readonly listeners = new Set<() => void>()
   private announced: string | null = null
+  private updater: Promise<AppUpdater> | null = null
 
-  constructor() {
+  private load(): Promise<AppUpdater> {
+    this.updater ??= import('electron-updater').then((module) => {
+      const { autoUpdater } = module.default ?? module
+      this.listen(autoUpdater)
+      return autoUpdater
+    })
+    return this.updater
+  }
+
+  private listen(autoUpdater: AppUpdater): void {
     autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = true
     autoUpdater.on('update-available', ({ version }) => {
@@ -56,17 +66,23 @@ export class Updates {
   check(manual = true): void {
     if (!app.isPackaged || ['checking', 'downloading', 'ready'].includes(this.state.kind)) return
     this.set({ kind: 'checking', manual })
-    autoUpdater.checkForUpdates().catch(() => {})
+    this.load()
+      .then((updater) => updater.checkForUpdates())
+      .catch((error: unknown) => {
+        if (this.state.kind === 'checking') this.set({ kind: 'failed', message: error instanceof Error ? error.message : String(error) })
+      })
   }
 
   download(): void {
     if (this.state.kind !== 'available') return
     this.set({ kind: 'downloading', version: this.state.version, percent: 0 })
-    autoUpdater.downloadUpdate().catch(() => {})
+    void this.load()
+      .then((updater) => updater.downloadUpdate())
+      .catch(() => {})
   }
 
   install(): void {
-    if (this.state.kind === 'ready') autoUpdater.quitAndInstall(true, true)
+    if (this.state.kind === 'ready') void this.load().then((updater) => updater.quitAndInstall(true, true))
   }
 
   private announce(version: string): void {

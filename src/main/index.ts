@@ -1,4 +1,4 @@
-import { app, globalShortcut, Menu, nativeImage, Notification, Tray } from 'electron'
+import { app, globalShortcut, Menu, nativeImage, Notification, session, Tray } from 'electron'
 import { uIOhook } from 'uiohook-napi'
 import type { OverlayApi, SettingsApi } from '../shared/ipc'
 import { HOTKEY_ACTIONS, HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
@@ -7,7 +7,8 @@ import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
-import { registerImageScheme, serveCachedImages } from './imageCache'
+import { serveApp } from './appScheme'
+import { registerSchemes, serveCachedImages } from './imageCache'
 import { registerHandlers } from './ipc'
 import { Overlay } from './overlay'
 import { ICON_PATH } from './renderer'
@@ -19,7 +20,8 @@ import { trayTooltip, updateMenuItem } from './updateStatus'
 
 let tray: Tray | null = null
 
-registerImageScheme()
+registerSchemes()
+Menu.setApplicationMenu(null)
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -30,6 +32,9 @@ if (!app.requestSingleInstanceLock()) {
 function start(): void {
   app.setAppUserModelId('io.kjelde.poe-item-checker')
   serveCachedImages()
+  serveApp()
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false))
+  session.defaultSession.setPermissionCheckHandler(() => false)
   const store = new SettingsStore()
   const overlay = new Overlay(store)
   const gear = new GearStore()
@@ -134,6 +139,7 @@ function start(): void {
   updates.onChange(refreshTray)
   updates.start()
   tray.on('double-click', () => settingsWindow.open())
+  app.on('second-instance', () => settingsWindow.open())
   warnTakenHotkeys(hotkeys.unavailableActions.map((action) => store.current.hotkeys[action]), () => settingsWindow.open())
 }
 
@@ -148,6 +154,11 @@ function warnTakenHotkeys(taken: string[], openSettings: () => void): void {
   notification.on('click', openSettings)
   notification.show()
 }
+
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-navigate', (event) => event.preventDefault())
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+})
 
 app.on('window-all-closed', () => {})
 app.on('will-quit', () => {

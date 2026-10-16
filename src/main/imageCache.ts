@@ -3,9 +3,13 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { IMAGE_SCHEME, remoteImage } from '../shared/imageCache'
+import { APP_SCHEME } from './appScheme'
 
-export function registerImageScheme(): void {
-  protocol.registerSchemesAsPrivileged([{ scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true } }])
+export function registerSchemes(): void {
+  protocol.registerSchemesAsPrivileged([
+    { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true } },
+    { scheme: APP_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+  ])
 }
 
 export function serveCachedImages(): void {

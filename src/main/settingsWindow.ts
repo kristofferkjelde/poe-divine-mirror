@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import { THEME_BACKGROUNDS } from '../shared/settings'
 import type { Hotkeys } from './hotkeys'
 import type { SettingsStore } from './settingsStore'
 import { ICON_PATH, loadRenderer, PRELOAD_PATH } from './renderer'
@@ -11,6 +12,10 @@ export class SettingsWindow {
     private readonly store: SettingsStore,
   ) {
     store.watch((settings) => settings.uiScale, () => this.window?.webContents.setZoomFactor(this.scale))
+    store.watch(
+      (settings) => settings.theme,
+      (theme) => this.window?.setBackgroundColor(THEME_BACKGROUNDS[theme]),
+    )
   }
 
   private get scale(): number {
@@ -33,17 +38,16 @@ export class SettingsWindow {
       maximizable: false,
       minimizable: false,
       fullscreenable: false,
-      autoHideMenuBar: true,
+      show: false,
       title: 'Divine Mirror Settings',
-      backgroundColor: '#0b0907',
-      webPreferences: { preload: PRELOAD_PATH, sandbox: true },
+      backgroundColor: THEME_BACKGROUNDS[this.store.current.theme],
+      webPreferences: { preload: PRELOAD_PATH, sandbox: true, zoomFactor: this.scale },
     })
-    this.window.setMenu(null)
+    this.window.once('ready-to-show', () => this.window?.show())
     this.window.on('closed', () => {
       this.window = null
       this.hotkeys.resume()
     })
-    this.window.webContents.on('did-finish-load', () => this.window?.webContents.setZoomFactor(this.scale))
-    void loadRenderer(this.window, 'settings')
+    void loadRenderer(this.window, this.store.current.theme, 'settings')
   }
 }
