@@ -1,6 +1,6 @@
 import type { BuildProfile } from './build/profile'
 import type { Gear, GearSlot } from './gear'
-import type { HotkeyAction, Settings } from './settings'
+import type { HotkeyAction, Settings, Theme } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
 import type { SearchEdit } from './trade/query'
 
@@ -13,6 +13,7 @@ export interface OverlayContext {
   hotkeys: Settings['hotkeys']
   locked: boolean
   build: BuildProfile | null
+  theme: Theme
 }
 
 export interface OverlayMessages {
@@ -53,6 +54,7 @@ export interface SettingsApi {
   resetBuildWeights: () => Promise<SettingsState>
   listLeagues: () => Promise<string[]>
   setLeague: (league: string | null) => Promise<SettingsState>
+  setTheme: (theme: Theme) => Promise<SettingsState>
 }
 
 export interface OverlayBridge extends OverlayApi {
@@ -83,6 +85,7 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   resetBuildWeights: true,
   listLeagues: true,
   setLeague: true,
+  setTheme: true,
 }
 
 export const API_METHODS = {

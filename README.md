@@ -36,8 +36,8 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
 | Hover an item and press **Ctrl+D** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
-| Drag the popup anywhere | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
-| Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, or change the hotkeys: click one and press the new keys |
+| Drag the popup by its bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
+| Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, change the hotkeys (click one and press the new keys), or pick a theme: Ember, Mana or Iron |
 | Right-click the tray icon → **Quit** | The app closes |
 
 Works anywhere you can hover an item: your inventory, stash, vendors, or the ground.
@@ -72,7 +72,7 @@ The first search runs automatically with sensible defaults. Weapons are matched 
 - The table lists each stat that changes: what you have **now**, what the **new** item has, and the difference in green or red. Greyed-out rows aren't counted in the score yet.
 - Rings compare against whichever of your two rings is weaker, since that's the one you'd swap out.
 - Saved gear survives restarts. Click **✕ Forget** next to "vs your …" to forget that one item, or right-click the tray icon → **Clear saved gear** to start over.
-- **P1–P6 / S1–S7** badges show whether a mod is a **P**refix or **S**uffix and its tier. Tier 1 is the best roll. T1 and T2 are highlighted in gold.
+- **P1–P6 / S1–S7** badges show whether a mod is a **P**refix or **S**uffix and its tier. Tier 1 is the best roll. T1 and T2 are highlighted.
 - Mod colors match the game: blue for normal mods, light blue for runes, red for corrupted.
 
 ## Is it safe? Will I get banned?
@@ -142,7 +142,7 @@ Windows releases are built from this repository by [GitHub Actions](.github/work
 
 ## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It only connects to the internet when you ask it to: a price check sends searches to the official Path of Exile trade site, and importing a build fetches the link you paste. Your settings, saved gear and build stay on your PC.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It only connects to the internet when you ask it to: a price check sends searches to the official Path of Exile trade site, importing a build fetches the link you paste, and showing an item loads its picture (item art from GitHub, currency icons from the trade site's image server). Your settings, saved gear and build stay on your PC.
 
 ## License
 
@@ -150,4 +150,4 @@ This program will not transfer any information to other networked systems unless
 
 ## Credits
 
-Inspired by [PoE Overlay](https://github.com/PoE-Overlay-Community/PoE-Overlay-Community-Fork) and [Exiled Exchange 2](https://github.com/Kvan7/Exiled-Exchange-2). Not affiliated with or endorsed by Grinding Gear Games.
+Inspired by [PoE Overlay](https://github.com/PoE-Overlay-Community/PoE-Overlay-Community-Fork) and [Exiled Exchange 2](https://github.com/Kvan7/Exiled-Exchange-2). Item art comes from the game files via [RePoE](https://github.com/repoe-fork/poe2) and belongs to Grinding Gear Games. Headings use [Cinzel](https://github.com/NDISCOVER/Cinzel) (SIL Open Font License). Not affiliated with or endorsed by Grinding Gear Games.

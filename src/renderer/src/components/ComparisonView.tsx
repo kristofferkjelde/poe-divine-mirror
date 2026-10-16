@@ -4,11 +4,12 @@ import { GEAR_SLOTS } from '../../../shared/gear'
 import { formatNumber } from '../../../shared/compare/stats'
 import { itemLabel } from '../../../shared/item/label'
 import { forgetGear } from '../overlayStore'
+import { VerdictMark } from './VerdictMark'
 
 const VERDICT_LABELS: Record<Verdict, string> = {
-  upgrade: '▲ Upgrade',
-  downgrade: '▼ Downgrade',
-  sidegrade: '≈ Sidegrade',
+  upgrade: 'Upgrade',
+  downgrade: 'Downgrade',
+  sidegrade: 'Sidegrade',
 }
 
 interface Props {
@@ -23,6 +24,7 @@ export function ComparisonView({ result, against, weightsNote }: Props) {
   return (
     <section className="compare" data-verdict={comparison.verdict}>
       <header className="compare-verdict">
+        <VerdictMark verdict={comparison.verdict} />
         <strong>{VERDICT_LABELS[comparison.verdict]}</strong>
         <span className="compare-score" title={`Weighted score ${formatNumber(comparison.score)}`}>
           {comparison.percent === null

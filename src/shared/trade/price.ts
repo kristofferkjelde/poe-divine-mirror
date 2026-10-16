@@ -1,4 +1,5 @@
 import type { ParsedItem } from '../item/types'
+import type { CurrencyIcons } from './currency'
 import { toListedItem, type TradeItem } from './listedItem'
 import type { ItemSearch } from './query'
 
@@ -16,7 +17,7 @@ export interface Listing extends Price {
 }
 
 export type PriceCheckResult =
-  | { ok: true; league: string; url: string; total: number; listings: Listing[] }
+  | { ok: true; league: string; url: string; total: number; listings: Listing[]; icons: CurrencyIcons }
   | { ok: false; error: string; url?: string; retryAt?: number }
 
 export type PrepareResult = { ok: true; id: string; search: ItemSearch } | { ok: false; error: string }
