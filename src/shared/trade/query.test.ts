@@ -23,7 +23,14 @@ describe('defaultSearch', () => {
     const search = defaultSearch(fixture('rare-ring-advanced'), stats)
 
     expect(search).toMatchObject({ type: 'Iron Ring', rarity: 'nonunique', corrupted: 'no', status: 'securable', scale: 0 })
-    expect(byLabel(search, '+28 to maximum Life')).toMatchObject({ enabled: true, value: 28, min: 28, statId: 'explicit.stat_3299347043' })
+    expect(byLabel(search, '+28 to maximum Life')).toMatchObject({
+      enabled: true,
+      value: 28,
+      min: 28,
+      statId: 'explicit.stat_3299347043',
+      affix: 'prefix',
+      tier: 5,
+    })
     expect(byLabel(search, 'Adds 3 to 7 Physical Damage to Attacks')).toMatchObject({ enabled: true, value: 5, min: 5 })
     expect(byLabel(search, 'Adds 1 to 4 Physical Damage to Attacks')).toMatchObject({ enabled: false, modType: 'implicit', statId: 'implicit.stat_3032590688' })
     expect(byLabel(search, 'Item Level')).toMatchObject({ enabled: false, value: 47 })

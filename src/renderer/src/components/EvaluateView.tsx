@@ -1,7 +1,8 @@
-import type { ChangeEvent } from 'react'
+import { useState, type ChangeEvent, type MouseEvent } from 'react'
 import { formatNumber } from '../../../shared/compare/stats'
 import { estimate, formatAge, formatPrice, type PriceCheckResult } from '../../../shared/trade/price'
 import {
+  BROAD_SCALE,
   CORRUPTED_OPTIONS,
   CURRENCY_OPTIONS,
   LISTED_OPTIONS,
@@ -12,6 +13,8 @@ import {
   type ItemSearch,
   type SearchFilter,
 } from '../../../shared/trade/query'
+import { useCountdown } from '../countdown'
+import { ItemCard } from './ItemCard'
 import {
   closeEvaluate,
   runSearch,
@@ -49,6 +52,7 @@ function SearchForm({ search, searching, result }: FormProps) {
   const properties = search.filters.filter((filter) => filter.kind === 'property')
   const mods = search.filters.filter((filter) => filter.kind !== 'property')
   const tradeUrl = result?.url
+  const wait = useCountdown(result?.ok === false ? result.retryAt : undefined)
 
   return (
     <form
@@ -79,6 +83,14 @@ function SearchForm({ search, searching, result }: FormProps) {
           <FilterRow key={filter.key} filter={filter} />
         ))}
       </ul>
+      <div className="evaluate-presets" role="group" aria-label="Search preset">
+        <button type="button" aria-pressed={search.scale === 0} onClick={() => setSearchScale(0)}>
+          Quick price
+        </button>
+        <button type="button" aria-pressed={search.scale === BROAD_SCALE} onClick={() => setSearchScale(BROAD_SCALE)}>
+          Broad (−10%)
+        </button>
+      </div>
       <div className="evaluate-scale">
         <button type="button" className="panel-link" onClick={() => setSearchScale(search.scale - SCALE_STEP)} aria-label="Lower minimums by 5%">
           −
@@ -106,7 +118,7 @@ function SearchForm({ search, searching, result }: FormProps) {
           {scaleLabel(search.scale)}
         </button>
       </div>
-      <EstimateBox searching={searching} result={result} />
+      <EstimateBox searching={searching} result={result} wait={wait} />
       <div className="evaluate-selects">
         <Select
           value={search.currency}
@@ -125,8 +137,8 @@ function SearchForm({ search, searching, result }: FormProps) {
         />
       </div>
       <div className="evaluate-actions">
-        <button type="submit" className="evaluate-search" disabled={searching}>
-          {searching ? 'Searching…' : 'Search'}
+        <button type="submit" className="evaluate-search" disabled={searching || wait > 0}>
+          {searching ? 'Searching…' : wait > 0 ? `Wait ${wait}s` : 'Search'}
         </button>
         {tradeUrl && (
           <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(tradeUrl)}>
@@ -165,6 +177,16 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
           onChange={(event) => updateFilter(filter.key, { enabled: event.target.checked })}
         />
         <span>
+          {filter.kind !== 'property' && filter.affix && (
+            <span
+              className="item-tier"
+              data-best={filter.tier !== undefined && filter.tier <= 2}
+              title={`${filter.affix === 'prefix' ? 'Prefix' : 'Suffix'}${filter.tier === undefined ? '' : `, tier ${filter.tier}`}`}
+            >
+              {filter.affix === 'prefix' ? 'P' : 'S'}
+              {filter.tier}
+            </span>
+          )}
           {filter.label}
           {filter.kind === 'property' && <span className="evaluate-value"> {formatNumber(filter.value)}</span>}
         </span>
@@ -201,9 +223,24 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
   )
 }
 
-function EstimateBox({ searching, result }: { searching: boolean; result: PriceCheckResult | null }) {
+interface EstimateProps {
+  searching: boolean
+  result: PriceCheckResult | null
+  wait: number
+}
+
+function EstimateBox({ searching, result, wait }: EstimateProps) {
   if (!result) {
     return <div className="evaluate-estimate evaluate-note">{searching ? 'Searching the trade site…' : 'Press Search'}</div>
+  }
+  if (!result.ok && result.retryAt !== undefined) {
+    return wait > 0 ? (
+      <div className="evaluate-estimate evaluate-error" role="timer">
+        The trade site asked us to slow down. You can search again in {wait}s.
+      </div>
+    ) : (
+      <div className="evaluate-estimate evaluate-note">Ready. Press Search again.</div>
+    )
   }
   if (!result.ok) return <div className="evaluate-estimate evaluate-error">{result.error}</div>
 
@@ -232,10 +269,27 @@ function EstimateBox({ searching, result }: { searching: boolean; result: PriceC
   )
 }
 
+interface Preview {
+  index: number
+  placement: { top: number } | { bottom: number }
+}
+
+const PREVIEW_GAP = 6
+
+function placeBeside(row: HTMLElement): Preview['placement'] {
+  const { top, bottom } = row.getBoundingClientRect()
+  return top > window.innerHeight / 2 ? { bottom: window.innerHeight - top + PREVIEW_GAP } : { top: bottom + PREVIEW_GAP }
+}
+
 function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> }) {
+  const [preview, setPreview] = useState<Preview | null>(null)
   const now = Date.now()
+  const previewed = preview && result.listings[preview.index]?.item
+  const show = (index: number) => (event: MouseEvent<HTMLTableRowElement>) =>
+    setPreview({ index, placement: placeBeside(event.currentTarget) })
+
   return (
-    <div className="evaluate-listings">
+    <div className="evaluate-listings" onMouseLeave={() => setPreview(null)}>
       <table>
         <thead>
           <tr>
@@ -248,7 +302,7 @@ function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> 
         </thead>
         <tbody>
           {result.listings.map((listing, index) => (
-            <tr key={index}>
+            <tr key={index} data-previewed={preview?.index === index} onMouseEnter={show(index)}>
               <td>{formatPrice(listing)}</td>
               <td>{listing.itemLevel ?? '–'}</td>
               <td>{listing.quality ?? 0}%</td>
@@ -258,6 +312,11 @@ function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> 
           ))}
         </tbody>
       </table>
+      {previewed && (
+        <div className="window listing-preview" style={preview.placement}>
+          <ItemCard item={previewed} />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,3 +1,5 @@
+import type { ParsedItem } from '../item/types'
+import { toListedItem, type TradeItem } from './listedItem'
 import type { ItemSearch } from './query'
 
 export interface Price {
@@ -10,11 +12,12 @@ export interface Listing extends Price {
   account?: string
   itemLevel?: number
   quality?: number
+  item?: ParsedItem
 }
 
 export type PriceCheckResult =
   | { ok: true; league: string; url: string; total: number; listings: Listing[] }
-  | { ok: false; error: string; url?: string }
+  | { ok: false; error: string; url?: string; retryAt?: number }
 
 export type PrepareResult = { ok: true; id: string; search: ItemSearch } | { ok: false; error: string }
 
@@ -79,7 +82,7 @@ interface FetchedResult {
     account?: { name?: unknown }
     price?: { amount?: unknown; currency?: unknown } | null
   }
-  item?: { ilvl?: unknown; properties?: Array<{ name?: unknown; values?: unknown }> }
+  item?: TradeItem
 }
 
 function qualityOf(item: FetchedResult['item']): number | undefined {
@@ -100,6 +103,8 @@ export function parseListings(body: unknown): Listing[] {
     if (typeof result?.item?.ilvl === 'number') listing.itemLevel = result.item.ilvl
     const quality = qualityOf(result?.item)
     if (quality !== undefined) listing.quality = quality
+    const item = toListedItem(result?.item)
+    if (item) listing.item = item
     return [listing]
   })
 }

@@ -1,5 +1,5 @@
 import { DERIVED, extractStats, isLocal } from '../compare/stats'
-import type { Mod, ModType, ParsedItem, Slot } from '../item/types'
+import type { Affix, Mod, ModType, ParsedItem, Slot } from '../item/types'
 import { UserFacingError } from '../errors'
 import { modValue } from '../item/mods'
 import { isArmourSlot, itemClass } from '../item/slots'
@@ -73,9 +73,15 @@ interface FilterBase {
 export type SearchFilter = FilterBase &
   (
     | { kind: 'property'; target: PropertyTarget; value: number }
-    | { kind: 'mod'; statId: string; value?: number; modType: ModType }
-    | { kind: 'unsearchable'; modType: ModType }
+    | ({ kind: 'mod'; statId: string; value?: number } & ModOrigin)
+    | ({ kind: 'unsearchable' } & ModOrigin)
   )
+
+interface ModOrigin {
+  modType: ModType
+  affix?: Affix
+  tier?: number
+}
 
 export interface ItemSearch {
   name?: string
@@ -115,6 +121,7 @@ export class PriceCheckUnsupported extends UserFacingError {}
 
 export const SCALE_STEP = 5
 export const SCALE_LIMIT = 50
+export const BROAD_SCALE = -10
 const UNSCALED = new Set(['rune_sockets', 'ilvl'])
 
 const MOD_TYPES: ReadonlySet<ModType> = new Set(['explicit', 'fractured', 'desecrated', 'implicit', 'rune', 'enchant'])
@@ -254,8 +261,13 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
     const local = isLocal(mod.template, item.slot)
     const stat = matchStat(mod, groups, local)
     const key = `mod-${index}`
+    const origin: ModOrigin = {
+      modType: mod.type,
+      ...(mod.affix && { affix: mod.affix }),
+      ...(mod.tier !== undefined && { tier: mod.tier }),
+    }
     if (!stat) {
-      filters.push({ key, label: mod.text, kind: 'unsearchable', enabled: false, min: null, max: null, modType: mod.type })
+      filters.push({ key, label: mod.text, kind: 'unsearchable', enabled: false, min: null, max: null, ...origin })
       continue
     }
     const coveredByProperty = local && (item.slot === 'weapon' || isArmourSlot(item.slot))
@@ -268,7 +280,7 @@ export function defaultSearch(item: ParsedItem, groups: TradeStatGroup[], scale 
       min: minimumFor(stat.value, scale),
       max: null,
       statId: stat.id,
-      modType: mod.type,
+      ...origin,
     })
   }
 

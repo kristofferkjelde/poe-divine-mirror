@@ -1,6 +1,7 @@
 import { app, net } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { toResult, UserFacingError } from '../shared/errors'
+import type { ParsedItem } from '../shared/item/types'
 import { parseItem } from '../shared/item/parse'
 import {
   leagueIds,
@@ -13,6 +14,7 @@ import {
   type PrepareResult,
   type PriceCheckResult,
 } from '../shared/trade/price'
+import { baseTypeNames, magicBaseType } from '../shared/trade/baseTypes'
 import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
 import { jsonFile } from './jsonFile'
 
@@ -25,6 +27,12 @@ const KEPT_SEARCHES = 20
 
 class TradeError extends UserFacingError {}
 
+class SlowDownError extends TradeError {
+  constructor(readonly retryAt: number) {
+    super(`The trade site asked us to slow down. Try again in ${Math.ceil((retryAt - Date.now()) / 1000)}s.`)
+  }
+}
+
 interface SearchResponse {
   id: string
   result: string[]
@@ -34,6 +42,8 @@ interface SearchResponse {
 export class TradeClient {
   private readonly statsFile = jsonFile('trade-stats.json')
   private stats: Promise<TradeStatGroup[]> | null = null
+  private readonly baseTypesFile = jsonFile('trade-base-types.json')
+  private baseTypes: Promise<string[]> | null = null
   private leagues: Promise<string[]> | null = null
   private blockedUntil = 0
   private readonly cache = new Map<string, { at: number; result: PriceCheckResult }>()
@@ -49,7 +59,7 @@ export class TradeClient {
 
   async prepare(text: string): Promise<PrepareResult> {
     try {
-      const search = defaultSearch(parseItem(text), await this.loadStats())
+      const search = defaultSearch(await this.withBaseType(parseItem(text)), await this.loadStats())
       const id = randomUUID()
       this.searches.set(id, search)
       if (this.searches.size > KEPT_SEARCHES) {
@@ -92,7 +102,11 @@ export class TradeClient {
       this.cache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
-      return { ...toResult(error, 'Could not reach the trade site'), url }
+      return {
+        ...toResult(error, 'Could not reach the trade site'),
+        url,
+        ...(error instanceof SlowDownError && { retryAt: error.retryAt }),
+      }
     }
   }
 
@@ -106,6 +120,35 @@ export class TradeClient {
       throw error
     })
     return this.stats
+  }
+
+  private async withBaseType(item: ParsedItem): Promise<ParsedItem> {
+    if (item.rarity !== 'Magic' || item.baseType) return item
+    const types = await this.loadBaseTypes().catch(() => [])
+    const baseType = magicBaseType(item.name, types)
+    return baseType ? { ...item, baseType } : item
+  }
+
+  private async loadBaseTypes(): Promise<string[]> {
+    this.baseTypes ??= this.readBaseTypes().catch((error) => {
+      this.baseTypes = null
+      throw error
+    })
+    return this.baseTypes
+  }
+
+  private async readBaseTypes(): Promise<string[]> {
+    const saved = this.baseTypesFile.read() as { fetchedAt?: number; result?: string[] } | undefined
+    if (saved?.result && saved.fetchedAt && Date.now() - saved.fetchedAt < STATS_MAX_AGE_MS) return saved.result
+    try {
+      const result = baseTypeNames(await this.request('/api/trade2/data/items'))
+      if (result.length === 0) throw new TradeError('The trade site sent unexpected item data')
+      await this.baseTypesFile.write({ fetchedAt: Date.now(), result })
+      return result
+    } catch (error) {
+      if (saved?.result) return saved.result
+      throw error
+    }
   }
 
   private async readStats(): Promise<TradeStatGroup[]> {
@@ -123,8 +166,7 @@ export class TradeClient {
   }
 
   private async request(path: string, body?: unknown): Promise<unknown> {
-    const wait = this.blockedUntil - Date.now()
-    if (wait > 0) throw new TradeError(`The trade site asked us to slow down. Try again in ${Math.ceil(wait / 1000)}s.`)
+    if (this.blockedUntil > Date.now()) throw new SlowDownError(this.blockedUntil)
 
     let response: Response
     try {
@@ -151,7 +193,7 @@ export class TradeClient {
     if (response.status === 429) {
       const retry = Number(response.headers.get('retry-after')) || 60
       this.blockedUntil = Math.max(this.blockedUntil, Date.now() + retry * 1000)
-      throw new TradeError(`The trade site asked us to slow down. Try again in ${retry}s.`)
+      throw new SlowDownError(this.blockedUntil)
     }
     if (!response.ok) {
       const message = await response
