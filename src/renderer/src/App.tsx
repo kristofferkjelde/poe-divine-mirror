@@ -19,7 +19,7 @@ export function App() {
   if (state.status === 'error') {
     return (
       <Panel hotkeys={state.hotkeys} locked={state.locked}>
-        <div className="window">
+        <div className="window detail">
           <p className="panel-message">{state.message}</p>
         </div>
       </Panel>
@@ -52,7 +52,7 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
 
   return (
     <>
-      <div className={decided ? 'window inventory' : 'window'}>
+      <div className={decided ? 'window inventory' : 'window detail'}>
         {equippedTo && <GearHint>✓ Saved as your equipped {GEAR_SLOTS[equippedTo].label}</GearHint>}
         {decided ? (
           <DecisionCard
@@ -80,17 +80,17 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
         </p>
       </div>
       {detailsOpen && buildComparison && (
-        <div className="window">
+        <div className="window detail">
           <ComparisonView result={buildComparison} against="build" weightsNote={weightsNote} />
         </div>
       )}
       {detailsOpen && comparison && (
-        <div className="window">
+        <div className="window detail">
           <ComparisonView result={comparison} against="gear" />
         </div>
       )}
       {detailsOpen && (
-        <div className="window">
+        <div className="window detail">
           <ItemCard item={item} />
         </div>
       )}

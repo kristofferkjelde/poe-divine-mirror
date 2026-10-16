@@ -41,7 +41,13 @@ export type OverlayState = OverlayContext &
     | Extract<View, { status: 'error' }>
   )
 
-let context: OverlayContext = { gear: {}, hotkeys: DEFAULT_SETTINGS.hotkeys, locked: false, build: null }
+let context: OverlayContext = {
+  gear: {},
+  hotkeys: DEFAULT_SETTINGS.hotkeys,
+  locked: false,
+  build: null,
+  theme: DEFAULT_SETTINGS.theme,
+}
 let view: View = { status: 'idle' }
 let comparisons: Comparisons = { comparison: null, buildComparison: null }
 let state: OverlayState = { ...context, ...view }
@@ -81,6 +87,7 @@ function show(event: Extract<OverlayEvent, { kind: 'item' }>): View {
 
 window.overlay.on('context', (next) => {
   context = next
+  document.documentElement.dataset.theme = next.theme
   comparisons = compare()
   render()
 })

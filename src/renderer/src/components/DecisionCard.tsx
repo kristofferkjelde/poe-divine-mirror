@@ -1,11 +1,14 @@
-import { formatPercent, type ComparisonRow } from '../../../shared/compare/compare'
-import { breakdown, decide, describeChange, shortStat } from '../../../shared/compare/decision'
+import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared/compare/compare'
+import { breakdown, decide, describeChange, shortStat, type Tone } from '../../../shared/compare/decision'
 import type { GearComparison } from '../../../shared/compare/gear'
 import { formatNumber } from '../../../shared/compare/stats'
 import type { ParsedItem } from '../../../shared/item/types'
 import { ItemArt } from './ItemArt'
+import { VerdictMark } from './VerdictMark'
 
 const LEDGER_ROWS = 7
+
+const TONE_MARKS: Record<Tone, Verdict> = { good: 'upgrade', bad: 'downgrade', mixed: 'sidegrade' }
 
 interface Props {
   item: ParsedItem
@@ -39,7 +42,10 @@ export function DecisionCard({ item, gear, build, weightsNote, equipHotkey, deta
         {build ? <Slot item={build.equipped} caption="Your build" result={build} /> : <EmptySlot caption="Your build" hint="Add your build in Settings" />}
       </div>
       <div className="decision-verdict">
-        <strong>{decision.title}</strong>
+        <strong>
+          <VerdictMark verdict={TONE_MARKS[decision.tone]} />
+          {decision.title}
+        </strong>
         <span>{decision.detail}</span>
       </div>
       {stats.length > 0 && (
