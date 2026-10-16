@@ -705,8 +705,9 @@ tr[data-direction='down'] .compare-delta {
   color: var(--text-muted);
 }
 
-.panel[data-locked='false'] {
+.panel[data-locked='false'] > .panel-footer {
   -webkit-app-region: drag;
+  cursor: move;
 }
 
 .panel button {

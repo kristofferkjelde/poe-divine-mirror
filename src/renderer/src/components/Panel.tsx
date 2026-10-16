@@ -30,7 +30,7 @@ export function Panel({ hotkeys, locked, children }: Props) {
                 type="button"
                 className="panel-link"
                 aria-pressed={locked}
-                title={locked ? 'Position locked. Click to allow dragging.' : 'Drag the panel to move it. Click to lock.'}
+                title={locked ? 'Position locked. Click to allow dragging.' : 'Drag this bar to move the panel. Click to lock.'}
                 onClick={() => void setOverlayLocked(!locked)}
               >
                 {locked ? '🔒 Locked' : '🔓 Move'}

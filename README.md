@@ -36,7 +36,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover any other item and press **Alt+D** | It pops up in the middle of the screen with ▲ Upgrade, ▼ Downgrade or ≈ Sidegrade, and every stat that changes |
 | Hover an item and press **Ctrl+D** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
-| Drag the popup anywhere | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
+| Drag the popup by its bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, or change the hotkeys: click one and press the new keys |
 | Right-click the tray icon → **Quit** | The app closes |
 
