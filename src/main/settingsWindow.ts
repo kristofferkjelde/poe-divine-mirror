@@ -1,11 +1,21 @@
 import { BrowserWindow } from 'electron'
 import type { Hotkeys } from './hotkeys'
+import type { SettingsStore } from './settingsStore'
 import { ICON_PATH, loadRenderer, PRELOAD_PATH } from './renderer'
 
 export class SettingsWindow {
   private window: BrowserWindow | null = null
 
-  constructor(private readonly hotkeys: Hotkeys) {}
+  constructor(
+    private readonly hotkeys: Hotkeys,
+    private readonly store: SettingsStore,
+  ) {
+    store.onChange(() => this.window?.webContents.setZoomFactor(this.scale))
+  }
+
+  private get scale(): number {
+    return this.store.current.uiScale / 100
+  }
 
   open(): void {
     if (this.window) {
@@ -33,6 +43,7 @@ export class SettingsWindow {
       this.window = null
       this.hotkeys.resume()
     })
+    this.window.webContents.on('did-finish-load', () => this.window?.webContents.setZoomFactor(this.scale))
     void loadRenderer(this.window, 'settings')
   }
 }

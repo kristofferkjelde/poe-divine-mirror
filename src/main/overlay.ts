@@ -45,6 +45,7 @@ export class Overlay {
       if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
     })
     this.window.on('moved', () => this.rememberPosition())
+    this.window.webContents.on('did-finish-load', () => this.window.webContents.setZoomFactor(this.scale))
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
         event.preventDefault()
@@ -53,10 +54,15 @@ export class Overlay {
     })
     store.onChange(() => {
       this.window.setMovable(!store.current.overlayLocked)
+      this.window.webContents.setZoomFactor(this.scale)
       if (this.window.isVisible()) this.reposition()
     })
 
     void loadRenderer(this.window)
+  }
+
+  private get scale(): number {
+    return this.store.current.uiScale / 100
   }
 
   get visible(): boolean {
@@ -182,19 +188,20 @@ export class Overlay {
   private reposition(): void {
     const saved = this.store.current.overlayPosition
     const { workArea } = screen.getDisplayNearestPoint(saved ?? this.anchor)
-    const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
+    const width = Math.round(WIDTH * this.scale)
+    const height = Math.min(Math.ceil(this.height * this.scale), workArea.height - SCREEN_MARGIN * 2)
     const bottom = workArea.y + workArea.height - height
     const top = this.window.isVisible() && this.placed ? this.placed.y : workArea.y + (workArea.height - height) / 2
     const bounds = saved
       ? {
-          x: clamp(saved.x, workArea.x, workArea.x + workArea.width - WIDTH),
+          x: clamp(saved.x, workArea.x, workArea.x + workArea.width - width),
           y: clamp(saved.y, workArea.y, bottom),
         }
       : {
-          x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
+          x: Math.round(workArea.x + (workArea.width - width) / 2),
           y: clamp(top, workArea.y, bottom),
         }
-    this.placed = { ...bounds, width: WIDTH, height }
+    this.placed = { ...bounds, width, height }
     this.window.setBounds(this.placed)
   }
 }

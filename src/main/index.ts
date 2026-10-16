@@ -84,7 +84,7 @@ function start(): void {
     store,
     Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
   )
-  const settingsWindow = new SettingsWindow(hotkeys)
+  const settingsWindow = new SettingsWindow(hotkeys, store)
   const services = { store, gear, builds, hotkeys, trade, overlay, settingsWindow }
   registerHandlers<OverlayApi>('overlay', overlayHandlers(services))
   registerHandlers<SettingsApi>('settings', settingsHandlers(services))

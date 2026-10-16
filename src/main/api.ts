@@ -2,7 +2,7 @@ import { net, shell } from 'electron'
 import { toResult } from '../shared/errors'
 import { isGearSlot } from '../shared/gear'
 import type { OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
-import { isHotkeyAction, isTheme } from '../shared/settings'
+import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
 import { TRADE_ORIGIN } from '../shared/trade/price'
 import { importBuild } from './buildImport'
 import type { BuildStore } from './buildStore'
@@ -103,6 +103,7 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Services): H
     setLeague: (league) =>
       then(store.update({ league: typeof league === 'string' && league.trim() !== '' ? league : null })),
     setTheme: (theme) => (isTheme(theme) ? then(store.update({ theme })) : Promise.resolve(state())),
+    setUiScale: (scale) => (isUiScale(scale) ? then(store.update({ uiScale: scale })) : Promise.resolve(state())),
   }
 }
 

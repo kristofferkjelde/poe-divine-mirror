@@ -1,4 +1,4 @@
-import type { Settings } from '../../../shared/settings'
+import { isUiScale, UI_SCALES, type Settings } from '../../../shared/settings'
 import { setSettingsState } from './settingsStore'
 
 export function OverlaySettings({ settings }: { settings: Settings }) {
@@ -15,6 +15,26 @@ export function OverlaySettings({ settings }: { settings: Settings }) {
           checked={settings.overlayLocked}
           onChange={async (event) => setSettingsState(await window.settings.setLocked(event.target.checked))}
         />
+      </label>
+      <label className="settings-row">
+        <span>
+          UI size
+          <small>Makes the overlay and this window bigger.</small>
+        </span>
+        <select
+          className="settings-select"
+          value={settings.uiScale}
+          onChange={async (event) => {
+            const scale = Number(event.target.value)
+            if (isUiScale(scale)) setSettingsState(await window.settings.setUiScale(scale))
+          }}
+        >
+          {UI_SCALES.map((scale) => (
+            <option key={scale} value={scale}>
+              {scale}%
+            </option>
+          ))}
+        </select>
       </label>
       <div className="settings-row">
         <span>

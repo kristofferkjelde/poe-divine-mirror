@@ -17,6 +17,12 @@ export const THEME_LABELS: Record<Theme, { name: string; hint: string }> = {
 
 export const isTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
 
+export const UI_SCALES = [100, 110, 120] as const
+
+export type UiScale = (typeof UI_SCALES)[number]
+
+export const isUiScale = (value: unknown): value is UiScale => UI_SCALES.includes(value as UiScale)
+
 export interface Point {
   x: number
   y: number
@@ -28,6 +34,7 @@ export interface Settings {
   overlayLocked: boolean
   league: string | null
   theme: Theme
+  uiScale: UiScale
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayLocked: false,
   league: null,
   theme: 'ember',
+  uiScale: 100,
 }
 
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
@@ -68,5 +76,6 @@ export function normalizeSettings(value: unknown): Settings {
     overlayLocked: input?.overlayLocked === true,
     league: typeof input?.league === 'string' && input.league.trim() !== '' ? input.league : null,
     theme: isTheme(input?.theme) ? input.theme : DEFAULT_SETTINGS.theme,
+    uiScale: isUiScale(input?.uiScale) ? input.uiScale : DEFAULT_SETTINGS.uiScale,
   }
 }

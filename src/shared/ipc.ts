@@ -1,6 +1,6 @@
 import type { BuildProfile } from './build/profile'
 import type { Gear, GearSlot } from './gear'
-import type { HotkeyAction, Settings, Theme } from './settings'
+import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
 import type { SearchEdit } from './trade/query'
 
@@ -62,6 +62,7 @@ export interface SettingsApi {
   listLeagues: () => Promise<string[]>
   setLeague: (league: string | null) => Promise<SettingsState>
   setTheme: (theme: Theme) => Promise<SettingsState>
+  setUiScale: (scale: UiScale) => Promise<SettingsState>
 }
 
 export interface OverlayBridge extends OverlayApi {
@@ -99,6 +100,7 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   listLeagues: true,
   setLeague: true,
   setTheme: true,
+  setUiScale: true,
 }
 
 export const API_METHODS = {
