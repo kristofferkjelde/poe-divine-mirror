@@ -122,7 +122,7 @@ Your clipboard is put back the way it was right after the item is read.
 
 ## For developers
 
-Built with Electron, React 19, TypeScript and Vite ([electron-vite](https://electron-vite.org)). Requires Node 22+. The hotkey and overlay only work on Windows, but the UI and tests run anywhere.
+Built with Electron, React 19, TypeScript and Vite ([electron-vite](https://electron-vite.org)). Requires Node 24+. The hotkey and overlay only work on Windows, but the UI and tests run anywhere.
 
 ```sh
 npm install        # also downloads Electron
