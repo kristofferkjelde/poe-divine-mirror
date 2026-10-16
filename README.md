@@ -127,6 +127,7 @@ Built with Electron, React 19, TypeScript and Vite ([electron-vite](https://elec
 ```sh
 npm install        # also downloads Electron
 npm run dev        # start the overlay with hot reload
+npm start          # build and start it like the installed app (fast; use this to test)
 npm test           # item parser tests
 npm run typecheck
 npm run dist       # build a Windows installer into release/
