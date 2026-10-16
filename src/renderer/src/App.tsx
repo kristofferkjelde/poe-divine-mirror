@@ -46,10 +46,7 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
 
   if (evaluate.status !== 'closed') {
     return (
-      <div className="window">
-        <ItemCard item={withSearchedBase(item, evaluate)} compact />
-        <EvaluateView evaluate={evaluate} />
-      </div>
+      <EvaluateView item={withSearchedBase(item, evaluate)} evaluate={evaluate} />
     )
   }
 

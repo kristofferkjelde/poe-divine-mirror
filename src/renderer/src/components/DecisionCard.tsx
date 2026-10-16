@@ -150,4 +150,4 @@ const GLYPHS: Array<[RegExp, string]> = [
   [/shield|buckler|focus|quiver/i, '⛨'],
 ]
 
-const glyph = (itemClass: string) => GLYPHS.find(([pattern]) => pattern.test(itemClass))?.[1] ?? '◆'
+export const glyph = (itemClass: string) => GLYPHS.find(([pattern]) => pattern.test(itemClass))?.[1] ?? '◆'

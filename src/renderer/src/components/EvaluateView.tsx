@@ -1,6 +1,8 @@
-import { useState, type ChangeEvent, type MouseEvent } from 'react'
+import { useState, type ChangeEvent, type CSSProperties, type MouseEvent } from 'react'
+import type { ParsedItem } from '../../../shared/item/types'
 import { formatNumber } from '../../../shared/compare/stats'
-import { estimate, formatAge, formatPrice, type PriceCheckResult } from '../../../shared/trade/price'
+import type { CurrencyIcons } from '../../../shared/trade/currency'
+import { estimate, formatAge, formatPrice, type Price, type PriceCheckResult, type Reliability } from '../../../shared/trade/price'
 import {
   BROAD_SCALE,
   CORRUPTED_OPTIONS,
@@ -14,6 +16,7 @@ import {
   type SearchFilter,
 } from '../../../shared/trade/query'
 import { useCountdown } from '../countdown'
+import { glyph } from './DecisionCard'
 import { ItemCard } from './ItemCard'
 import {
   closeEvaluate,
@@ -24,75 +27,221 @@ import {
   type EvaluateState,
 } from '../overlayStore'
 
-export function EvaluateView({ evaluate }: { evaluate: Exclude<EvaluateState, { status: 'closed' }> }) {
-  return (
-    <section className="evaluate">
-      <header className="evaluate-head">
-        <strong>⚖ Evaluate</strong>
-        <button type="button" className="panel-link" onClick={closeEvaluate}>
-          ← Compare
-        </button>
-      </header>
-      {evaluate.status === 'preparing' && <p className="evaluate-note">Loading trade stats…</p>}
-      {evaluate.status === 'unavailable' && <p className="evaluate-error">{evaluate.error}</p>}
-      {evaluate.status === 'ready' && (
-        <SearchForm search={evaluate.search} searching={evaluate.searching} result={evaluate.result} />
-      )}
-    </section>
-  )
-}
+type OpenEvaluate = Exclude<EvaluateState, { status: 'closed' }>
+type Tab = 'filters' | 'listings'
 
-interface FormProps {
-  search: ItemSearch
-  searching: boolean
-  result: PriceCheckResult | null
-}
+const EMBERS = 9
 
-function SearchForm({ search, searching, result }: FormProps) {
-  const properties = search.filters.filter((filter) => filter.kind === 'property')
-  const mods = search.filters.filter((filter) => filter.kind !== 'property')
-  const tradeUrl = result?.url
+export function EvaluateView({ item, evaluate }: { item: ParsedItem; evaluate: OpenEvaluate }) {
+  const [tab, setTab] = useState<Tab>('filters')
+  const ready = evaluate.status === 'ready' ? evaluate : null
+  const result = ready?.result ?? null
+  const searching = ready?.searching ?? false
+  const listings = result?.ok ? result.listings : []
   const wait = useCountdown(result?.ok === false ? result.retryAt : undefined)
+  const tradeUrl = result?.url
 
   return (
     <form
-      className="evaluate-form"
+      className="window ember"
       onSubmit={(event) => {
         event.preventDefault()
         void runSearch()
       }}
     >
-      <div className="evaluate-selects">
-        <Select
-          value={search.rarity}
-          options={RARITY_OPTIONS}
-          onChange={(rarity) => updateSearch({ rarity })}
-        />
-        <Select
-          value={search.corrupted}
-          options={CORRUPTED_OPTIONS}
-          onChange={(corrupted) => updateSearch({ corrupted })}
-        />
+      <span className="ember-corner" data-corner="tl" aria-hidden />
+      <span className="ember-corner" data-corner="bl" aria-hidden />
+      <span className="ember-corner" data-corner="br" aria-hidden />
+
+      <nav className="ember-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'filters'} onClick={() => setTab('filters')}>
+          Filters <span>{ready?.search.filters.filter((filter) => filter.enabled).length ?? 0}</span>
+        </button>
+        <h3 className="ember-plate">
+          <span>Evaluate</span>
+        </h3>
+        <button type="button" role="tab" aria-selected={tab === 'listings'} onClick={() => setTab('listings')}>
+          Listings <span>{listings.length}</span>
+        </button>
+      </nav>
+
+      <div className="ember-top">
+        <figure className="ember-slot">
+          <figcaption>This item</figcaption>
+          <span className="ember-glyph" aria-hidden>
+            {glyph(item.itemClass)}
+          </span>
+          <strong data-rarity={item.rarity.toLowerCase()}>{item.name || item.baseType}</strong>
+          <small>
+            {[item.name && item.baseType, item.itemLevel !== undefined && `iLvl ${item.itemLevel}`].filter(Boolean).join(' · ')}
+          </small>
+        </figure>
+        <EstimateSlot evaluate={evaluate} searching={searching} wait={wait} />
       </div>
-      <ul className="evaluate-filters">
+
+      <div className="ember-rule" aria-hidden>
+        <span />
+      </div>
+
+      {ready &&
+        (tab === 'filters' ? (
+          <Filters search={ready.search} />
+        ) : listings.length > 0 ? (
+          <Listings listings={listings} icons={result?.ok ? result.icons : {}} />
+        ) : (
+          <p className="ember-empty">{result ? 'No listings for this search.' : 'Press Search to see what is listed.'}</p>
+        ))}
+
+      {ready && (
+        <div className="ember-bottom">
+          <div className="ember-presets" role="group" aria-label="Search preset">
+            <button type="button" aria-pressed={ready.search.scale === 0} onClick={() => setSearchScale(0)}>
+              Quick price
+            </button>
+            <button
+              type="button"
+              aria-pressed={ready.search.scale === BROAD_SCALE}
+              onClick={() => setSearchScale(BROAD_SCALE)}
+            >
+              Broad (−10%)
+            </button>
+          </div>
+          <button type="submit" className="ember-search" disabled={searching || wait > 0}>
+            <span>{searching ? 'Searching' : wait > 0 ? `Wait ${wait}s` : 'Search'}</span>
+          </button>
+        </div>
+      )}
+
+      <footer className="ember-links">
+        <button type="button" className="panel-link" onClick={closeEvaluate}>
+          ← Compare
+        </button>
+        {tradeUrl && (
+          <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(tradeUrl)}>
+            Open on trade ↗
+          </button>
+        )}
+      </footer>
+    </form>
+  )
+}
+
+interface EstimateProps {
+  evaluate: OpenEvaluate
+  searching: boolean
+  wait: number
+}
+
+function EstimateSlot({ evaluate, searching, wait }: EstimateProps) {
+  return (
+    <div className="ember-estimate" data-searching={searching}>
+      <EstimateBody evaluate={evaluate} searching={searching} wait={wait} />
+    </div>
+  )
+}
+
+function EstimateBody({ evaluate, searching, wait }: EstimateProps) {
+  if (evaluate.status === 'preparing') return <p className="ember-message">Loading trade stats…</p>
+  if (evaluate.status === 'unavailable') return <p className="ember-message" data-error>{evaluate.error}</p>
+
+  const { result } = evaluate
+  if (!result) return <p className="ember-message">{searching ? 'Searching the trade site…' : 'Press Search'}</p>
+  if (!result.ok && result.retryAt !== undefined) {
+    return wait > 0 ? (
+      <>
+        <small>Slow down</small>
+        <strong className="ember-value" role="timer">
+          {wait}s
+        </strong>
+        <span className="ember-range">The trade site asked us to wait before searching again.</span>
+      </>
+    ) : (
+      <p className="ember-message">Ready. Press Search again.</p>
+    )
+  }
+  if (!result.ok) return <p className="ember-message" data-error>{result.error}</p>
+
+  const value = estimate(result.listings, result.total)
+  if (!value) return <p className="ember-message">Nothing listed. Untick some filters or lower the minimums.</p>
+
+  return (
+    <>
+      <small title="The middle of the cheapest matching listings on the trade site. Reliability goes up with more listings.">
+        Worth about
+      </small>
+      <strong className="ember-value">
+        <Amount price={value.value} icons={result.icons} />
+      </strong>
+      <span className="ember-embers" aria-hidden>
+        {Array.from({ length: EMBERS }, (_, index) => (
+          <i key={index} style={{ left: `${8 + index * 10}%`, animationDelay: `${(index * 0.37) % 2.4}s` }} />
+        ))}
+      </span>
+      <span className="ember-range">
+        <Amount price={value.low} icons={result.icons} /> – <Amount price={value.high} icons={result.icons} />
+      </span>
+      <Pips reliability={value.reliability} />
+      <span className="ember-range">
+        {result.listings.length} of {formatNumber(result.total)} · {result.league}
+      </span>
+    </>
+  )
+}
+
+function Amount({ price, icons }: { price: Price; icons: CurrencyIcons }) {
+  const icon = icons[price.currency]
+  return (
+    <span className="ember-amount">
+      {icon && (
+        <img
+          src={icon}
+          alt=""
+          draggable={false}
+          onError={(event) => {
+            event.currentTarget.hidden = true
+          }}
+        />
+      )}
+      <span>{formatPrice(price)}</span>
+    </span>
+  )
+}
+
+const PIPS: Record<Reliability, number> = { 'Very low': 1, Low: 2, Medium: 3, High: 4 }
+
+function Pips({ reliability }: { reliability: Reliability }) {
+  return (
+    <span className="ember-pips" title={`Reliability ${reliability.toLowerCase()}`} aria-label={`Reliability ${reliability}`}>
+      {[1, 2, 3, 4].map((pip) => (
+        <span key={pip} data-on={pip <= PIPS[reliability]} />
+      ))}
+    </span>
+  )
+}
+
+function Filters({ search }: { search: ItemSearch }) {
+  const properties = search.filters.filter((filter) => filter.kind === 'property')
+  const mods = search.filters.filter((filter) => filter.kind !== 'property')
+  return (
+    <>
+      <div className="ember-options">
+        <Select value={search.rarity} options={RARITY_OPTIONS} onChange={(rarity) => updateSearch({ rarity })} />
+        <Select value={search.corrupted} options={CORRUPTED_OPTIONS} onChange={(corrupted) => updateSearch({ corrupted })} />
+        <Select value={search.currency} options={CURRENCY_OPTIONS} onChange={(currency) => updateSearch({ currency })} />
+        <Select value={search.status} options={STATUS_OPTIONS} onChange={(status) => updateSearch({ status })} />
+        <Select value={search.listed} options={LISTED_OPTIONS} onChange={(listed) => updateSearch({ listed })} />
+      </div>
+      <ul className="ember-ledger">
         {properties.map((filter) => (
           <FilterRow key={filter.key} filter={filter} />
         ))}
-        {properties.length > 0 && mods.length > 0 && <li className="evaluate-divider" aria-hidden />}
+        {properties.length > 0 && mods.length > 0 && <li className="ember-divider" aria-hidden />}
         {mods.map((filter) => (
           <FilterRow key={filter.key} filter={filter} />
         ))}
       </ul>
-      <div className="evaluate-presets" role="group" aria-label="Search preset">
-        <button type="button" aria-pressed={search.scale === 0} onClick={() => setSearchScale(0)}>
-          Quick price
-        </button>
-        <button type="button" aria-pressed={search.scale === BROAD_SCALE} onClick={() => setSearchScale(BROAD_SCALE)}>
-          Broad (−10%)
-        </button>
-      </div>
-      <div className="evaluate-scale">
-        <button type="button" className="panel-link" onClick={() => setSearchScale(search.scale - SCALE_STEP)} aria-label="Lower minimums by 5%">
+      <div className="ember-scale">
+        <button type="button" onClick={() => setSearchScale(search.scale - SCALE_STEP)} aria-label="Lower minimums by 5%">
           −
         </button>
         <input
@@ -103,14 +252,15 @@ function SearchForm({ search, searching, result }: FormProps) {
           value={search.scale}
           aria-label="Scale every minimum"
           aria-valuetext={scaleLabel(search.scale)}
+          style={{ '--fill': `${((search.scale + SCALE_LIMIT) / (2 * SCALE_LIMIT)) * 100}%` } as CSSProperties}
           onChange={(event) => setSearchScale(Number(event.target.value))}
         />
-        <button type="button" className="panel-link" onClick={() => setSearchScale(search.scale + SCALE_STEP)} aria-label="Raise minimums by 5%">
+        <button type="button" onClick={() => setSearchScale(search.scale + SCALE_STEP)} aria-label="Raise minimums by 5%">
           +
         </button>
         <button
           type="button"
-          className="evaluate-scale-label panel-link"
+          className="ember-scale-label"
           data-exact={search.scale === 0}
           title="Back to exact match"
           onClick={() => setSearchScale(0)}
@@ -118,36 +268,7 @@ function SearchForm({ search, searching, result }: FormProps) {
           {scaleLabel(search.scale)}
         </button>
       </div>
-      <EstimateBox searching={searching} result={result} wait={wait} />
-      <div className="evaluate-selects">
-        <Select
-          value={search.currency}
-          options={CURRENCY_OPTIONS}
-          onChange={(currency) => updateSearch({ currency })}
-        />
-        <Select
-          value={search.status}
-          options={STATUS_OPTIONS}
-          onChange={(status) => updateSearch({ status })}
-        />
-        <Select
-          value={search.listed}
-          options={LISTED_OPTIONS}
-          onChange={(listed) => updateSearch({ listed })}
-        />
-      </div>
-      <div className="evaluate-actions">
-        <button type="submit" className="evaluate-search" disabled={searching || wait > 0}>
-          {searching ? 'Searching…' : wait > 0 ? `Wait ${wait}s` : 'Search'}
-        </button>
-        {tradeUrl && (
-          <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(tradeUrl)}>
-            Open on trade ↗
-          </button>
-        )}
-      </div>
-      {result?.ok && result.listings.length > 0 && <Listings result={result} />}
-    </form>
+    </>
   )
 }
 
@@ -164,7 +285,6 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
   const origin = filter.kind === 'mod' || filter.kind === 'unsearchable' ? filter : undefined
   return (
     <li
-      className="evaluate-filter"
       data-kind={filter.kind}
       data-type={origin?.modType}
       data-enabled={filter.enabled}
@@ -173,11 +293,12 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
       <label>
         <input
           type="checkbox"
+          className="ember-check"
           checked={filter.enabled}
           disabled={!searchable}
           onChange={(event) => updateFilter(filter.key, { enabled: event.target.checked })}
         />
-        <span>
+        <span className="ember-stat">
           {origin?.affix && (
             <span
               className="item-tier"
@@ -194,7 +315,7 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
             </span>
           )}
           {filter.label}
-          {filter.kind === 'property' && <span className="evaluate-value"> {formatNumber(filter.value)}</span>}
+          {filter.kind === 'property' && <span className="ember-property"> {formatNumber(filter.value)}</span>}
         </span>
       </label>
       {searchable && (
@@ -202,7 +323,7 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
           <input
             type="number"
             step="any"
-            className="evaluate-number"
+            className="ember-number"
             placeholder="min"
             aria-label={`${filter.label} minimum`}
             value={filter.min ?? ''}
@@ -214,7 +335,7 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
           <input
             type="number"
             step="any"
-            className="evaluate-number"
+            className="ember-number"
             placeholder="max"
             aria-label={`${filter.label} maximum`}
             value={filter.max ?? ''}
@@ -229,51 +350,7 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
   )
 }
 
-interface EstimateProps {
-  searching: boolean
-  result: PriceCheckResult | null
-  wait: number
-}
-
-function EstimateBox({ searching, result, wait }: EstimateProps) {
-  if (!result) {
-    return <div className="evaluate-estimate evaluate-note">{searching ? 'Searching the trade site…' : 'Press Search'}</div>
-  }
-  if (!result.ok && result.retryAt !== undefined) {
-    return wait > 0 ? (
-      <div className="evaluate-estimate evaluate-error" role="timer">
-        The trade site asked us to slow down. You can search again in {wait}s.
-      </div>
-    ) : (
-      <div className="evaluate-estimate evaluate-note">Ready. Press Search again.</div>
-    )
-  }
-  if (!result.ok) return <div className="evaluate-estimate evaluate-error">{result.error}</div>
-
-  const value = estimate(result.listings, result.total)
-  if (!value) {
-    return (
-      <div className="evaluate-estimate evaluate-note">
-        Nothing listed. Untick some filters or lower the minimums.
-      </div>
-    )
-  }
-  return (
-    <div className="evaluate-estimate" data-searching={searching}>
-      <small title="The middle of the cheapest matching listings on the trade site. Reliability goes up with more listings.">
-        Estimated value · {result.league}
-      </small>
-      <strong>≈ {formatPrice(value.value)}</strong>
-      <span className="evaluate-note">
-        Range {formatPrice(value.low)} – {formatPrice(value.high)} · Reliability{' '}
-        <span data-reliability={value.reliability}>{value.reliability}</span>
-      </span>
-      <span className="evaluate-note">
-        {result.listings.length} of {result.total} listed
-      </span>
-    </div>
-  )
-}
+type Listing = Extract<PriceCheckResult, { ok: true }>['listings'][number]
 
 interface Preview {
   index: number
@@ -287,37 +364,28 @@ function placeBeside(row: HTMLElement): Preview['placement'] {
   return top > window.innerHeight / 2 ? { bottom: window.innerHeight - top + PREVIEW_GAP } : { top: bottom + PREVIEW_GAP }
 }
 
-function Listings({ result }: { result: Extract<PriceCheckResult, { ok: true }> }) {
+function Listings({ listings, icons }: { listings: Listing[]; icons: CurrencyIcons }) {
   const [preview, setPreview] = useState<Preview | null>(null)
   const now = Date.now()
-  const previewed = preview && result.listings[preview.index]?.item
-  const show = (index: number) => (event: MouseEvent<HTMLTableRowElement>) =>
+  const previewed = preview && listings[preview.index]?.item
+  const show = (index: number) => (event: MouseEvent<HTMLLIElement>) =>
     setPreview({ index, placement: placeBeside(event.currentTarget) })
 
   return (
-    <div className="evaluate-listings" onMouseLeave={() => setPreview(null)}>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Price</th>
-            <th scope="col">iLvl</th>
-            <th scope="col">Q%</th>
-            <th scope="col">Seller</th>
-            <th scope="col">Listed</th>
-          </tr>
-        </thead>
-        <tbody>
-          {result.listings.map((listing, index) => (
-            <tr key={index} data-previewed={preview?.index === index} onMouseEnter={show(index)}>
-              <td>{formatPrice(listing)}</td>
-              <td>{listing.itemLevel ?? '–'}</td>
-              <td>{listing.quality ?? 0}%</td>
-              <td className="evaluate-seller">{listing.account ?? '–'}</td>
-              <td>{formatAge(listing.indexed, now) ?? '–'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="ember-listings" onMouseLeave={() => setPreview(null)}>
+      <ol>
+        {listings.map((listing, index) => (
+          <li key={index} data-previewed={preview?.index === index} onMouseEnter={show(index)}>
+            <strong>
+              <Amount price={listing} icons={icons} />
+            </strong>
+            <span>iLvl {listing.itemLevel ?? '–'}</span>
+            <span>{listing.quality ?? 0}%</span>
+            <span className="ember-seller">{listing.account ?? '–'}</span>
+            <span>{formatAge(listing.indexed, now) ?? '–'}</span>
+          </li>
+        ))}
+      </ol>
       {previewed && (
         <div className="window listing-preview" style={preview.placement}>
           <ItemCard item={previewed} />
@@ -335,7 +403,7 @@ interface SelectProps<T extends string> {
 
 function Select<T extends string>({ value, options, onChange }: SelectProps<T>) {
   return (
-    <select className="evaluate-select" value={value} onChange={(event) => onChange(event.target.value as T)}>
+    <select className="ember-select" value={value} onChange={(event) => onChange(event.target.value as T)}>
       {(Object.entries(options) as Array<[T, string]>).map(([key, label]) => (
         <option key={key} value={key}>
           {label}
