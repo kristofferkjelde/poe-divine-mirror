@@ -32,6 +32,27 @@ describe('listed trade items', () => {
     ])
   })
 
+  it('reads mods sent as objects with their own tiers, and granted skills', () => {
+    const item = toListedItem({
+      rarity: 'Rare',
+      name: 'Rune Edge',
+      typeLine: 'Soaring Spear',
+      grantedSkills: [{ name: 'Grants Skill', values: [['[SpearThrow|Spear Throw]', 0]], displayMode: 0 }],
+      runeMods: ['Adds 2 to 4 [Fire|Fire] Damage'],
+      explicitMods: [
+        { description: 'Adds 83 to 104 [Fire|Fire] Damage', mods: [{ name: 'Blasting', tier: 'P2' }] },
+        { description: '+3 to Level of all [Projectile|Projectile] Skills', mods: [{ name: 'of the Sniper', tier: 'S1' }] },
+        { hash: 'no text' },
+      ],
+    })
+    expect(item?.mods.map(({ text, type, affix, tier }) => ({ text, type, affix, tier }))).toEqual([
+      { text: 'Adds 2 to 4 Fire Damage', type: 'rune', affix: undefined, tier: undefined },
+      { text: 'Adds 83 to 104 Fire Damage', type: 'explicit', affix: 'prefix', tier: 2 },
+      { text: '+3 to Level of all Projectile Skills', type: 'explicit', affix: 'suffix', tier: 1 },
+    ])
+    expect(item?.properties).toContainEqual({ name: 'Grants Skill', value: 'Spear Throw', augmented: false })
+  })
+
   it('turns a fetched item into an item card', () => {
     const item = toListedItem({
       rarity: 'Rare',
