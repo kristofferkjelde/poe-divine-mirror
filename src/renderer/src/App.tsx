@@ -8,7 +8,8 @@ import { EvaluateView } from './components/EvaluateView'
 import { GearHint } from './components/GearHint'
 import { ItemCard } from './components/ItemCard'
 import { Panel } from './components/Panel'
-import { openEvaluate, useOverlayState, type OverlayState } from './overlayStore'
+import type { ParsedItem } from '../../shared/item/types'
+import { openEvaluate, useOverlayState, type EvaluateState, type OverlayState } from './overlayStore'
 
 export function App() {
   const state = useOverlayState()
@@ -46,7 +47,7 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
   if (evaluate.status !== 'closed') {
     return (
       <div className="window">
-        <ItemCard item={item} compact />
+        <ItemCard item={withSearchedBase(item, evaluate)} compact />
         <EvaluateView evaluate={evaluate} />
       </div>
     )
@@ -99,3 +100,6 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
     </>
   )
 }
+
+const withSearchedBase = (item: ParsedItem, evaluate: EvaluateState): ParsedItem =>
+  !item.baseType && evaluate.status === 'ready' && evaluate.search.type ? { ...item, baseType: evaluate.search.type } : item
