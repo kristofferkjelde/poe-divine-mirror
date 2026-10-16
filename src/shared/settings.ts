@@ -39,9 +39,9 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   hotkeys: {
-    compare: 'Alt+D',
-    equip: 'Alt+Shift+D',
-    price: 'Ctrl+D',
+    compare: 'Alt+Z',
+    equip: 'Alt+Shift+Z',
+    price: 'Ctrl+Alt+Z',
   },
   overlayPosition: null,
   overlayLocked: false,
