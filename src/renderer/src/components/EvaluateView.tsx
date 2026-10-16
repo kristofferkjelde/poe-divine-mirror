@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
@@ -21,7 +20,6 @@ import {
 import { useCountdown } from '../countdown'
 import { ItemArt } from './ItemArt'
 import { ItemCard } from './ItemCard'
-import { measureTooltip, tooltipDocument } from '../tooltipWindow'
 import {
   closeEvaluate,
   runSearch,
@@ -384,16 +382,35 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
 
 type Listing = Extract<PriceCheckResult, { ok: true }>['listings'][number]
 
+const hideTooltip = () => void window.overlay.hideTooltip()
+
+const hideTooltipOnUnmount = (node: HTMLElement | null) => {
+  if (node) return hideTooltip
+}
+
 function Listings({ listings, icons }: { listings: Listing[]; icons: CurrencyIcons }) {
   const [preview, setPreview] = useState<number | null>(null)
   const now = Date.now()
-  const previewed = preview === null ? undefined : listings[preview]?.item
+
+  const show = (index: number) => {
+    setPreview(index)
+    const item = listings[index]?.item
+    if (item) void window.overlay.showTooltip(item)
+    else hideTooltip()
+  }
 
   return (
-    <div className="ember-listings" onMouseLeave={() => setPreview(null)}>
+    <div
+      ref={hideTooltipOnUnmount}
+      className="ember-listings"
+      onMouseLeave={() => {
+        setPreview(null)
+        hideTooltip()
+      }}
+    >
       <ol>
         {listings.map((listing, index) => (
-          <li key={index} data-previewed={preview === index} onMouseEnter={() => setPreview(index)}>
+          <li key={index} data-previewed={preview === index} onMouseEnter={() => show(index)}>
             <strong>
               <Amount price={listing} icons={icons} />
             </strong>
@@ -404,19 +421,7 @@ function Listings({ listings, icons }: { listings: Listing[]; icons: CurrencyIco
           </li>
         ))}
       </ol>
-      {previewed && <ListingTooltip item={previewed} />}
     </div>
-  )
-}
-
-function ListingTooltip({ item }: { item: ParsedItem }) {
-  const target = tooltipDocument()
-  if (!target) return null
-  return createPortal(
-    <div ref={measureTooltip} className="window listing-preview">
-      <ItemCard item={item} />
-    </div>,
-    target.body,
   )
 }
 

@@ -5,7 +5,7 @@ import { APP_ORIGIN } from './appScheme'
 
 export const PRELOAD_PATH = join(__dirname, '../preload/index.js')
 
-export function loadRenderer(window: BrowserWindow, theme: Theme, view?: 'settings'): Promise<void> {
+export function loadRenderer(window: BrowserWindow, theme: Theme, view?: 'settings' | 'tooltip'): Promise<void> {
   const url = new URL(process.env.ELECTRON_RENDERER_URL || `${APP_ORIGIN}/index.html`)
   url.searchParams.set('theme', theme)
   if (view) url.searchParams.set('view', view)

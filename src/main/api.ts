@@ -1,6 +1,7 @@
 import { net, shell } from 'electron'
 import { toResult } from '../shared/errors'
 import { isGearSlot } from '../shared/gear'
+import type { ParsedItem } from '../shared/item/types'
 import type { OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
 import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
 import { TRADE_ORIGIN } from '../shared/trade/price'
@@ -55,8 +56,8 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     painted: () => overlay.painted(),
     startDrag: () => overlay.startDrag(),
     endDrag: () => overlay.endDrag(),
-    showTooltip: (height) => {
-      if (isFiniteNumber(height)) overlay.showTooltip(height)
+    showTooltip: (item) => {
+      if (typeof item === 'object' && item !== null) overlay.showTooltip(item as ParsedItem)
     },
     hideTooltip: () => overlay.hideTooltip(),
   }

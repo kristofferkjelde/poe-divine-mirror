@@ -1,5 +1,18 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { API_METHODS, apiChannel, messageChannel, type ApiScope, SETTINGS_ARGUMENT, type OverlayBridge, type SettingsApi } from '../shared/ipc'
+import {
+  API_METHODS,
+  apiChannel,
+  messageChannel,
+  SETTINGS_ARGUMENT,
+  TOOLTIP_ARGUMENT,
+  TOOLTIP_CHANNEL,
+  type ApiScope,
+  type OverlayBridge,
+  type SettingsApi,
+  type TooltipApi,
+  type TooltipBridge,
+  type TooltipContent,
+} from '../shared/ipc'
 
 function proxy<T>(scope: ApiScope): T {
   return Object.fromEntries(
@@ -16,8 +29,19 @@ const overlay: OverlayBridge = {
   },
 }
 
+const tooltip: TooltipBridge = {
+  ...proxy<TooltipApi>('tooltip'),
+  onContent: (listener) => {
+    const handler = (_event: IpcRendererEvent, content: TooltipContent | null) => listener(content)
+    ipcRenderer.on(TOOLTIP_CHANNEL, handler)
+    return () => ipcRenderer.off(TOOLTIP_CHANNEL, handler)
+  },
+}
+
 if (process.argv.includes(SETTINGS_ARGUMENT)) {
   contextBridge.exposeInMainWorld('settings', proxy<SettingsApi>('settings'))
+} else if (process.argv.includes(TOOLTIP_ARGUMENT)) {
+  contextBridge.exposeInMainWorld('tooltip', tooltip)
 } else {
   contextBridge.exposeInMainWorld('overlay', overlay)
 }
