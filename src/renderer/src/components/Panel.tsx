@@ -17,35 +17,37 @@ interface Props {
 
 export function Panel({ hotkeys, locked, children }: Props) {
   return (
-    <div className="panel-scroll">
-      <div ref={reportHeight} className="panel" data-locked={locked}>
-        {children}
-        <footer className="panel-footer">
-          <span>
-            {hotkeys.compare} compare · {hotkeys.equip} equip · {hotkeys.price} price
-          </span>
-          <span className="panel-actions">
-            <button
-              type="button"
-              className="panel-link"
-              aria-pressed={locked}
-              title={locked ? 'Position locked. Click to allow dragging.' : 'Drag the panel to move it. Click to lock.'}
-              onClick={() => void setOverlayLocked(!locked)}
-            >
-              {locked ? '🔒 Locked' : '🔓 Move'}
-            </button>
-            <button type="button" className="panel-link" onClick={() => void window.overlay.openSettings()}>
-              Settings
-            </button>
-            <button type="button" className="panel-link" onClick={() => void window.overlay.hide()}>
-              Esc
-            </button>
-          </span>
-        </footer>
-        <button type="button" className="panel-close" aria-label="Close" title="Close (Esc)" onClick={() => void window.overlay.hide()}>
-          ✕
-        </button>
+    <>
+      <div className="panel-scroll">
+        <div ref={reportHeight} className="panel" data-locked={locked}>
+          {children}
+          <footer className="panel-footer">
+            <span>
+              {hotkeys.compare} compare · {hotkeys.equip} equip · {hotkeys.price} price
+            </span>
+            <span className="panel-actions">
+              <button
+                type="button"
+                className="panel-link"
+                aria-pressed={locked}
+                title={locked ? 'Position locked. Click to allow dragging.' : 'Drag the panel to move it. Click to lock.'}
+                onClick={() => void setOverlayLocked(!locked)}
+              >
+                {locked ? '🔒 Locked' : '🔓 Move'}
+              </button>
+              <button type="button" className="panel-link" onClick={() => void window.overlay.openSettings()}>
+                Settings
+              </button>
+              <button type="button" className="panel-link" onClick={() => void window.overlay.hide()}>
+                Esc
+              </button>
+            </span>
+          </footer>
+        </div>
       </div>
-    </div>
+      <button type="button" className="panel-close" aria-label="Close" title="Close (Esc)" onClick={() => void window.overlay.hide()}>
+        ✕
+      </button>
+    </>
   )
 }

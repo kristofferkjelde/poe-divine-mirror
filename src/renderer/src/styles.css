@@ -58,10 +58,11 @@ body {
 }
 
 .panel-close {
-  position: absolute;
+  position: fixed;
   top: 4px;
   right: 4px;
-  z-index: 2;
+  z-index: 10;
+  -webkit-app-region: no-drag;
   display: grid;
   place-items: center;
   width: 22px;
