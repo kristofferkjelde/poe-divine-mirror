@@ -1586,10 +1586,6 @@ tr[data-direction='down'] .compare-delta {
   );
   animation: ember-swirl 18s linear infinite;
 }
-.ember-slot .item-art,
-.decision-slot[data-highlight='true'] .item-art {
-  animation: ember-float 5.6s ease-in-out infinite;
-}
 @keyframes ember-breathe {
   0%,
   100% {
@@ -1606,21 +1602,10 @@ tr[data-direction='down'] .compare-delta {
     transform: rotate(1turn);
   }
 }
-@keyframes ember-float {
-  0%,
-  100% {
-    transform: translateY(1px);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .ember-slot::before,
   .ember-slot::after,
-  .decision-slot[data-highlight='true']::after,
-  .ember-slot .item-art,
-  .decision-slot[data-highlight='true'] .item-art {
+  .decision-slot[data-highlight='true']::after {
     animation: none;
   }
 }
