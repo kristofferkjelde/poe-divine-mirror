@@ -1,5 +1,5 @@
 import { useActionState, useState } from 'react'
-import { PROFILE_VERSION, profileWeights, type BuildProfile } from '../../../shared/build/profile'
+import { PROFILE_VERSION, profileWeights, stageTitle, type BuildProfile } from '../../../shared/build/profile'
 import { setSettingsState } from './settingsStore'
 
 export function BuildSettings({ build }: { build: BuildProfile | null }) {
@@ -27,6 +27,25 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
           </button>
         </span>
       </div>
+      {stageTitle(build) && (
+        <label className="settings-row">
+          <span>
+            Gear stage
+            <small>Which of the build's gear sets to compare against.</small>
+          </span>
+          <select
+            className="settings-select"
+            value={build.itemSet}
+            onChange={async (event) => setSettingsState(await window.settings.setBuildItemSet(event.target.value))}
+          >
+            {build.itemSets?.map(({ id, title }) => (
+              <option key={id} value={id}>
+                {title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {build.version !== PROFILE_VERSION && (
         <p className="hotkey-status">
           This build was imported by an older version of the app. Click Change and import it again to pick up the latest

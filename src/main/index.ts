@@ -1,14 +1,14 @@
-import { app, globalShortcut, Menu, nativeImage, Tray } from 'electron'
+import { app, globalShortcut, Menu, nativeImage, Notification, session, Tray } from 'electron'
 import { uIOhook } from 'uiohook-napi'
-import type { OverlayApi, SettingsApi } from '../shared/ipc'
+import type { OverlayApi } from '../shared/ipc'
 import { HOTKEY_ACTIONS, HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
 import { overlayHandlers, settingsHandlers } from './api'
 import { BuildStore } from './buildStore'
 import { copyHoveredItem } from './clipboard'
-import { delay } from './delay'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
-import { registerImageScheme, serveCachedImages } from './imageCache'
+import { serveApp } from './appScheme'
+import { registerSchemes, serveCachedImages } from './imageCache'
 import { registerHandlers } from './ipc'
 import { Overlay } from './overlay'
 import { ICON_PATH } from './renderer'
@@ -18,11 +18,10 @@ import { TradeClient } from './trade'
 import { Updates } from './updates'
 import { trayTooltip, updateMenuItem } from './updateStatus'
 
-const FOCUS_RETURN_MS = 60
-
 let tray: Tray | null = null
 
-registerImageScheme()
+registerSchemes()
+Menu.setApplicationMenu(null)
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -33,24 +32,29 @@ if (!app.requestSingleInstanceLock()) {
 function start(): void {
   app.setAppUserModelId('io.kjelde.poe-item-checker')
   serveCachedImages()
+  serveApp()
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false))
+  session.defaultSession.setPermissionCheckHandler(() => false)
   const store = new SettingsStore()
   const overlay = new Overlay(store)
   const gear = new GearStore()
   const builds = new BuildStore()
   const trade = new TradeClient()
 
-  const pushContext = () =>
-    overlay.send('context', {
-      gear: gear.current,
+  const pushPreferences = () =>
+    overlay.send('preferences', {
       hotkeys: store.current.hotkeys,
       locked: store.current.overlayLocked,
-      build: builds.current,
       theme: store.current.theme,
     })
-  overlay.onLoad(pushContext)
-  store.onChange(pushContext)
-  gear.onChange(pushContext)
-  builds.onChange(pushContext)
+  const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current })
+  overlay.onReady(() => {
+    pushPreferences()
+    pushGear()
+  })
+  store.watch((settings) => [settings.hotkeys, settings.overlayLocked, settings.theme], pushPreferences)
+  gear.onChange(pushGear)
+  builds.onChange(pushGear)
 
   let busy = false
   let queued: HotkeyAction | null = null
@@ -64,10 +68,6 @@ function start(): void {
     try {
       const overlayVisible = overlay.visible
       if (overlay.hovered) return overlay.show({ kind: 'missed', mode, overlayVisible })
-      if (overlay.focused) {
-        overlay.hide()
-        await delay(FOCUS_RETURN_MS)
-      }
       const text = await copyHoveredItem()
       if (!text) return overlay.show({ kind: 'missed', mode, overlayVisible })
       const equippedTo = mode === 'equip' ? await gear.equip(text, builds.current).catch(() => undefined) : undefined
@@ -84,10 +84,8 @@ function start(): void {
     store,
     Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
   )
-  const settingsWindow = new SettingsWindow(hotkeys)
-  const services = { store, gear, builds, hotkeys, trade, overlay, settingsWindow }
-  registerHandlers<OverlayApi>('overlay', overlayHandlers(services))
-  registerHandlers<SettingsApi>('settings', settingsHandlers(services))
+  const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, hotkeys, trade }))
+  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, hotkeys, trade, overlay, settingsWindow }))
 
   const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))
@@ -135,12 +133,30 @@ function start(): void {
     )
   }
   refreshTray()
-  store.onChange(refreshTray)
+  store.watch((settings) => [settings.hotkeys, settings.overlayLocked], refreshTray)
   updates.onChange(refreshTray)
   updates.start()
   tray.on('double-click', () => settingsWindow.open())
-  if (hotkeys.unavailableActions.length > 0) settingsWindow.open()
+  app.on('second-instance', () => settingsWindow.open())
+  warnTakenHotkeys(hotkeys.unavailableActions.map((action) => store.current.hotkeys[action]), () => settingsWindow.open())
 }
+
+function warnTakenHotkeys(taken: string[], openSettings: () => void): void {
+  if (taken.length === 0) return
+  if (!Notification.isSupported()) return openSettings()
+  const notification = new Notification({
+    title: 'Divine Mirror',
+    body: `${taken.join(', ')} ${taken.length === 1 ? 'is' : 'are'} taken by another app. Click to change.`,
+    icon: ICON_PATH,
+  })
+  notification.on('click', openSettings)
+  notification.show()
+}
+
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-navigate', (event) => event.preventDefault())
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+})
 
 app.on('window-all-closed', () => {})
 app.on('will-quit', () => {

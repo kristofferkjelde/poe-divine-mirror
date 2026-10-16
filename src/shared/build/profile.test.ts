@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { BuildImportError, decodePobCode, importBuild, refreshProfile } from '../../main/buildImport'
+import { BuildImportError, chooseItemSet, decodePobCode, importBuild, refreshProfile } from '../../main/buildImport'
 import { compareItems } from '../compare/compare'
 import { compareWithGear } from '../compare/gear'
 import { DERIVED, extractStats } from '../compare/stats'
@@ -192,6 +192,46 @@ describe('importBuild', () => {
     const page = `<html><script>{"pobCode":"${code}"}</script></html>`
     const profile = await importBuild('https://mobalytics.gg/poe-2/builds/twister', async () => page)
     expect(profile.source).toBe('https://mobalytics.gg/poe-2/builds/twister')
+  })
+
+  describe('gear stages', () => {
+    const LATE = '3a7deeaa-76d5-4d1e-a4ec-a107d84dbb90'
+    const MID = '89c2f089-1111-4222-8333-444455556666'
+    const staged = encode(
+      xml
+        .replace('<ItemSet useSecondWeaponSet="false" id="1">', '<ItemSet useSecondWeaponSet="false" title="Mid Endgame" id="1">')
+        .replace(
+          '</Items>',
+          '<ItemSet useSecondWeaponSet="false" title="Late Campaign" id="2"><Slot name="Helmet" itemId="2"/></ItemSet></Items>',
+        ),
+    )
+
+    it('lists the stages and compares against the active one', async () => {
+      const profile = await importBuild(staged, offline)
+      expect(profile.itemSets).toEqual([
+        { id: '1', title: 'Mid Endgame' },
+        { id: '2', title: 'Late Campaign' },
+      ])
+      expect(profile.itemSet).toBe('1')
+      expect(profile.items.weapon?.name).toBe('Storm Impaler')
+    })
+
+    it('switches stage, keeping custom weights', async () => {
+      const profile = { ...(await importBuild(staged, offline)), custom: { '+# to maximum Life': 3 } }
+      const late = chooseItemSet(profile, '2')
+      expect(late.itemSet).toBe('2')
+      expect(late.items.weapon).toBeUndefined()
+      expect(late.items.helmet).toBeDefined()
+      expect(late.custom).toEqual({ '+# to maximum Life': 3 })
+      expect(chooseItemSet(profile, '9')).toBe(profile)
+    })
+
+    it("picks the stage a Mobalytics link points at", async () => {
+      const page = `<html><script>{"pobCode":"${staged}","variants":[{"id":"${MID}","title":"Mid Endgame"},{"id":"${LATE}","title":"Late Campaign"}]}</script></html>`
+      const url = `https://mobalytics.gg/poe-2/builds/twister?ws-ngf5-f7d82102=activeVariantId%2C${LATE}`
+      expect((await importBuild(url, async () => page)).itemSet).toBe('2')
+      expect((await importBuild('https://mobalytics.gg/poe-2/builds/twister', async () => page)).itemSet).toBe('1')
+    })
   })
 
   it('explains what to do when Mobalytics has no code', async () => {

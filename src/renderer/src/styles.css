@@ -15,7 +15,7 @@
   --rarity-gem: #1ba29b;
   --rarity-currency: #aa9e82;
 
-  --glass: rgba(10, 8, 7, 0.97);
+  --glass: #0a0807;
   --bevel: #1b0f0a;
   --base: #0a0807;
   --well-top: #120e0c;
@@ -51,7 +51,7 @@
 }
 
 :root[data-theme='mana'] {
-  --glass: rgba(6, 8, 16, 0.97);
+  --glass: #060810;
   --bevel: #121624;
   --base: #060912;
   --well-top: #0b1226;
@@ -82,7 +82,7 @@
 }
 
 :root[data-theme='iron'] {
-  --glass: rgba(15, 14, 11, 0.97);
+  --glass: #0f0e0b;
   --bevel: #24231e;
   --base: #0c0c0a;
   --well-top: #1d1b13;
@@ -126,7 +126,7 @@
 
 html,
 body {
-  background: transparent;
+  background: var(--base);
   overflow: hidden;
   user-select: none;
   font-family: var(--font-poe);
@@ -146,6 +146,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  background: var(--base);
 }
 
 .panel-close {
@@ -153,7 +154,6 @@ body {
   top: 4px;
   right: 4px;
   z-index: 10;
-  -webkit-app-region: no-drag;
   display: grid;
   place-items: center;
   width: 22px;
@@ -203,6 +203,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 6px 10px;
   font-size: 12px;
   color: var(--text-muted);
@@ -218,6 +219,10 @@ body {
 
 .panel-link:hover {
   color: var(--accent-ink);
+}
+
+.panel-link[data-confirm='true'] {
+  color: var(--delta-down);
 }
 
 .item {
@@ -771,7 +776,16 @@ tr[data-direction='down'] .compare-delta {
 
 .panel-actions {
   display: flex;
-  gap: 12px;
+  flex-shrink: 0;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.panel-hotkeys {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings {
@@ -871,13 +885,9 @@ tr[data-direction='down'] .compare-delta {
   color: var(--text-muted);
 }
 
-.panel[data-locked='false'] > .panel-footer {
-  -webkit-app-region: drag;
+.panel[data-locked='false'] :is(.ember-tabs, .ember-tabs *, .item-header, .item-header *, .panel-footer) {
   cursor: move;
-}
-
-.panel button {
-  -webkit-app-region: no-drag;
+  touch-action: none;
 }
 
 .settings-row {
@@ -1008,13 +1018,6 @@ tr[data-direction='down'] .compare-delta {
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.8),
     0 8px 24px rgba(0, 0, 0, 0.8);
-}
-
-.panel input,
-.panel select,
-.panel label,
-.ember-listings {
-  -webkit-app-region: no-drag;
 }
 
 .settings-select {
@@ -1377,27 +1380,35 @@ tr[data-direction='down'] .compare-delta {
   outline: none;
 }
 .ember-select {
+  display: flex;
   flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   padding: 0 6px;
+  cursor: pointer;
 }
-.ember-select:focus,
-.ember-number:focus {
+.ember-select::after {
+  content: '⇅';
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+.ember-select:hover,
+.ember-number:hover {
   border-color: var(--accent);
   box-shadow:
     inset 0 1px 4px #000,
     0 0 0 1px var(--aura);
 }
 .ember-number {
+  display: grid;
+  place-items: center;
   width: 100%;
   padding: 0 4px;
-  text-align: center;
-  appearance: textfield;
+  cursor: ns-resize;
+  font-variant-numeric: tabular-nums;
 }
-.ember-number::-webkit-inner-spin-button,
-.ember-number::-webkit-outer-spin-button {
-  appearance: none;
-}
-.ember-number::placeholder {
+.ember-number[data-empty='true'] {
   color: var(--ink-faint);
   opacity: 0.6;
 }
@@ -1567,12 +1578,12 @@ tr[data-direction='down'] .compare-delta {
   max-height: 330px;
   overflow-y: auto;
 }
-.ember-listings ol {
+.ember-listings > ol {
   display: grid;
   gap: 2px;
   list-style: none;
 }
-.ember-listings li {
+.ember-listings > ol > li {
   display: grid;
   grid-template-columns: 72px 52px 32px minmax(0, 1fr) auto;
   gap: 8px;
@@ -1584,15 +1595,15 @@ tr[data-direction='down'] .compare-delta {
   color: var(--ink-dim);
   font-variant-numeric: tabular-nums;
 }
-.ember-listings li:nth-child(even) {
+.ember-listings > ol > li:nth-child(even) {
   background: var(--row-alt);
 }
-.ember-listings li[data-previewed='true'] {
+.ember-listings > ol > li[data-previewed='true'] {
   border-left-color: var(--accent);
   background: linear-gradient(90deg, var(--row-on), transparent 80%), var(--row);
   color: var(--ink);
 }
-.ember-listings strong {
+.ember-listings > ol strong {
   font-weight: normal;
   color: var(--price);
 }

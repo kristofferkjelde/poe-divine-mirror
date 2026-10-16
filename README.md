@@ -1,6 +1,6 @@
 # Divine Mirror
 
-**Is this item an upgrade?** Hover it in Path of Exile 2, press **Alt+D**, and find out without leaving the game.
+**Is this item an upgrade?** Hover it in Path of Exile 2, press **Alt+Z**, and find out without leaving the game.
 
 <p align="center">
   <img src="docs/overlay.png" alt="The Compare popup: a rare ring between the ring you wear and your build's ring, with the verdict Equip it and a stat-by-stat ledger" width="420" />
@@ -34,9 +34,9 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 
 | Do this | What happens |
 | --- | --- |
-| Hover an item you're **wearing** and press **Alt+Shift+D** | It's saved as your equipped item for that slot (do this once per slot) |
-| Hover any other item and press **Alt+D** | It pops up in the middle of the screen next to the item you wear and your build's item, with a verdict (such as **Equip it** or **Keep yours**) and every stat that changes |
-| Hover an item and press **Ctrl+D** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
+| Hover an item you're **wearing** and press **Alt+Shift+Z** | It's saved as your equipped item for that slot (do this once per slot) |
+| Hover any other item and press **Alt+Z** | It pops up in the middle of the screen next to the item you wear and your build's item, with a verdict (such as **Equip it** or **Keep yours**) and every stat that changes |
+| Hover an item and press **Ctrl+Alt+Z** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
 | Drag the popup by its bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, change the hotkeys (click one and press the new keys), or pick a theme: Ember, Mana or Iron |
@@ -51,7 +51,7 @@ Works anywhere you can hover an item: your inventory, stash, vendors, or the gro
 
 The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it.
 
-With a build added, **Alt+D** also compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. The popup shows the item you wear, the new item and your build's item side by side. Click **Show full comparison** for every stat and the full item text.
+With a build added, **Alt+Z** also compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. The popup shows the item you wear, the new item and your build's item side by side. Click **Show full comparison** for every stat and the full item text.
 
 **Pick a theme**
 
@@ -63,7 +63,7 @@ Open **Settings → Theme** and choose **Ember** (glowing embers on obsidian), *
 
 **Check the price**
 
-Press **Ctrl+D** on an item, or click **⚖ Evaluate price** at the bottom of any popup. With a popup already open, **Ctrl+D** switches it to Evaluate unless you're hovering a different item in the game. The popup switches to an Evaluate view, like PoE Overlay's:
+Press **Ctrl+Alt+Z** on an item, or click **⚖ Evaluate price** at the bottom of any popup. With a popup already open, **Ctrl+Alt+Z** switches it to Evaluate unless you're hovering a different item in the game. The popup switches to an Evaluate view, like PoE Overlay's:
 
 <p align="center">
   <img src="docs/evaluate.png" alt="The Evaluate view for a rare spear with its item art, an estimated value with currency icons, stat filters and the range slider" width="420" />
@@ -98,7 +98,7 @@ Your clipboard is put back the way it was right after the item is read.
 
 ## Troubleshooting
 
-**Nothing happens when I press Alt+D**
+**Nothing happens when I press Alt+Z**
 - Check that the tray icon is there. Hover it: if it says a hotkey is taken, another app (often another overlay) already uses it. Open **Settings…** from the tray and pick a different combination. The Settings window also opens by itself when this happens.
 - Make sure your mouse is actually over an item and the game window is focused.
 - If the popup says **Couldn't read an item**, the game didn't copy anything. Hover the item and press the hotkey again. In a busy map it can help to hold the keys a moment longer.
@@ -122,11 +122,12 @@ Your clipboard is put back the way it was right after the item is read.
 
 ## For developers
 
-Built with Electron, React 19, TypeScript and Vite ([electron-vite](https://electron-vite.org)). Requires Node 22+. The hotkey and overlay only work on Windows, but the UI and tests run anywhere.
+Built with Electron, React 19, TypeScript and Vite ([electron-vite](https://electron-vite.org)). Requires Node 24+. The hotkey and overlay only work on Windows, but the UI and tests run anywhere.
 
 ```sh
 npm install        # also downloads Electron
 npm run dev        # start the overlay with hot reload
+npm start          # build and start it like the installed app (fast; use this to test)
 npm test           # item parser tests
 npm run typecheck
 npm run dist       # build a Windows installer into release/

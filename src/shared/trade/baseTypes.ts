@@ -9,10 +9,9 @@ export function baseTypeNames(body: unknown): string[] {
   return [...new Set(names)]
 }
 
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export function magicBaseType(name: string, types: string[]): string | undefined {
   return types
-    .filter((type) => new RegExp(`(^|\\s)${escape(type)}($|\\s)`).test(name))
+    .filter((type) => new RegExp(`(^|\\s)${RegExp.escape(type)}($|\\s)`).test(name))
     .sort((a, b) => b.length - a.length)[0]
 }

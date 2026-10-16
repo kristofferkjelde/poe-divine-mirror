@@ -88,9 +88,14 @@ function show(event: Extract<OverlayEvent, { kind: 'item' }>): View {
   }
 }
 
-window.overlay.on('context', (next) => {
-  context = next
-  document.documentElement.dataset.theme = next.theme
+window.overlay.on('preferences', (preferences) => {
+  context = { ...context, ...preferences }
+  document.documentElement.dataset.theme = preferences.theme
+  render()
+})
+
+window.overlay.on('gear', (gear) => {
+  context = { ...context, ...gear }
   comparisons = compare()
   render()
 })
@@ -189,3 +194,5 @@ function subscribe(listener: () => void) {
 export function useOverlayState(): OverlayState {
   return useSyncExternalStore(subscribe, () => state)
 }
+
+void window.overlay.ready()

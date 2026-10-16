@@ -1,5 +1,5 @@
 import { inflateSync } from 'node:zlib'
-import { parsePobXml } from '../shared/build/pob'
+import { parsePobXml, type ItemSet } from '../shared/build/pob'
 import { hasItems, PROFILE_VERSION, profileFromPob, type BuildProfile, type StoredProfile } from '../shared/build/profile'
 import { UserFacingError } from '../shared/errors'
 
@@ -19,6 +19,8 @@ const PASTE_SITES: Array<{ pattern: RegExp; raw: (id: string) => string }> = [
 
 const MOBALYTICS = /^https?:\/\/(?:www\.)?mobalytics\.gg\/poe-2\/(?:builds|profile)\//
 const EMBEDDED_CODE = /e[AFJN][\w+/=-]{200,}/g
+const VARIANT_ID = /activeVariantId,([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+const VARIANT_WINDOW = 600
 const EMBEDDED_LINK = /https?:\/\/(?:pobb\.in|maxroll\.gg\/poe2\/pob|poe2?\.ninja\/(?:poe2\/)?pob|poe2db\.tw\/pob)\/[\w-]+/g
 
 export class BuildImportError extends UserFacingError {}
@@ -36,8 +38,14 @@ export function decodePobCode(code: string): string {
   }
 }
 
-function profileFromCode(code: string, source: string): BuildProfile {
-  return { ...profileFromPob(parsePobXml(decodePobCode(code)), source), code: code.trim().replace(/\s+/g, '') }
+function profileFromCode(code: string, source: string, itemSet?: string): BuildProfile {
+  return { ...profileFromPob(parsePobXml(decodePobCode(code), itemSet), source), code: code.trim().replace(/\s+/g, '') }
+}
+
+export function chooseItemSet(profile: BuildProfile, itemSet: string): BuildProfile {
+  if (!profile.code || !profile.itemSets?.some(({ id }) => id === itemSet)) return profile
+  const fresh = profileFromCode(profile.code, profile.source, itemSet)
+  return { ...fresh, importedAt: profile.importedAt, custom: profile.custom }
 }
 
 async function download(fetcher: Fetcher, url: string): Promise<string> {
@@ -51,7 +59,7 @@ async function download(fetcher: Fetcher, url: string): Promise<string> {
 export function refreshProfile(profile: StoredProfile): BuildProfile {
   if (profile.version !== PROFILE_VERSION && profile.code) {
     try {
-      const fresh = profileFromCode(profile.code, profile.source)
+      const fresh = profileFromCode(profile.code, profile.source, profile.itemSet)
       return { ...fresh, importedAt: profile.importedAt, custom: profile.custom }
     } catch {}
   }
@@ -74,16 +82,20 @@ export async function importBuild(input: string, fetcher: Fetcher): Promise<Buil
 
 async function fromMobalytics(url: string, fetcher: Fetcher): Promise<BuildProfile> {
   const html = await download(fetcher, url)
+  const pickVariant = (profile: BuildProfile) => {
+    const itemSet = variantItemSet(html, url, profile.itemSets)
+    return itemSet ? chooseItemSet(profile, itemSet) : profile
+  }
   for (const [code] of html.matchAll(EMBEDDED_CODE)) {
     try {
-      return profileFromCode(code, url)
+      return pickVariant(profileFromCode(code, url))
     } catch {
       continue
     }
   }
   for (const [link] of new Set(html.matchAll(EMBEDDED_LINK))) {
     try {
-      return await importBuild(link, fetcher).then((profile) => ({ ...profile, source: url }))
+      return pickVariant(await importBuild(link, fetcher).then((profile) => ({ ...profile, source: url })))
     } catch {
       continue
     }
@@ -92,3 +104,34 @@ async function fromMobalytics(url: string, fetcher: Fetcher): Promise<BuildProfi
     'Mobalytics did not include the build code in that page. On the build page, click "Copy Code" (Path of Building) and paste the code here instead.',
   )
 }
+
+function variantItemSet(html: string, url: string, itemSets: ItemSet[] = []): string | undefined {
+  const variant = VARIANT_ID.exec(safeDecode(url))?.[1].toLowerCase()
+  if (!variant || itemSets.length < 2) return undefined
+  const page = html.toLowerCase()
+  let best: { id: string; distance: number } | undefined
+  for (let at = page.indexOf(variant); at >= 0; at = page.indexOf(variant, at + 1)) {
+    const start = Math.max(0, at - VARIANT_WINDOW)
+    const near = page.slice(start, at + VARIANT_WINDOW)
+    for (const { id, title } of itemSets) {
+      const pattern = new RegExp(`(?:"|&quot;)${RegExp.escape(title.toLowerCase())}(?:\\\\?"|&quot;)`, 'g')
+      for (const match of near.matchAll(pattern)) {
+        const position = start + match.index
+        const between = position < at ? page.slice(position, at) : page.slice(at, position)
+        if (/[{}]/.test(between)) continue
+        const distance = Math.abs(position - at)
+        if (!best || distance < best.distance) best = { id, distance }
+      }
+    }
+  }
+  return best?.id
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+

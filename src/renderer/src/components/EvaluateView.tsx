@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type CSSProperties, type MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
@@ -252,7 +252,7 @@ function Filters({ search }: { search: ItemSearch }) {
           value={search.scale}
           aria-label="Scale every minimum"
           aria-valuetext={scaleLabel(search.scale)}
-          style={{ '--fill': `${((search.scale + SCALE_LIMIT) / (2 * SCALE_LIMIT)) * 100}%` } as CSSProperties}
+          style={{ '--fill': `${((search.scale + SCALE_LIMIT) / (2 * SCALE_LIMIT)) * 100}%` }}
           onChange={(event) => setSearchScale(Number(event.target.value))}
         />
         <button type="button" onClick={() => setSearchScale(search.scale + SCALE_STEP)} aria-label="Raise minimums by 5%">
@@ -274,10 +274,49 @@ function Filters({ search }: { search: ItemSearch }) {
 
 const scaleLabel = (scale: number) => (scale === 0 ? 'Exact match' : `${scale > 0 ? '+' : '−'}${Math.abs(scale)}%`)
 
-const numberFrom = (event: ChangeEvent<HTMLInputElement>) => {
-  if (event.target.value === '') return null
-  const value = Number(event.target.value)
-  return Number.isFinite(value) ? value : undefined
+const decimalsOf = (value: number) => Math.min((String(value).split('.')[1] ?? '').length, 2)
+
+interface WheelNumberProps {
+  label: string
+  placeholder: string
+  value: number | null | undefined
+  start: number | undefined
+  onChange: (value: number | null) => void
+}
+
+function WheelNumber({ label, placeholder, value, start, onChange }: WheelNumberProps) {
+  const decimals = decimalsOf(start ?? value ?? 0)
+  const step = 10 ** -decimals
+  const attach = (node: HTMLSpanElement | null) => {
+    if (!node) return
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const delta = event.deltaY || event.deltaX
+      if (delta === 0) return
+      const by = (delta < 0 ? step : -step) * (event.shiftKey ? 10 : 1)
+      const next = value == null ? (start ?? 0) : value + by
+      onChange(Math.max(0, Number(next.toFixed(decimals))))
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }
+  return (
+    <span
+      ref={attach}
+      className="ember-number"
+      role="spinbutton"
+      aria-label={label}
+      aria-valuenow={value ?? undefined}
+      data-empty={value == null}
+      title="Scroll to change (Shift for bigger steps). Right-click to clear."
+      onContextMenu={(event) => {
+        event.preventDefault()
+        onChange(null)
+      }}
+    >
+      {value == null ? placeholder : formatNumber(value)}
+    </span>
+  )
 }
 
 function FilterRow({ filter }: { filter: SearchFilter }) {
@@ -320,29 +359,19 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
       </label>
       {searchable && (
         <>
-          <input
-            type="number"
-            step="any"
-            className="ember-number"
+          <WheelNumber
+            label={`${filter.label} minimum`}
             placeholder="min"
-            aria-label={`${filter.label} minimum`}
-            value={filter.min ?? ''}
-            onChange={(event) => {
-              const min = numberFrom(event)
-              if (min !== undefined) updateFilter(filter.key, { min, enabled: true })
-            }}
+            value={filter.min}
+            start={filter.value}
+            onChange={(min) => updateFilter(filter.key, { min, enabled: min !== null || filter.enabled })}
           />
-          <input
-            type="number"
-            step="any"
-            className="ember-number"
+          <WheelNumber
+            label={`${filter.label} maximum`}
             placeholder="max"
-            aria-label={`${filter.label} maximum`}
-            value={filter.max ?? ''}
-            onChange={(event) => {
-              const max = numberFrom(event)
-              if (max !== undefined) updateFilter(filter.key, { max, enabled: true })
-            }}
+            value={filter.max}
+            start={filter.value}
+            onChange={(max) => updateFilter(filter.key, { max, enabled: max !== null || filter.enabled })}
           />
         </>
       )}
@@ -402,13 +431,20 @@ interface SelectProps<T extends string> {
 }
 
 function Select<T extends string>({ value, options, onChange }: SelectProps<T>) {
+  const keys = Object.keys(options) as T[]
+  const pick = (by: number) => onChange(keys[(keys.indexOf(value) + by + keys.length) % keys.length])
   return (
-    <select className="ember-select" value={value} onChange={(event) => onChange(event.target.value as T)}>
-      {(Object.entries(options) as Array<[T, string]>).map(([key, label]) => (
-        <option key={key} value={key}>
-          {label}
-        </option>
-      ))}
-    </select>
+    <button
+      type="button"
+      className="ember-select"
+      title={`${keys.map((key) => options[key]).join(' · ')}\nClick for next, right-click for previous`}
+      onClick={() => pick(1)}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        pick(-1)
+      }}
+    >
+      {options[value]}
+    </button>
   )
 }

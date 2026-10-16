@@ -1,7 +1,8 @@
 import { BrowserWindow, globalShortcut, screen, type Rectangle } from 'electron'
-import { uIOhook } from 'uiohook-napi'
+import { EventType, uIOhook, type UiohookKeyboardEvent, type UiohookMouseEvent, type UiohookWheelEvent } from 'uiohook-napi'
 import { messageChannel, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
+import { THEME_BACKGROUNDS } from '../shared/settings'
 import type { SettingsStore } from './settingsStore'
 
 const WIDTH = 440
@@ -9,6 +10,10 @@ const SCREEN_MARGIN = 24
 const ESCAPE = 'Escape'
 const REVEAL_FALLBACK_MS = 150
 const PAINT_FALLBACK_MS = 150
+const HOOK_IDLE_MS = 60_000
+const MOUSE_DRAGGED = 10
+
+type HookEvent = UiohookKeyboardEvent | UiohookMouseEvent | UiohookWheelEvent
 
 export class Overlay {
   private readonly window: BrowserWindow
@@ -18,6 +23,9 @@ export class Overlay {
   private revealTimer: NodeJS.Timeout | undefined
   private paintTimer: NodeJS.Timeout | undefined
   private hooked = false
+  private hookIdle: NodeJS.Timeout | undefined
+  private stopDrag: (() => void) | null = null
+  private readonly readyListeners = new Set<() => void>()
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -25,9 +33,8 @@ export class Overlay {
       height: this.height,
       show: false,
       frame: false,
-      transparent: true,
+      backgroundColor: THEME_BACKGROUNDS[store.current.theme],
       resizable: false,
-      movable: !store.current.overlayLocked,
       skipTaskbar: true,
       focusable: false,
       alwaysOnTop: true,
@@ -36,42 +43,56 @@ export class Overlay {
       webPreferences: {
         preload: PRELOAD_PATH,
         sandbox: true,
+        zoomFactor: store.current.uiScale / 100,
       },
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
-    this.window.on('blur', () => this.hide())
     uIOhook.on('mousedown', () => {
       if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
     })
-    this.window.on('moved', () => this.rememberPosition())
     this.window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape') {
         event.preventDefault()
         this.hide()
       }
     })
-    store.onChange(() => {
-      this.window.setMovable(!store.current.overlayLocked)
-      if (this.window.isVisible()) this.reposition()
-    })
+    store.watch(
+      (settings) => [settings.uiScale, settings.overlayPosition],
+      () => {
+        this.window.webContents.setZoomFactor(this.scale)
+        if (this.window.isVisible()) this.reposition()
+      },
+    )
+    store.watch(
+      (settings) => settings.theme,
+      (theme) => this.window.setBackgroundColor(THEME_BACKGROUNDS[theme]),
+    )
 
-    void loadRenderer(this.window)
+    void loadRenderer(this.window, store.current.theme)
+  }
+
+  get ipc(): Electron.WebContents['ipc'] {
+    return this.window.webContents.ipc
+  }
+
+  private get scale(): number {
+    return this.store.current.uiScale / 100
   }
 
   get visible(): boolean {
     return this.window.isVisible()
   }
 
-  get focused(): boolean {
-    return this.window.isFocused()
-  }
-
   get hovered(): boolean {
     return this.window.isVisible() && this.contains(screen.getCursorScreenPoint())
   }
 
-  onLoad(listener: () => void): void {
-    this.window.webContents.on('did-finish-load', listener)
+  onReady(listener: () => void): void {
+    this.readyListeners.add(listener)
+  }
+
+  ready(): void {
+    this.readyListeners.forEach((listener) => listener())
   }
 
   send<K extends keyof OverlayMessages>(name: K, payload: OverlayMessages[K]): void {
@@ -95,6 +116,7 @@ export class Overlay {
   painted(): void {
     clearTimeout(this.paintTimer)
     this.window.setOpacity(1)
+    this.watchClicks(true)
   }
 
   resize(height: number): void {
@@ -110,8 +132,9 @@ export class Overlay {
       this.send('revealed', null)
       clearTimeout(this.paintTimer)
       this.paintTimer = setTimeout(() => this.painted(), PAINT_FALLBACK_MS)
+    } else {
+      this.watchClicks(true)
     }
-    this.watchClicks(true)
     if (!globalShortcut.isRegistered(ESCAPE)) {
       try {
         globalShortcut.register(ESCAPE, () => this.hide())
@@ -119,21 +142,44 @@ export class Overlay {
     }
   }
 
-  startTyping(): void {
-    if (!this.window.isVisible() || this.window.isFocused()) return
-    this.window.setFocusable(true)
-    this.window.focus()
+  startDrag(): void {
+    if (this.stopDrag || this.store.current.overlayLocked || !this.window.isVisible()) return
+    this.watchClicks(true)
+    const [x, y] = this.window.getPosition()
+    const start = screen.getCursorScreenPoint()
+    const move = () => {
+      const cursor = screen.getCursorScreenPoint()
+      this.window.setPosition(x + cursor.x - start.x, y + cursor.y - start.y)
+    }
+    const follow = (event: HookEvent) => {
+      if (event.type === EventType.EVENT_MOUSE_MOVED || (event.type as number) === MOUSE_DRAGGED) move()
+      else if (event.type === EventType.EVENT_MOUSE_RELEASED) this.endDrag()
+    }
+    uIOhook.on('input', follow)
+    this.stopDrag = () => {
+      uIOhook.off('input', follow)
+      this.stopDrag = null
+      move()
+    }
+  }
+
+  endDrag(): void {
+    if (!this.stopDrag) return
+    this.stopDrag()
+    this.rememberPosition()
   }
 
   hide(): void {
     clearTimeout(this.revealTimer)
+    this.endDrag()
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
-    this.window.setFocusable(false)
-    this.watchClicks(false)
+    clearTimeout(this.hookIdle)
+    this.hookIdle = setTimeout(() => this.watchClicks(false), HOOK_IDLE_MS)
   }
 
   private watchClicks(on: boolean): void {
+    if (on) clearTimeout(this.hookIdle)
     if (on === this.hooked) return
     try {
       if (on) uIOhook.start()
@@ -159,19 +205,20 @@ export class Overlay {
   private reposition(): void {
     const saved = this.store.current.overlayPosition
     const { workArea } = screen.getDisplayNearestPoint(saved ?? this.anchor)
-    const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
+    const width = Math.round(WIDTH * this.scale)
+    const height = Math.min(Math.ceil(this.height * this.scale), workArea.height - SCREEN_MARGIN * 2)
     const bottom = workArea.y + workArea.height - height
     const top = this.window.isVisible() && this.placed ? this.placed.y : workArea.y + (workArea.height - height) / 2
     const bounds = saved
       ? {
-          x: clamp(saved.x, workArea.x, workArea.x + workArea.width - WIDTH),
+          x: clamp(saved.x, workArea.x, workArea.x + workArea.width - width),
           y: clamp(saved.y, workArea.y, bottom),
         }
       : {
-          x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
+          x: Math.round(workArea.x + (workArea.width - width) / 2),
           y: clamp(top, workArea.y, bottom),
         }
-    this.placed = { ...bounds, width: WIDTH, height }
+    this.placed = { ...bounds, width, height }
     this.window.setBounds(this.placed)
   }
 }

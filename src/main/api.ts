@@ -2,9 +2,9 @@ import { net, shell } from 'electron'
 import { toResult } from '../shared/errors'
 import { isGearSlot } from '../shared/gear'
 import type { OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
-import { isHotkeyAction, isTheme } from '../shared/settings'
+import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
 import { TRADE_ORIGIN } from '../shared/trade/price'
-import { importBuild } from './buildImport'
+import { chooseItemSet, importBuild } from './buildImport'
 import type { BuildStore } from './buildStore'
 import type { GearStore } from './gearStore'
 import type { Hotkeys } from './hotkeys'
@@ -40,6 +40,7 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     forgetGear: async (slot) => {
       if (isGearSlot(slot)) await gear.forget(slot)
     },
+    clearGear: () => gear.clear(),
     prepareSearch: (text) =>
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>
@@ -47,15 +48,17 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     openTrade: (url) => {
       if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
     },
-    startTyping: () => overlay.startTyping(),
     rendered: (height) => {
       if (isFiniteNumber(height)) overlay.rendered(height)
     },
+    ready: () => overlay.ready(),
     painted: () => overlay.painted(),
+    startDrag: () => overlay.startDrag(),
+    endDrag: () => overlay.endDrag(),
   }
 }
 
-export function settingsHandlers({ store, builds, hotkeys, trade }: Services): Handlers<SettingsApi> {
+export function settingsHandlers({ store, builds, hotkeys, trade }: Pick<Services, 'store' | 'builds' | 'hotkeys' | 'trade'>): Handlers<SettingsApi> {
   const state = (): SettingsState => ({
     settings: store.current,
     unavailable: hotkeys.unavailableActions,
@@ -87,9 +90,19 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Services): H
       }
     },
     removeBuild: () => then(builds.set(null)),
+    setBuildItemSet: async (itemSet) => {
+      if (typeof itemSet === 'string' && builds.current) {
+        try {
+          await builds.set(chooseItemSet(builds.current, itemSet))
+        } catch (error) {
+          console.error('Could not switch build stage', error)
+        }
+      }
+      return state()
+    },
     setBuildWeight: async (stat, weight) => {
       const valid = weight === null || (isFiniteNumber(weight) && Math.abs(weight) <= MAX_WEIGHT)
-      if (typeof stat === 'string' && valid) await builds.setWeight(stat, weight as number | null)
+      if (typeof stat === 'string' && valid) await builds.setWeight(stat, weight)
       return state()
     },
     resetBuildWeights: async () => {
@@ -100,6 +113,7 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Services): H
     setLeague: (league) =>
       then(store.update({ league: typeof league === 'string' && league.trim() !== '' ? league : null })),
     setTheme: (theme) => (isTheme(theme) ? then(store.update({ theme })) : Promise.resolve(state())),
+    setUiScale: (scale) => (isUiScale(scale) ? then(store.update({ uiScale: scale })) : Promise.resolve(state())),
   }
 }
 

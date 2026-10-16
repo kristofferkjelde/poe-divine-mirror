@@ -15,12 +15,13 @@ import {
   type PriceCheckResult,
 } from '../shared/trade/price'
 import { baseTypeNames, magicBaseType } from '../shared/trade/baseTypes'
-import { currencyIcons, iconsFor, type CurrencyIcons } from '../shared/trade/currency'
+import { currencyIcons, iconsFor } from '../shared/trade/currency'
 import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
-import { jsonFile } from './jsonFile'
+import { diskBacked, expiring } from './cached'
 
 const TIMEOUT_MS = 15_000
-const STATS_MAX_AGE_MS = 24 * 60 * 60 * 1000
+const DATA_MAX_AGE_MS = 24 * 60 * 60 * 1000
+const LEAGUES_MAX_AGE_MS = 60 * 60 * 1000
 const RESULT_CACHE_MS = 60_000
 const FETCH_COUNT = 20
 const FETCH_BATCH = 10
@@ -41,28 +42,45 @@ interface SearchResponse {
 }
 
 export class TradeClient {
-  private readonly statsFile = jsonFile('trade-stats.json')
-  private stats: Promise<TradeStatGroup[]> | null = null
-  private readonly baseTypesFile = jsonFile('trade-base-types.json')
-  private baseTypes: Promise<string[]> | null = null
-  private readonly iconsFile = jsonFile('trade-currency-icons.json')
-  private icons: Promise<CurrencyIcons> | null = null
-  private leagues: Promise<string[]> | null = null
+  private readonly leagues = expiring(() => this.request('/api/trade2/data/leagues').then(leagueIds), LEAGUES_MAX_AGE_MS)
+  private readonly stats = expiring(
+    diskBacked(
+      'trade-stats.json',
+      DATA_MAX_AGE_MS,
+      () => this.request('/api/trade2/data/stats').then((body) => (body as { result?: TradeStatGroup[] }).result as TradeStatGroup[]),
+      (result) => (Array.isArray(result) ? null : new TradeError('The trade site sent unexpected stat data')),
+    ),
+    DATA_MAX_AGE_MS,
+  )
+  private readonly baseTypes = expiring(
+    diskBacked(
+      'trade-base-types.json',
+      DATA_MAX_AGE_MS,
+      () => this.request('/api/trade2/data/items').then(baseTypeNames),
+      (result) => (result.length > 0 ? null : new TradeError('The trade site sent unexpected item data')),
+    ),
+    DATA_MAX_AGE_MS,
+  )
+  private readonly icons = expiring(
+    diskBacked(
+      'trade-currency-icons.json',
+      DATA_MAX_AGE_MS,
+      () => this.request('/api/trade2/data/static').then(currencyIcons),
+      (result) => (Object.keys(result).length > 0 ? null : new TradeError('The trade site sent unexpected currency data')),
+    ),
+    DATA_MAX_AGE_MS,
+  )
   private blockedUntil = 0
   private readonly cache = new Map<string, { at: number; result: PriceCheckResult }>()
   private readonly searches = new Map<string, ItemSearch>()
 
-  async listLeagues(): Promise<string[]> {
-    this.leagues ??= this.request('/api/trade2/data/leagues').then(leagueIds)
-    return this.leagues.catch((error) => {
-      this.leagues = null
-      throw error
-    })
+  listLeagues(): Promise<string[]> {
+    return this.leagues()
   }
 
   async prepare(text: string): Promise<PrepareResult> {
     try {
-      const search = defaultSearch(await this.withBaseType(parseItem(text)), await this.loadStats())
+      const search = defaultSearch(await this.withBaseType(parseItem(text)), await this.stats())
       const id = randomUUID()
       this.searches.set(id, search)
       if (this.searches.size > KEPT_SEARCHES) {
@@ -85,7 +103,7 @@ export class TradeClient {
 
     let url: string | undefined
     try {
-      const leagueId = league ?? (await this.defaultLeague())
+      const leagueId = league ?? pickLeague(await this.leagues())
       const response = (await this.request(
         `/api/trade2/search/poe2/${encodeURIComponent(leagueId)}`,
         query,
@@ -102,10 +120,11 @@ export class TradeClient {
       }
 
       const icons = iconsFor(
-        await this.loadCurrencyIcons().catch(() => ({})),
+        await this.icons().catch(() => ({})),
         listings.map((listing) => listing.currency),
       )
       const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings, icons }
+      for (const [key, entry] of this.cache) if (Date.now() - entry.at >= RESULT_CACHE_MS) this.cache.delete(key)
       this.cache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
@@ -117,81 +136,11 @@ export class TradeClient {
     }
   }
 
-  private async defaultLeague(): Promise<string> {
-    return pickLeague(await this.listLeagues())
-  }
-
-  private async loadStats(): Promise<TradeStatGroup[]> {
-    this.stats ??= this.readStats().catch((error) => {
-      this.stats = null
-      throw error
-    })
-    return this.stats
-  }
-
   private async withBaseType(item: ParsedItem): Promise<ParsedItem> {
     if (item.rarity !== 'Magic' || item.baseType) return item
-    const types = await this.loadBaseTypes().catch(() => [])
+    const types = await this.baseTypes().catch(() => [])
     const baseType = magicBaseType(item.name, types)
     return baseType ? { ...item, baseType } : item
-  }
-
-  private async loadBaseTypes(): Promise<string[]> {
-    this.baseTypes ??= this.readBaseTypes().catch((error) => {
-      this.baseTypes = null
-      throw error
-    })
-    return this.baseTypes
-  }
-
-  private async readBaseTypes(): Promise<string[]> {
-    const saved = this.baseTypesFile.read() as { fetchedAt?: number; result?: string[] } | undefined
-    if (saved?.result && saved.fetchedAt && Date.now() - saved.fetchedAt < STATS_MAX_AGE_MS) return saved.result
-    try {
-      const result = baseTypeNames(await this.request('/api/trade2/data/items'))
-      if (result.length === 0) throw new TradeError('The trade site sent unexpected item data')
-      await this.baseTypesFile.write({ fetchedAt: Date.now(), result })
-      return result
-    } catch (error) {
-      if (saved?.result) return saved.result
-      throw error
-    }
-  }
-
-  private async loadCurrencyIcons(): Promise<CurrencyIcons> {
-    this.icons ??= this.readCurrencyIcons().catch((error) => {
-      this.icons = null
-      throw error
-    })
-    return this.icons
-  }
-
-  private async readCurrencyIcons(): Promise<CurrencyIcons> {
-    const saved = this.iconsFile.read() as { fetchedAt?: number; result?: CurrencyIcons } | undefined
-    if (saved?.result && saved.fetchedAt && Date.now() - saved.fetchedAt < STATS_MAX_AGE_MS) return saved.result
-    try {
-      const result = currencyIcons(await this.request('/api/trade2/data/static'))
-      if (Object.keys(result).length === 0) throw new TradeError('The trade site sent unexpected currency data')
-      await this.iconsFile.write({ fetchedAt: Date.now(), result })
-      return result
-    } catch (error) {
-      if (saved?.result) return saved.result
-      throw error
-    }
-  }
-
-  private async readStats(): Promise<TradeStatGroup[]> {
-    const saved = this.statsFile.read() as { fetchedAt?: number; result?: TradeStatGroup[] } | undefined
-    if (saved?.result && saved.fetchedAt && Date.now() - saved.fetchedAt < STATS_MAX_AGE_MS) return saved.result
-    try {
-      const body = (await this.request('/api/trade2/data/stats')) as { result?: TradeStatGroup[] }
-      if (!Array.isArray(body.result)) throw new TradeError('The trade site sent unexpected stat data')
-      await this.statsFile.write({ fetchedAt: Date.now(), result: body.result })
-      return body.result
-    } catch (error) {
-      if (saved?.result) return saved.result
-      throw error
-    }
   }
 
   private async request(path: string, body?: unknown): Promise<unknown> {

@@ -1,11 +1,12 @@
 import { magicBaseType } from '../trade/baseTypes'
 import art from './art.json'
+import { ART_ORIGIN } from './artOrigin'
 import type { ParsedItem } from './types'
 
-export const ART_ORIGIN = 'https://raw.githubusercontent.com/repoe-fork/poe2/f45ff3e83f4a6309ef1697b4c9d0db4e69db4baf/data/Art/2DItems/'
+export { ART_ORIGIN }
 
-const bases: Record<string, string> = art.bases
-const uniques: Record<string, string> = art.uniques
+const bases: Partial<Record<string, string>> = art.bases
+const uniques: Partial<Record<string, string>> = art.uniques
 const baseNames = Object.keys(bases)
 const foundInName = new Map<string, string | undefined>()
 

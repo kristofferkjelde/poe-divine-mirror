@@ -1,4 +1,4 @@
-import { ART_ORIGIN } from './item/art'
+import { ART_ORIGIN } from './item/artOrigin'
 import { IMAGE_ORIGIN } from './trade/currency'
 
 export const IMAGE_SCHEME = 'divine-art'

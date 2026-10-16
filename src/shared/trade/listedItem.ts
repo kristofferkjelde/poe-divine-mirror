@@ -25,6 +25,15 @@ export interface TradeItem {
   enchantMods?: unknown
   fracturedMods?: unknown
   desecratedMods?: unknown
+  mutatedMods?: unknown
+  grantedSkills?: TradeProperty[]
+  extended?: {
+    dps?: unknown
+    pdps?: unknown
+    edps?: unknown
+    mods?: Record<string, Array<{ name?: unknown; tier?: unknown }> | undefined>
+    hashes?: Record<string, Array<[unknown, unknown]> | undefined>
+  }
 }
 
 const RARITIES: Rarity[] = ['Normal', 'Magic', 'Rare', 'Unique', 'Gem', 'Currency']
@@ -37,6 +46,7 @@ const MOD_FIELDS: Array<[keyof TradeItem, ModType]> = [
   ['fracturedMods', 'fractured'],
   ['explicitMods', 'explicit'],
   ['craftedMods', 'explicit'],
+  ['mutatedMods', 'explicit'],
   ['desecratedMods', 'desecrated'],
 ]
 
@@ -49,7 +59,7 @@ function valuesOf(property: TradeProperty): Array<{ value: string; augmented: bo
   if (!Array.isArray(property.values)) return []
   return property.values.flatMap((entry: unknown) => {
     if (!Array.isArray(entry) || typeof entry[0] !== 'string') return []
-    return [{ value: entry[0], augmented: entry[1] === AUGMENTED_VALUE }]
+    return [{ value: stripMarkup(entry[0]), augmented: entry[1] === AUGMENTED_VALUE }]
   })
 }
 
@@ -85,14 +95,49 @@ function toRequirements(entries: TradeProperty[] | undefined): Requirements {
   return requirements
 }
 
-function toMod(line: string, type: ModType): Mod {
+function toMod(line: string, type: ModType, origin?: Pick<Mod, 'affix' | 'tier' | 'affixName'>): Mod {
   const clean = stripMarkup(line)
   return {
     text: clean,
     template: clean.replace(/\d+(?:\.\d+)?/g, '#'),
     values: (clean.match(/\d+(?:\.\d+)?/g) ?? []).map(Number),
     type,
+    ...origin,
   }
+}
+
+interface TradeModInfo {
+  name?: unknown
+  tier?: unknown
+}
+
+function originOf(item: TradeItem, group: string, line: number): Pick<Mod, 'affix' | 'tier' | 'affixName'> | undefined {
+  const indices = item.extended?.hashes?.[group]?.[line]?.[1]
+  const index = Array.isArray(indices) && typeof indices[0] === 'number' ? indices[0] : undefined
+  return affixOf(index === undefined ? undefined : item.extended?.mods?.[group]?.[index])
+}
+
+function affixOf(mod: TradeModInfo | undefined): Pick<Mod, 'affix' | 'tier' | 'affixName'> | undefined {
+  const tier = typeof mod?.tier === 'string' ? /^([PS])(\d+)$/.exec(mod.tier) : null
+  if (!tier) return undefined
+  return {
+    affix: tier[1] === 'P' ? 'prefix' : 'suffix',
+    tier: Number(tier[2]),
+    ...(typeof mod?.name === 'string' && mod.name !== '' && { affixName: mod.name }),
+  }
+}
+
+const DPS_PROPERTIES: Array<[keyof NonNullable<TradeItem['extended']>, string]> = [
+  ['dps', 'DPS'],
+  ['pdps', 'Physical DPS'],
+  ['edps', 'Elemental DPS'],
+]
+
+function dpsProperties(item: TradeItem): Property[] {
+  return DPS_PROPERTIES.flatMap(([key, name]) => {
+    const value = item.extended?.[key]
+    return typeof value === 'number' && value > 0 ? [{ name, value: value.toFixed(1), augmented: false }] : []
+  })
 }
 
 function rarityOf(item: TradeItem): Rarity {
@@ -115,11 +160,23 @@ export function toListedItem(item: TradeItem | undefined): ParsedItem | undefine
     baseType: name ? typeLine : undefined,
     category,
     itemLevel: typeof item.ilvl === 'number' ? item.ilvl : undefined,
-    properties: category ? properties.slice(1) : properties,
+    properties: [
+      ...(category ? properties.slice(1) : properties),
+      ...dpsProperties(item),
+      ...(item.grantedSkills ?? []).flatMap((skill) => toProperty(skill) ?? []),
+    ],
     requirements: toRequirements(item.requirements),
     mods: MOD_FIELDS.flatMap(([field, type]) => {
       const lines = item[field]
-      return Array.isArray(lines) ? lines.filter((line): line is string => typeof line === 'string').map((line) => toMod(line, type)) : []
+      if (!Array.isArray(lines)) return []
+      const group = field.replace(/Mods$/, '')
+      return lines.flatMap((line: unknown, index) => {
+        if (typeof line === 'string') return [toMod(line, type, originOf(item, group, index))]
+        const { description, mods } = (line ?? {}) as { description?: unknown; mods?: unknown }
+        if (typeof description !== 'string') return []
+        const origin = Array.isArray(mods) ? mods.map((mod: TradeModInfo) => affixOf(mod)).find(Boolean) : undefined
+        return [toMod(description, type, origin ?? originOf(item, group, index))]
+      })
     }),
     corrupted: item.corrupted === true,
     unidentified: item.identified === false,

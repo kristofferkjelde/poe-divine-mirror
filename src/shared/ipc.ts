@@ -1,6 +1,6 @@
 import type { BuildProfile } from './build/profile'
 import type { Gear, GearSlot } from './gear'
-import type { HotkeyAction, Settings, Theme } from './settings'
+import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
 import type { SearchEdit } from './trade/query'
 
@@ -18,7 +18,8 @@ export interface OverlayContext {
 
 export interface OverlayMessages {
   event: OverlayEvent
-  context: OverlayContext
+  preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme'>
+  gear: Pick<OverlayContext, 'gear' | 'build'>
   revealed: null
 }
 
@@ -37,12 +38,15 @@ export interface OverlayApi {
   openSettings: () => Promise<void>
   setLocked: (locked: boolean) => Promise<void>
   forgetGear: (slot: GearSlot) => Promise<void>
+  clearGear: () => Promise<void>
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   openTrade: (url: string) => Promise<void>
-  startTyping: () => Promise<void>
+  ready: () => Promise<void>
   rendered: (height: number) => Promise<void>
   painted: () => Promise<void>
+  startDrag: () => Promise<void>
+  endDrag: () => Promise<void>
 }
 
 export interface SettingsApi {
@@ -54,11 +58,13 @@ export interface SettingsApi {
   setRecording: (recording: boolean) => Promise<void>
   importBuild: (input: string) => Promise<SettingsResponse>
   removeBuild: () => Promise<SettingsState>
+  setBuildItemSet: (itemSet: string) => Promise<SettingsState>
   setBuildWeight: (stat: string, weight: number | null) => Promise<SettingsState>
   resetBuildWeights: () => Promise<SettingsState>
   listLeagues: () => Promise<string[]>
   setLeague: (league: string | null) => Promise<SettingsState>
   setTheme: (theme: Theme) => Promise<SettingsState>
+  setUiScale: (scale: UiScale) => Promise<SettingsState>
 }
 
 export interface OverlayBridge extends OverlayApi {
@@ -71,12 +77,15 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   openSettings: true,
   setLocked: true,
   forgetGear: true,
+  clearGear: true,
   prepareSearch: true,
   runSearch: true,
   openTrade: true,
-  startTyping: true,
+  ready: true,
   rendered: true,
   painted: true,
+  startDrag: true,
+  endDrag: true,
 }
 
 const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
@@ -88,11 +97,13 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setRecording: true,
   importBuild: true,
   removeBuild: true,
+  setBuildItemSet: true,
   setBuildWeight: true,
   resetBuildWeights: true,
   listLeagues: true,
   setLeague: true,
   setTheme: true,
+  setUiScale: true,
 }
 
 export const API_METHODS = {
@@ -101,6 +112,8 @@ export const API_METHODS = {
 }
 
 export type ApiScope = keyof typeof API_METHODS
+
+export const SETTINGS_ARGUMENT = '--divine-mirror-settings'
 
 export const apiChannel = (scope: ApiScope, method: string) => `${scope}:${method}`
 export const messageChannel = (name: keyof OverlayMessages) => `overlay:message:${name}`

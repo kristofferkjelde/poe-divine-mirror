@@ -7,6 +7,52 @@ describe('listed trade items', () => {
     expect(stripMarkup('[Quality]')).toBe('Quality')
   })
 
+  it('shows mod tiers and DPS from the extended data', () => {
+    const item = toListedItem({
+      rarity: 'Rare',
+      name: 'Beast Edge',
+      typeLine: 'Soaring Spear',
+      explicitMods: ['+51 to [Accuracy|Accuracy Rating]', '9% increased Attack Speed', 'Crafted line'],
+      extended: {
+        dps: 296.04,
+        pdps: 296.04,
+        edps: 0,
+        mods: { explicit: [{ name: 'of the Ranger', tier: 'S7' }, { name: 'Precise', tier: 'P8' }] },
+        hashes: { explicit: [['explicit.stat_1', [1]], ['explicit.stat_2', [0]], ['explicit.stat_3', null]] },
+      },
+    })
+    expect(item?.mods.map(({ affix, tier, affixName }) => ({ affix, tier, affixName }))).toEqual([
+      { affix: 'prefix', tier: 8, affixName: 'Precise' },
+      { affix: 'suffix', tier: 7, affixName: 'of the Ranger' },
+      { affix: undefined, tier: undefined, affixName: undefined },
+    ])
+    expect(item?.properties).toEqual([
+      { name: 'DPS', value: '296.0', augmented: false },
+      { name: 'Physical DPS', value: '296.0', augmented: false },
+    ])
+  })
+
+  it('reads mods sent as objects with their own tiers, and granted skills', () => {
+    const item = toListedItem({
+      rarity: 'Rare',
+      name: 'Rune Edge',
+      typeLine: 'Soaring Spear',
+      grantedSkills: [{ name: 'Grants Skill', values: [['[SpearThrow|Spear Throw]', 0]], displayMode: 0 }],
+      runeMods: ['Adds 2 to 4 [Fire|Fire] Damage'],
+      explicitMods: [
+        { description: 'Adds 83 to 104 [Fire|Fire] Damage', mods: [{ name: 'Blasting', tier: 'P2' }] },
+        { description: '+3 to Level of all [Projectile|Projectile] Skills', mods: [{ name: 'of the Sniper', tier: 'S1' }] },
+        { hash: 'no text' },
+      ],
+    })
+    expect(item?.mods.map(({ text, type, affix, tier }) => ({ text, type, affix, tier }))).toEqual([
+      { text: 'Adds 2 to 4 Fire Damage', type: 'rune', affix: undefined, tier: undefined },
+      { text: 'Adds 83 to 104 Fire Damage', type: 'explicit', affix: 'prefix', tier: 2 },
+      { text: '+3 to Level of all Projectile Skills', type: 'explicit', affix: 'suffix', tier: 1 },
+    ])
+    expect(item?.properties).toContainEqual({ name: 'Grants Skill', value: 'Spear Throw', augmented: false })
+  })
+
   it('turns a fetched item into an item card', () => {
     const item = toListedItem({
       rarity: 'Rare',
