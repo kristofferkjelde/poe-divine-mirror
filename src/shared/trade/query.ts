@@ -123,7 +123,7 @@ export class PriceCheckUnsupported extends UserFacingError {}
 
 export const SCALE_STEP = 5
 export const SCALE_LIMIT = 50
-export const PRESET_SCALES = [-10, -20] as const
+export const PRESET_SCALES = [-20, -10] as const
 const UNSCALED = new Set(['rune_sockets', 'ilvl'])
 const MAX_QUALITY = 20
 const LOW_VALUE = [/Stun Threshold/, /Light Radius/, /Attribute Requirements/]
