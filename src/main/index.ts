@@ -14,6 +14,8 @@ import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
 import { TradeClient } from './trade'
+import { Updates } from './updates'
+import { trayTooltip, updateMenuItem } from './updateStatus'
 
 const FOCUS_RETURN_MS = 120
 
@@ -82,17 +84,34 @@ function start(): void {
   registerHandlers<OverlayApi>('overlay', overlayHandlers(services))
   registerHandlers<SettingsApi>('settings', settingsHandlers(services))
 
+  const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))
   const refreshTray = () => {
     const settings = store.current
     const unavailable = hotkeys.unavailableActions
+    const update = updateMenuItem(updates.status)
     tray?.setToolTip(
-      unavailable.length === 0
-        ? `Divine Mirror: hover an item and press ${settings.hotkeys.compare}`
-        : 'Divine Mirror: a hotkey is taken by another app. Open Settings to change it.',
+      trayTooltip(
+        app.getVersion(),
+        updates.status,
+        unavailable.length === 0
+          ? `Hover an item and press ${settings.hotkeys.compare}`
+          : 'A hotkey is taken by another app. Open Settings to change it.',
+      ),
     )
     tray?.setContextMenu(
       Menu.buildFromTemplate([
+        { label: `Divine Mirror ${app.getVersion()}`, enabled: false },
+        {
+          label: update.label,
+          enabled: update.action !== undefined,
+          click: () => {
+            if (update.action === 'check') updates.check()
+            if (update.action === 'download') updates.download()
+            if (update.action === 'install') updates.install()
+          },
+        },
+        { type: 'separator' },
         ...HOTKEY_ACTIONS.map((action) => ({
           label: `${settings.hotkeys[action]}: ${HOTKEY_LABELS[action].toLowerCase()}`,
           enabled: false,
@@ -112,6 +131,8 @@ function start(): void {
   }
   refreshTray()
   store.onChange(refreshTray)
+  updates.onChange(refreshTray)
+  updates.start()
   tray.on('double-click', () => settingsWindow.open())
   if (hotkeys.unavailableActions.length > 0) settingsWindow.open()
   try {

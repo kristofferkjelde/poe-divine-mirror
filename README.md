@@ -20,7 +20,9 @@ Divine Mirror is a small overlay for Path of Exile 2. It shows the item under yo
 2. Download `Divine-Mirror-Setup-x.y.z.exe` and run it.
 3. Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.
 
-The app starts in the system tray (bottom-right, near the clock). Right-click the icon to quit.
+The app starts in the system tray (bottom-right, near the clock). Hover the icon to see your version, and right-click it to quit.
+
+**Updates:** the app checks for a new release when it starts and every few hours. When one is out you get a notification; click it (or **Update to x.y.z** in the tray menu) to download, then **Restart to update**. Versions before 0.5.0 can't update themselves, so install 0.5.0 by hand once.
 
 **Requirements:** Windows 10 or 11.
 
@@ -142,7 +144,7 @@ Windows releases are built from this repository by [GitHub Actions](.github/work
 
 ## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It only connects to the internet when you ask it to: a price check sends searches to the official Path of Exile trade site, and importing a build fetches the link you paste. Your settings, saved gear and build stay on your PC.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It connects to the internet only for these: a price check sends searches to the official Path of Exile trade site, importing a build fetches the link you paste, and the update check asks GitHub for the latest Divine Mirror release when the app starts and every few hours. Your settings, saved gear and build stay on your PC.
 
 ## License
 
