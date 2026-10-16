@@ -47,6 +47,7 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     openTrade: (url) => {
       if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
     },
+    startTyping: () => overlay.startTyping(),
   }
 }
 
