@@ -872,8 +872,9 @@ tr[data-direction='down'] .compare-delta {
 }
 
 .panel[data-locked='false'] > .panel-footer {
-  -webkit-app-region: drag;
   cursor: move;
+  user-select: none;
+  touch-action: none;
 }
 
 .panel button {

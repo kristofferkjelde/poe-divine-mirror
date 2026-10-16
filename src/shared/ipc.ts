@@ -43,6 +43,9 @@ export interface OverlayApi {
   startTyping: () => Promise<void>
   rendered: (height: number) => Promise<void>
   painted: () => Promise<void>
+  startDrag: () => Promise<void>
+  drag: () => Promise<void>
+  endDrag: () => Promise<void>
 }
 
 export interface SettingsApi {
@@ -77,6 +80,9 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   startTyping: true,
   rendered: true,
   painted: true,
+  startDrag: true,
+  drag: true,
+  endDrag: true,
 }
 
 const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {

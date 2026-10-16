@@ -52,6 +52,9 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
       if (isFiniteNumber(height)) overlay.rendered(height)
     },
     painted: () => overlay.painted(),
+    startDrag: () => overlay.startDrag(),
+    drag: () => overlay.drag(),
+    endDrag: () => overlay.endDrag(),
   }
 }
 

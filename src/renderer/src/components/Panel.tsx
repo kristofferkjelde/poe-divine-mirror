@@ -28,7 +28,18 @@ export function Panel({ hotkeys, locked, children }: Props) {
       >
         <div ref={reportHeight} className="panel" data-locked={locked}>
           {children}
-          <footer className="panel-footer">
+          <footer
+            className="panel-footer"
+            onPointerDown={(event) => {
+              if (locked || event.button !== 0 || (event.target instanceof Element && event.target.closest('button'))) return
+              event.currentTarget.setPointerCapture(event.pointerId)
+              void window.overlay.startDrag()
+            }}
+            onPointerMove={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) void window.overlay.drag()
+            }}
+            onLostPointerCapture={() => void window.overlay.endDrag()}
+          >
             <span>
               {hotkeys.compare} compare · {hotkeys.equip} equip · {hotkeys.price} price
             </span>

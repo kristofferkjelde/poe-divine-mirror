@@ -1,4 +1,4 @@
-import { BrowserWindow, globalShortcut, screen, type Rectangle } from 'electron'
+import { BrowserWindow, globalShortcut, screen, type Point, type Rectangle } from 'electron'
 import { uIOhook } from 'uiohook-napi'
 import { messageChannel, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
@@ -18,6 +18,7 @@ export class Overlay {
   private revealTimer: NodeJS.Timeout | undefined
   private paintTimer: NodeJS.Timeout | undefined
   private hooked = false
+  private dragFrom: { cursor: Point; origin: Point } | null = null
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -119,6 +120,26 @@ export class Overlay {
     }
   }
 
+  startDrag(): void {
+    if (this.store.current.overlayLocked || !this.window.isVisible()) return
+    const [x, y] = this.window.getPosition()
+    this.dragFrom = { cursor: screen.getCursorScreenPoint(), origin: { x, y } }
+  }
+
+  drag(): void {
+    if (!this.dragFrom) return
+    const cursor = screen.getCursorScreenPoint()
+    const { origin, cursor: start } = this.dragFrom
+    this.window.setPosition(origin.x + cursor.x - start.x, origin.y + cursor.y - start.y)
+  }
+
+  endDrag(): void {
+    if (!this.dragFrom) return
+    this.drag()
+    this.dragFrom = null
+    this.rememberPosition()
+  }
+
   startTyping(): void {
     if (!this.window.isVisible() || this.window.isFocused()) return
     this.window.setFocusable(true)
@@ -127,6 +148,7 @@ export class Overlay {
 
   hide(): void {
     clearTimeout(this.revealTimer)
+    this.dragFrom = null
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
     this.window.setFocusable(false)
@@ -150,6 +172,7 @@ export class Overlay {
   }
 
   private rememberPosition(): void {
+    if (this.dragFrom) return
     const [x, y] = this.window.getPosition()
     if (this.placed && this.placed.x === x && this.placed.y === y) return
     if (this.store.current.overlayLocked) return
