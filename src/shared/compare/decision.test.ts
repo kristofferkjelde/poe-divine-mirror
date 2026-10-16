@@ -43,7 +43,9 @@ describe('decide', () => {
 
   it('handles only one comparison', () => {
     expect(decide(gear, null)).toMatchObject({ title: 'Equip it', tone: 'good' })
-    expect(decide(null, build)).toMatchObject({ title: 'Not your build', tone: 'bad' })
+    expect(decide(null, build)).toMatchObject({ title: "Build's weapon is better", tone: 'bad' })
+    expect(decide(null, { ...build, slot: 'ring2' })?.title).toBe("Build's ring is better")
+    expect(decide(null, { ...build, slot: 'boots' })?.title).toBe("Build's boots are better")
     expect(decide(null, null)).toBeNull()
   })
 

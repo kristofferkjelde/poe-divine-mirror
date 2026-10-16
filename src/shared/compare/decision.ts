@@ -1,5 +1,6 @@
 import { formatPercent, type Comparison, type ComparisonRow } from './compare'
 import type { GearComparison } from './gear'
+import { GEAR_SLOTS } from '../gear'
 import { DERIVED, formatNumber } from './stats'
 import { itemLabel } from '../item/label'
 
@@ -59,6 +60,13 @@ export function breakdown(comparison: Comparison): Breakdown {
   }
 }
 
+const PLURAL_SLOTS = new Set(['gloves', 'boots'])
+
+function betterInBuild({ slot }: GearComparison): string {
+  const noun = GEAR_SLOTS[slot].label.replace(/\s*\d+$/, '').toLowerCase()
+  return `Build's ${noun} ${PLURAL_SLOTS.has(noun) ? 'are' : 'is'} better`
+}
+
 export function decide(gear: GearComparison | null, build: GearComparison | null): Decision | null {
   const name = (result: GearComparison) => itemLabel(result.equipped)
   const percent = (result: GearComparison) =>
@@ -90,7 +98,7 @@ export function decide(gear: GearComparison | null, build: GearComparison | null
   if (build) {
     if (vsBuild === 'upgrade') return { title: 'Build upgrade', detail: `Beats your build's ${name(build)}${percent(build)}.`, tone: 'good' }
     if (vsBuild === 'sidegrade') return { title: 'Close to your build', detail: `About as good as your build's ${name(build)}.`, tone: 'mixed' }
-    return { title: 'Not your build', detail: `Your build's ${name(build)} is better${percent(build)}.`, tone: 'bad' }
+    return { title: betterInBuild(build), detail: `Your build's ${name(build)} is better${percent(build)}.`, tone: 'bad' }
   }
   return null
 }
