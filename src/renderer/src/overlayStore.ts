@@ -194,3 +194,5 @@ function subscribe(listener: () => void) {
 export function useOverlayState(): OverlayState {
   return useSyncExternalStore(subscribe, () => state)
 }
+
+void window.overlay.ready()

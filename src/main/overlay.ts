@@ -25,6 +25,7 @@ export class Overlay {
   private hooked = false
   private hookIdle: NodeJS.Timeout | undefined
   private stopDrag: (() => void) | null = null
+  private readonly readyListeners = new Set<() => void>()
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -86,8 +87,12 @@ export class Overlay {
     return this.window.isVisible() && this.contains(screen.getCursorScreenPoint())
   }
 
-  onLoad(listener: () => void): void {
-    this.window.webContents.on('did-finish-load', listener)
+  onReady(listener: () => void): void {
+    this.readyListeners.add(listener)
+  }
+
+  ready(): void {
+    this.readyListeners.forEach((listener) => listener())
   }
 
   send<K extends keyof OverlayMessages>(name: K, payload: OverlayMessages[K]): void {

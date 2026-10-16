@@ -48,7 +48,7 @@ function start(): void {
       theme: store.current.theme,
     })
   const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current })
-  overlay.onLoad(() => {
+  overlay.onReady(() => {
     pushPreferences()
     pushGear()
   })
