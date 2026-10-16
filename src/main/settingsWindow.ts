@@ -27,8 +27,7 @@ export class SettingsWindow {
 
   open(): void {
     if (this.window) {
-      this.window.show()
-      this.window.focus()
+      this.bringToFront(this.window)
       return
     }
 
@@ -46,12 +45,19 @@ export class SettingsWindow {
       backgroundColor: THEME_BACKGROUNDS[this.store.current.theme],
       webPreferences: { preload: PRELOAD_PATH, sandbox: true, zoomFactor: this.scale, additionalArguments: [SETTINGS_ARGUMENT] },
     })
-    this.window.once('ready-to-show', () => this.window?.show())
+    this.window.setAlwaysOnTop(true, 'screen-saver')
+    this.window.once('ready-to-show', () => this.window && this.bringToFront(this.window))
     registerHandlers<SettingsApi>(this.window.webContents.ipc, 'settings', this.handlers)
     this.window.on('closed', () => {
       this.window = null
       this.hotkeys.resume()
     })
     void loadRenderer(this.window, this.store.current.theme, 'settings')
+  }
+
+  private bringToFront(window: BrowserWindow): void {
+    window.show()
+    window.moveTop()
+    window.focus()
   }
 }

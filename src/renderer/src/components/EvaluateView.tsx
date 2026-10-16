@@ -1,4 +1,5 @@
-import { useState, type MouseEvent } from 'react'
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
@@ -6,11 +7,11 @@ import { formatNumber } from '../../../shared/compare/stats'
 import type { CurrencyIcons } from '../../../shared/trade/currency'
 import { estimate, formatAge, formatPrice, type Price, type PriceCheckResult, type Reliability } from '../../../shared/trade/price'
 import {
-  BROAD_SCALE,
   CORRUPTED_OPTIONS,
   CURRENCY_OPTIONS,
   LISTED_OPTIONS,
   RARITY_OPTIONS,
+  PRESET_SCALES,
   SCALE_LIMIT,
   SCALE_STEP,
   STATUS_OPTIONS,
@@ -20,6 +21,7 @@ import {
 import { useCountdown } from '../countdown'
 import { ItemArt } from './ItemArt'
 import { ItemCard } from './ItemCard'
+import { measureTooltip, tooltipDocument } from '../tooltipWindow'
 import {
   closeEvaluate,
   runSearch,
@@ -95,16 +97,17 @@ export function EvaluateView({ item, evaluate }: { item: ParsedItem; evaluate: O
       {ready && (
         <div className="ember-bottom">
           <div className="ember-presets" role="group" aria-label="Search preset">
-            <button type="button" aria-pressed={ready.search.scale === 0} onClick={() => setSearchScale(0)}>
-              Quick price
-            </button>
-            <button
-              type="button"
-              aria-pressed={ready.search.scale === BROAD_SCALE}
-              onClick={() => setSearchScale(BROAD_SCALE)}
-            >
-              Broad (−10%)
-            </button>
+            {PRESET_SCALES.map((scale) => (
+              <button
+                key={scale}
+                type="button"
+                aria-pressed={ready.search.scale === scale}
+                title={`Lower every minimum by ${Math.abs(scale)}%. Click again for an exact match.`}
+                onClick={() => setSearchScale(ready.search.scale === scale ? 0 : scale)}
+              >
+                {scaleLabel(scale)}
+              </button>
+            ))}
           </div>
           <button type="submit" className="ember-search" disabled={searching || wait > 0}>
             <span>{searching ? 'Searching' : wait > 0 ? `Wait ${wait}s` : 'Search'}</span>
@@ -381,30 +384,16 @@ function FilterRow({ filter }: { filter: SearchFilter }) {
 
 type Listing = Extract<PriceCheckResult, { ok: true }>['listings'][number]
 
-interface Preview {
-  index: number
-  placement: { top: number } | { bottom: number }
-}
-
-const PREVIEW_GAP = 6
-
-function placeBeside(row: HTMLElement): Preview['placement'] {
-  const { top, bottom } = row.getBoundingClientRect()
-  return top > window.innerHeight / 2 ? { bottom: window.innerHeight - top + PREVIEW_GAP } : { top: bottom + PREVIEW_GAP }
-}
-
 function Listings({ listings, icons }: { listings: Listing[]; icons: CurrencyIcons }) {
-  const [preview, setPreview] = useState<Preview | null>(null)
+  const [preview, setPreview] = useState<number | null>(null)
   const now = Date.now()
-  const previewed = preview && listings[preview.index]?.item
-  const show = (index: number) => (event: MouseEvent<HTMLLIElement>) =>
-    setPreview({ index, placement: placeBeside(event.currentTarget) })
+  const previewed = preview === null ? undefined : listings[preview]?.item
 
   return (
     <div className="ember-listings" onMouseLeave={() => setPreview(null)}>
       <ol>
         {listings.map((listing, index) => (
-          <li key={index} data-previewed={preview?.index === index} onMouseEnter={show(index)}>
+          <li key={index} data-previewed={preview === index} onMouseEnter={() => setPreview(index)}>
             <strong>
               <Amount price={listing} icons={icons} />
             </strong>
@@ -415,12 +404,19 @@ function Listings({ listings, icons }: { listings: Listing[]; icons: CurrencyIco
           </li>
         ))}
       </ol>
-      {previewed && (
-        <div className="window listing-preview" style={preview.placement}>
-          <ItemCard item={previewed} />
-        </div>
-      )}
+      {previewed && <ListingTooltip item={previewed} />}
     </div>
+  )
+}
+
+function ListingTooltip({ item }: { item: ParsedItem }) {
+  const target = tooltipDocument()
+  if (!target) return null
+  return createPortal(
+    <div ref={measureTooltip} className="window listing-preview">
+      <ItemCard item={item} />
+    </div>,
+    target.body,
   )
 }
 

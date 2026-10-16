@@ -1,6 +1,6 @@
 import { BrowserWindow, globalShortcut, screen, type Rectangle } from 'electron'
 import { EventType, uIOhook, type UiohookKeyboardEvent, type UiohookMouseEvent, type UiohookWheelEvent } from 'uiohook-napi'
-import { messageChannel, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
+import { messageChannel, TOOLTIP_FRAME, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 import { THEME_BACKGROUNDS } from '../shared/settings'
 import type { SettingsStore } from './settingsStore'
@@ -12,11 +12,13 @@ const REVEAL_FALLBACK_MS = 150
 const PAINT_FALLBACK_MS = 150
 const HOOK_IDLE_MS = 60_000
 const MOUSE_DRAGGED = 10
+const TOOLTIP_GAP = 4
 
 type HookEvent = UiohookKeyboardEvent | UiohookMouseEvent | UiohookWheelEvent
 
 export class Overlay {
   private readonly window: BrowserWindow
+  private tooltip: BrowserWindow | null = null
   private height = 600
   private anchor = { x: 0, y: 0 }
   private placed: Rectangle | null = null
@@ -47,6 +49,33 @@ export class Overlay {
       },
     })
     this.window.setAlwaysOnTop(true, 'screen-saver')
+    this.window.webContents.setWindowOpenHandler(({ url, frameName }) =>
+      url === 'about:blank' && frameName === TOOLTIP_FRAME && !this.tooltip
+        ? {
+            action: 'allow',
+            overrideBrowserWindowOptions: {
+              show: false,
+              frame: false,
+              backgroundColor: THEME_BACKGROUNDS[store.current.theme],
+              resizable: false,
+              skipTaskbar: true,
+              focusable: false,
+              alwaysOnTop: true,
+              fullscreenable: false,
+              hasShadow: false,
+            },
+          }
+        : { action: 'deny' },
+    )
+    this.window.webContents.on('did-create-window', (tooltip) => {
+      this.tooltip = tooltip
+      tooltip.setAlwaysOnTop(true, 'screen-saver')
+      tooltip.setIgnoreMouseEvents(true)
+      tooltip.webContents.setZoomFactor(this.scale)
+      tooltip.on('closed', () => {
+        if (this.tooltip === tooltip) this.tooltip = null
+      })
+    })
     uIOhook.on('mousedown', () => {
       if (this.window.isVisible() && !this.contains(screen.getCursorScreenPoint())) this.hide()
     })
@@ -60,12 +89,16 @@ export class Overlay {
       (settings) => [settings.uiScale, settings.overlayPosition],
       () => {
         this.window.webContents.setZoomFactor(this.scale)
+        this.tooltip?.webContents.setZoomFactor(this.scale)
         if (this.window.isVisible()) this.reposition()
       },
     )
     store.watch(
       (settings) => settings.theme,
-      (theme) => this.window.setBackgroundColor(THEME_BACKGROUNDS[theme]),
+      (theme) => {
+        this.window.setBackgroundColor(THEME_BACKGROUNDS[theme])
+        this.tooltip?.setBackgroundColor(THEME_BACKGROUNDS[theme])
+      },
     )
 
     void loadRenderer(this.window, store.current.theme)
@@ -142,8 +175,23 @@ export class Overlay {
     }
   }
 
+  showTooltip(height: number): void {
+    const tooltip = this.tooltip
+    if (!tooltip || this.stopDrag || !this.window.isVisible()) return
+    const overlay = this.window.getBounds()
+    const { workArea } = screen.getDisplayMatching(overlay)
+    const size = { width: overlay.width, height: Math.min(Math.ceil(height * this.scale), workArea.height) }
+    tooltip.setBounds({ ...tooltipPosition(overlay, size, workArea), ...size })
+    if (!tooltip.isVisible()) tooltip.showInactive()
+  }
+
+  hideTooltip(): void {
+    if (this.tooltip?.isVisible()) this.tooltip.hide()
+  }
+
   startDrag(): void {
     if (this.stopDrag || this.store.current.overlayLocked || !this.window.isVisible()) return
+    this.hideTooltip()
     this.watchClicks(true)
     const [x, y] = this.window.getPosition()
     const start = screen.getCursorScreenPoint()
@@ -172,6 +220,7 @@ export class Overlay {
   hide(): void {
     clearTimeout(this.revealTimer)
     this.endDrag()
+    this.hideTooltip()
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
     clearTimeout(this.hookIdle)
@@ -221,6 +270,17 @@ export class Overlay {
     this.placed = { ...bounds, width, height }
     this.window.setBounds(this.placed)
   }
+}
+
+function tooltipPosition(overlay: Rectangle, { width, height }: { width: number; height: number }, area: Rectangle) {
+  const right = area.x + area.width
+  const bottom = area.y + area.height
+  const top = clamp(overlay.y, area.y, bottom - height)
+  if (overlay.y + overlay.height + TOOLTIP_GAP + height <= bottom) return { x: overlay.x, y: overlay.y + overlay.height + TOOLTIP_GAP }
+  if (overlay.y - TOOLTIP_GAP - height >= area.y) return { x: overlay.x, y: overlay.y - TOOLTIP_GAP - height }
+  if (overlay.x + overlay.width + TOOLTIP_GAP + width <= right) return { x: overlay.x + overlay.width + TOOLTIP_GAP, y: top }
+  if (overlay.x - TOOLTIP_GAP - width >= area.x) return { x: overlay.x - TOOLTIP_GAP - width, y: top }
+  return { x: overlay.x, y: bottom - height }
 }
 
 function clamp(value: number, min: number, max: number): number {

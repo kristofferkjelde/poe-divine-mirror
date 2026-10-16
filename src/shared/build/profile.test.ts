@@ -202,7 +202,8 @@ describe('importBuild', () => {
         .replace('<ItemSet useSecondWeaponSet="false" id="1">', '<ItemSet useSecondWeaponSet="false" title="Mid Endgame" id="1">')
         .replace(
           '</Items>',
-          '<ItemSet useSecondWeaponSet="false" title="Late Campaign" id="2"><Slot name="Helmet" itemId="2"/></ItemSet></Items>',
+          '<ItemSet useSecondWeaponSet="false" title="Late Campaign" id="2"><Slot name="Helmet" itemId="2"/></ItemSet>' +
+            '<ItemSet useSecondWeaponSet="false" title="Early Atlas" id="3"><Slot name="Helmet" itemId="2"/><Slot name="Weapon 1" itemId="0"/></ItemSet></Items>',
         ),
     )
 
@@ -211,6 +212,7 @@ describe('importBuild', () => {
       expect(profile.itemSets).toEqual([
         { id: '1', title: 'Mid Endgame' },
         { id: '2', title: 'Late Campaign' },
+        { id: '3', title: 'Early Atlas', sameAs: 'Late Campaign' },
       ])
       expect(profile.itemSet).toBe('1')
       expect(profile.items.weapon?.name).toBe('Storm Impaler')

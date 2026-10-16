@@ -55,6 +55,10 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     painted: () => overlay.painted(),
     startDrag: () => overlay.startDrag(),
     endDrag: () => overlay.endDrag(),
+    showTooltip: (height) => {
+      if (isFiniteNumber(height)) overlay.showTooltip(height)
+    },
+    hideTooltip: () => overlay.hideTooltip(),
   }
 }
 

@@ -1,5 +1,6 @@
 import { useActionState, useState } from 'react'
 import { PROFILE_VERSION, profileWeights, stageTitle, type BuildProfile } from '../../../shared/build/profile'
+import { GEAR_SLOT_IDS, GEAR_SLOTS } from '../../../shared/gear'
 import { setSettingsState } from './settingsStore'
 
 export function BuildSettings({ build }: { build: BuildProfile | null }) {
@@ -32,15 +33,16 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
           <span>
             Gear stage
             <small>Which of the build's gear sets to compare against.</small>
+            <small className="stage-gear">{stageGear(build)}</small>
           </span>
           <select
             className="settings-select"
             value={build.itemSet}
             onChange={async (event) => setSettingsState(await window.settings.setBuildItemSet(event.target.value))}
           >
-            {build.itemSets?.map(({ id, title }) => (
+            {build.itemSets?.map(({ id, title, sameAs }) => (
               <option key={id} value={id}>
-                {title}
+                {sameAs ? `${title} (same gear as ${sameAs})` : title}
               </option>
             ))}
           </select>
@@ -55,6 +57,14 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
       <BuildWeights build={build} />
     </>
   )
+}
+
+function stageGear(build: BuildProfile): string {
+  const items = GEAR_SLOT_IDS.flatMap((slot) => {
+    const item = build.items[slot]
+    return item ? [`${GEAR_SLOTS[slot].label}: ${item.name || item.baseType}`] : []
+  })
+  return items.length > 0 ? items.join(' · ') : 'No gear in this stage'
 }
 
 function describe(build: BuildProfile): string {

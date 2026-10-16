@@ -3,7 +3,18 @@ import type { Settings } from '../../../shared/settings'
 import { setOverlayLocked } from '../overlayStore'
 
 const DRAG_HANDLES = '.ember-tabs, .item-header, .panel-footer'
+const NOT_DRAG_HANDLES = '.panel-actions'
 const DRAG_THRESHOLD = 4
+const CONFIRM_MS = 3000
+const CLEARED_MS = 2500
+
+type ClearState = 'idle' | 'confirm' | 'cleared'
+
+const CLEAR_LABELS: Record<ClearState, string> = {
+  idle: 'Clear gear',
+  confirm: 'Click again to clear',
+  cleared: 'Gear cleared ✓',
+}
 
 const reportHeight = (node: HTMLElement | null) => {
   if (!node) return
@@ -19,11 +30,25 @@ interface Props {
 }
 
 export function Panel({ hotkeys, locked, children }: Props) {
-  const [confirmClear, setConfirmClear] = useState(false)
+  const [clear, setClear] = useState<ClearState>('idle')
+  const clearTimer = useRef<number | undefined>(undefined)
   const hints = `${hotkeys.compare} compare · ${hotkeys.equip} equip · ${hotkeys.price} price`
   const drag = useRef<{ x: number; y: number; moving: boolean } | null>(null)
 
   const dragged = useRef(false)
+
+  const showClear = (next: ClearState, duration: number) => {
+    window.clearTimeout(clearTimer.current)
+    setClear(next)
+    clearTimer.current = window.setTimeout(() => setClear('idle'), duration)
+  }
+
+  const clickClear = async () => {
+    if (clear !== 'confirm') return showClear('confirm', CONFIRM_MS)
+    window.clearTimeout(clearTimer.current)
+    await window.overlay.clearGear()
+    showClear('cleared', CLEARED_MS)
+  }
 
   const endDrag = () => {
     if (drag.current?.moving) {
@@ -51,7 +76,8 @@ export function Panel({ hotkeys, locked, children }: Props) {
           data-locked={locked}
           onPointerDown={(event) => {
             dragged.current = false
-            const handle = event.target instanceof Element && event.target.closest(DRAG_HANDLES)
+            const target = event.target instanceof Element ? event.target : null
+            const handle = target?.closest(DRAG_HANDLES) && !target.closest(NOT_DRAG_HANDLES)
             if (locked || event.button !== 0 || !handle) return
             drag.current = { x: event.clientX, y: event.clientY, moving: false }
           }}
@@ -85,15 +111,11 @@ export function Panel({ hotkeys, locked, children }: Props) {
               <button
                 type="button"
                 className="panel-link"
-                data-confirm={confirmClear}
+                data-clear={clear}
                 title="Forget every item you saved as equipped"
-                onClick={() => {
-                  if (confirmClear) void window.overlay.clearGear()
-                  setConfirmClear(!confirmClear)
-                }}
-                onPointerLeave={() => setConfirmClear(false)}
+                onClick={() => void clickClear()}
               >
-                {confirmClear ? 'Clear all?' : 'Clear gear'}
+                {CLEAR_LABELS[clear]}
               </button>
               <button type="button" className="panel-link" onClick={() => void window.overlay.openSettings()}>
                 Settings

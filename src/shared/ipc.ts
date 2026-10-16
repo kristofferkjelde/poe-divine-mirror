@@ -47,7 +47,11 @@ export interface OverlayApi {
   painted: () => Promise<void>
   startDrag: () => Promise<void>
   endDrag: () => Promise<void>
+  showTooltip: (height: number) => Promise<void>
+  hideTooltip: () => Promise<void>
 }
+
+export const TOOLTIP_FRAME = 'divine-mirror-tooltip'
 
 export interface SettingsApi {
   get: () => Promise<SettingsState>
@@ -86,6 +90,8 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   painted: true,
   startDrag: true,
   endDrag: true,
+  showTooltip: true,
+  hideTooltip: true,
 }
 
 const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {

@@ -221,8 +221,12 @@ body {
   color: var(--accent-ink);
 }
 
-.panel-link[data-confirm='true'] {
+.panel-link[data-clear='confirm'] {
   color: var(--delta-down);
+}
+
+.panel-link[data-clear='cleared'] {
+  color: var(--delta-up);
 }
 
 .item {
@@ -905,6 +909,11 @@ tr[data-direction='down'] .compare-delta {
   color: var(--text-muted);
 }
 
+.settings-row .stage-gear {
+  margin-top: 4px;
+  color: var(--accent-ink);
+}
+
 .settings-toggle {
   width: 18px;
   height: 18px;
@@ -1008,16 +1017,15 @@ tr[data-direction='down'] .compare-delta {
   border-radius: 2px;
 }
 
-.listing-preview {
-  position: fixed;
-  left: 8px;
-  right: 8px;
-  z-index: 5;
-  pointer-events: none;
+.tooltip-body {
+  margin: 0;
+  overflow: hidden;
   background: var(--base);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.8),
-    0 8px 24px rgba(0, 0, 0, 0.8);
+}
+
+.listing-preview {
+  background: var(--base);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.8);
 }
 
 .settings-select {
@@ -1780,8 +1788,7 @@ tr[data-direction='down'] .compare-delta {
   box-shadow:
     inset 0 0 0 1px #000,
     inset 0 0 0 3px var(--bevel),
-    inset 0 0 0 4px #000,
-    0 8px 24px rgba(0, 0, 0, 0.8);
+    inset 0 0 0 4px #000;
 }
 
 .window.detail::before {

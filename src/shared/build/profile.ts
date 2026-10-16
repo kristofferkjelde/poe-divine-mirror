@@ -5,7 +5,7 @@ import type { ItemSet, PobBuild } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
 
-export const PROFILE_VERSION = 3
+export const PROFILE_VERSION = 4
 
 export interface BuildProfile {
   version?: number
