@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ART_ORIGIN, itemArt } from './art'
+import { ART_ORIGIN, currencyArt, itemArt } from './art'
 
 describe('itemArt', () => {
   it('finds the artwork for uniques by name and everything else by base type', () => {
@@ -19,5 +19,13 @@ describe('itemArt', () => {
 
   it('has nothing for items it does not know', () => {
     expect(itemArt({ rarity: 'Rare', name: 'Nope', baseType: 'Imaginary Boots' })).toBeUndefined()
+  })
+})
+
+describe('currencyArt', () => {
+  it('finds the orb for each trade currency id', () => {
+    expect(currencyArt('exalted')).toBe(`${ART_ORIGIN}Currency/CurrencyAddModToRare.webp`)
+    expect(currencyArt('divine')).toBe(`${ART_ORIGIN}Currency/CurrencyModValues.webp`)
+    expect(currencyArt('toString')).toBeUndefined()
   })
 })

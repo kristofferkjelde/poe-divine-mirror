@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type CSSProperties, type MouseEvent } from 'react'
+import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
 import { formatNumber } from '../../../shared/compare/stats'
 import type { CurrencyIcons } from '../../../shared/trade/currency'
@@ -187,7 +188,7 @@ function EstimateBody({ evaluate, searching, wait }: EstimateProps) {
 }
 
 function Amount({ price, icons }: { price: Price; icons: CurrencyIcons }) {
-  const icon = icons[price.currency]
+  const icon = icons[price.currency] ?? currencyArt(price.currency)
   return (
     <span className="ember-amount">
       {icon && (

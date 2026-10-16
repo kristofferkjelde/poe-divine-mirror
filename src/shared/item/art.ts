@@ -14,11 +14,30 @@ function baseFromName(name: string): string | undefined {
   return foundInName.get(name)
 }
 
+const CURRENCY_ART: Record<string, string> = {
+  exalted: 'Currency/CurrencyAddModToRare',
+  divine: 'Currency/CurrencyModValues',
+  chaos: 'Currency/CurrencyRerollRare',
+  regal: 'Currency/CurrencyUpgradeMagicToRare',
+  alch: 'Currency/CurrencyUpgradeToRare',
+  aug: 'Currency/CurrencyAddModToMagic',
+  transmute: 'Currency/CurrencyUpgradeToMagic',
+  annul: 'Currency/AnnullOrb',
+  vaal: 'Currency/CurrencyVaal',
+  chance: 'Currency/CurrencyUpgradeToUnique',
+  mirror: 'Currency/CurrencyDuplicate',
+}
+
+const artUrl = (path: string) => `${ART_ORIGIN}${path.split('/').map(encodeURIComponent).join('/')}.webp`
+
+export const currencyArt = (currency: string): string | undefined =>
+  Object.hasOwn(CURRENCY_ART, currency) ? artUrl(CURRENCY_ART[currency]) : undefined
+
 export function itemArt(item: Pick<ParsedItem, 'rarity' | 'name' | 'baseType'>): string | undefined {
   const path =
     (item.rarity === 'Unique' ? uniques[item.name] : undefined) ??
     bases[item.baseType ?? ''] ??
     bases[item.name] ??
     bases[baseFromName(item.name) ?? '']
-  return path && `${ART_ORIGIN}${path.split('/').map(encodeURIComponent).join('/')}.webp`
+  return path && artUrl(path)
 }

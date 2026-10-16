@@ -1542,3 +1542,85 @@ tr[data-direction='down'] .compare-delta {
   height: 36px;
   filter: drop-shadow(0 0 10px rgba(255, 140, 60, 0.7)) drop-shadow(0 2px 2px #000);
 }
+
+.ember-slot,
+.decision-slot[data-highlight='true'] {
+  isolation: isolate;
+}
+.ember-slot > *,
+.decision-slot[data-highlight='true'] > :not(figcaption, .decision-badge) {
+  position: relative;
+  z-index: 1;
+}
+.ember-slot::before,
+.ember-slot::after,
+.decision-slot[data-highlight='true']::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+.ember-slot::before,
+.decision-slot[data-highlight='true']::after {
+  left: 50%;
+  top: 44%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 120, 40, 0.42), rgba(255, 80, 20, 0.12) 45%, transparent 70%);
+  animation: ember-breathe 4.8s ease-in-out infinite;
+}
+.decision-slot[data-highlight='true']::after {
+  background: radial-gradient(circle, color-mix(in srgb, var(--tone) 40%, transparent), transparent 70%);
+}
+.ember-slot::after {
+  inset: -40%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 110, 40, 0.1) 40deg,
+    transparent 90deg,
+    rgba(255, 150, 60, 0.08) 200deg,
+    transparent 260deg
+  );
+  animation: ember-swirl 18s linear infinite;
+}
+.ember-slot .item-art,
+.decision-slot[data-highlight='true'] .item-art {
+  animation: ember-float 5.6s ease-in-out infinite;
+}
+@keyframes ember-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@keyframes ember-swirl {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes ember-float {
+  0%,
+  100% {
+    transform: translateY(1px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ember-slot::before,
+  .ember-slot::after,
+  .decision-slot[data-highlight='true']::after,
+  .ember-slot .item-art,
+  .decision-slot[data-highlight='true'] .item-art {
+    animation: none;
+  }
+}
