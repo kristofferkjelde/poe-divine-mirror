@@ -15,7 +15,7 @@
   --rarity-gem: #1ba29b;
   --rarity-currency: #aa9e82;
 
-  --glass: rgba(10, 8, 7, 0.97);
+  --glass: #0a0807;
   --bevel: #1b0f0a;
   --base: #0a0807;
   --well-top: #120e0c;
@@ -51,7 +51,7 @@
 }
 
 :root[data-theme='mana'] {
-  --glass: rgba(6, 8, 16, 0.97);
+  --glass: #060810;
   --bevel: #121624;
   --base: #060912;
   --well-top: #0b1226;
@@ -82,7 +82,7 @@
 }
 
 :root[data-theme='iron'] {
-  --glass: rgba(15, 14, 11, 0.97);
+  --glass: #0f0e0b;
   --bevel: #24231e;
   --base: #0c0c0a;
   --well-top: #1d1b13;
@@ -146,6 +146,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  background: var(--base);
 }
 
 .panel-close {
