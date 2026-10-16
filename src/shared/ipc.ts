@@ -37,6 +37,7 @@ export interface OverlayApi {
   openSettings: () => Promise<void>
   setLocked: (locked: boolean) => Promise<void>
   forgetGear: (slot: GearSlot) => Promise<void>
+  clearGear: () => Promise<void>
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   openTrade: (url: string) => Promise<void>
@@ -76,6 +77,7 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   openSettings: true,
   setLocked: true,
   forgetGear: true,
+  clearGear: true,
   prepareSearch: true,
   runSearch: true,
   openTrade: true,

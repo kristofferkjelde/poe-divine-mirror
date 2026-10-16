@@ -40,6 +40,7 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
     forgetGear: async (slot) => {
       if (isGearSlot(slot)) await gear.forget(slot)
     },
+    clearGear: () => gear.clear(),
     prepareSearch: (text) =>
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>

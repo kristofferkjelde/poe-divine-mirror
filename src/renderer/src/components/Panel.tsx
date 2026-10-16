@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Settings } from '../../../shared/settings'
 import { setOverlayLocked } from '../overlayStore'
 
@@ -18,6 +18,9 @@ interface Props {
 }
 
 export function Panel({ hotkeys, locked, children }: Props) {
+  const [confirmClear, setConfirmClear] = useState(false)
+  const hints = `${hotkeys.compare} compare · ${hotkeys.equip} equip · ${hotkeys.price} price`
+
   return (
     <>
       <div
@@ -40,18 +43,32 @@ export function Panel({ hotkeys, locked, children }: Props) {
             }}
             onLostPointerCapture={() => void window.overlay.endDrag()}
           >
-            <span>
-              {hotkeys.compare} compare · {hotkeys.equip} equip · {hotkeys.price} price
+            <span className="panel-hotkeys" title={hints}>
+              {hints}
             </span>
             <span className="panel-actions">
               <button
                 type="button"
                 className="panel-link"
                 aria-pressed={locked}
+                aria-label={locked ? 'Unlock position' : 'Lock position'}
                 title={locked ? 'Position locked. Click to allow dragging.' : 'Drag this bar to move the panel. Click to lock.'}
                 onClick={() => void setOverlayLocked(!locked)}
               >
-                {locked ? '🔒 Locked' : '🔓 Move'}
+                {locked ? '🔒' : '🔓'}
+              </button>
+              <button
+                type="button"
+                className="panel-link"
+                data-confirm={confirmClear}
+                title="Forget every item you saved as equipped"
+                onClick={() => {
+                  if (confirmClear) void window.overlay.clearGear()
+                  setConfirmClear(!confirmClear)
+                }}
+                onPointerLeave={() => setConfirmClear(false)}
+              >
+                {confirmClear ? 'Clear all?' : 'Clear gear'}
               </button>
               <button type="button" className="panel-link" onClick={() => void window.overlay.openSettings()}>
                 Settings
