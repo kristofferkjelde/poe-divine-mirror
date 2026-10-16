@@ -68,6 +68,8 @@ const isPoint = (value: unknown): value is Point =>
   Number.isFinite((value as Point).x) &&
   Number.isFinite((value as Point).y)
 
+const OLD_DEFAULT_HOTKEYS: Settings['hotkeys'] = { compare: 'Alt+D', equip: 'Alt+Shift+D', price: 'Ctrl+D' }
+
 export function normalizeSettings(value: unknown): Settings {
   const input = value as Partial<Settings> | null
   const hotkeys = input?.hotkeys
@@ -75,7 +77,7 @@ export function normalizeSettings(value: unknown): Settings {
     hotkeys: Object.fromEntries(
       HOTKEY_ACTIONS.map((action) => {
         const value = hotkeys?.[action]
-        return [action, typeof value === 'string' ? value : DEFAULT_SETTINGS.hotkeys[action]]
+        return [action, typeof value === 'string' && value !== OLD_DEFAULT_HOTKEYS[action] ? value : DEFAULT_SETTINGS.hotkeys[action]]
       }),
     ) as Settings['hotkeys'],
     overlayPosition: isPoint(input?.overlayPosition) ? input.overlayPosition : null,
