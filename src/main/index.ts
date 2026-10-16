@@ -8,6 +8,7 @@ import { copyHoveredItem } from './clipboard'
 import { delay } from './delay'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
+import { registerImageScheme, serveCachedImages } from './imageCache'
 import { registerHandlers } from './ipc'
 import { Overlay } from './overlay'
 import { ICON_PATH } from './renderer'
@@ -17,9 +18,11 @@ import { TradeClient } from './trade'
 import { Updates } from './updates'
 import { trayTooltip, updateMenuItem } from './updateStatus'
 
-const FOCUS_RETURN_MS = 120
+const FOCUS_RETURN_MS = 60
 
 let tray: Tray | null = null
+
+registerImageScheme()
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -29,6 +32,7 @@ if (!app.requestSingleInstanceLock()) {
 
 function start(): void {
   app.setAppUserModelId('io.kjelde.poe-item-checker')
+  serveCachedImages()
   const store = new SettingsStore()
   const overlay = new Overlay(store)
   const gear = new GearStore()
@@ -136,15 +140,12 @@ function start(): void {
   updates.start()
   tray.on('double-click', () => settingsWindow.open())
   if (hotkeys.unavailableActions.length > 0) settingsWindow.open()
-  try {
-    uIOhook.start()
-  } catch (error) {
-    console.error('Could not watch mouse clicks', error)
-  }
 }
 
 app.on('window-all-closed', () => {})
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
-  uIOhook.stop()
+  try {
+    uIOhook.stop()
+  } catch {}
 })

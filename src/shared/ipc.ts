@@ -19,6 +19,7 @@ export interface OverlayContext {
 export interface OverlayMessages {
   event: OverlayEvent
   context: OverlayContext
+  revealed: null
 }
 
 export interface SettingsState {
@@ -40,6 +41,8 @@ export interface OverlayApi {
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   openTrade: (url: string) => Promise<void>
   startTyping: () => Promise<void>
+  rendered: (height: number) => Promise<void>
+  painted: () => Promise<void>
 }
 
 export interface SettingsApi {
@@ -72,6 +75,8 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   runSearch: true,
   openTrade: true,
   startTyping: true,
+  rendered: true,
+  painted: true,
 }
 
 const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {

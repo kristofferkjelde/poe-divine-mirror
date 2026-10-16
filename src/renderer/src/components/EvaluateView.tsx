@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type CSSProperties, type MouseEvent } from 'react'
+import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
 import { formatNumber } from '../../../shared/compare/stats'
@@ -188,7 +189,7 @@ function EstimateBody({ evaluate, searching, wait }: EstimateProps) {
 }
 
 function Amount({ price, icons }: { price: Price; icons: CurrencyIcons }) {
-  const icon = icons[price.currency] ?? currencyArt(price.currency)
+  const icon = cachedImageUrl(icons[price.currency]) ?? cachedImageUrl(currencyArt(price.currency))
   return (
     <span className="ember-amount">
       {icon && (

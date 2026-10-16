@@ -7,12 +7,17 @@ import type { SettingsStore } from './settingsStore'
 const WIDTH = 440
 const SCREEN_MARGIN = 24
 const ESCAPE = 'Escape'
+const REVEAL_FALLBACK_MS = 150
+const PAINT_FALLBACK_MS = 150
 
 export class Overlay {
   private readonly window: BrowserWindow
   private height = 600
   private anchor = { x: 0, y: 0 }
   private placed: Rectangle | null = null
+  private revealTimer: NodeJS.Timeout | undefined
+  private paintTimer: NodeJS.Timeout | undefined
+  private hooked = false
 
   constructor(private readonly store: SettingsStore) {
     this.window = new BrowserWindow({
@@ -74,19 +79,39 @@ export class Overlay {
   }
 
   show(event: OverlayEvent): void {
-    this.send('event', event)
     this.anchor = screen.getCursorScreenPoint()
+    this.send('event', event)
+    clearTimeout(this.revealTimer)
+    this.revealTimer = setTimeout(() => this.reveal(), REVEAL_FALLBACK_MS)
+  }
+
+  rendered(height: number): void {
+    clearTimeout(this.revealTimer)
+    this.height = Math.ceil(height)
     this.reposition()
     this.reveal()
   }
 
+  painted(): void {
+    clearTimeout(this.paintTimer)
+    this.window.setOpacity(1)
+  }
+
   resize(height: number): void {
     this.height = Math.ceil(height)
-    this.reposition()
+    if (this.window.isVisible()) this.reposition()
   }
 
   private reveal(): void {
-    if (!this.window.isVisible()) this.window.showInactive()
+    if (!this.window.isVisible()) {
+      if (!this.placed) this.reposition()
+      this.window.setOpacity(0)
+      this.window.showInactive()
+      this.send('revealed', null)
+      clearTimeout(this.paintTimer)
+      this.paintTimer = setTimeout(() => this.painted(), PAINT_FALLBACK_MS)
+    }
+    this.watchClicks(true)
     if (!globalShortcut.isRegistered(ESCAPE)) {
       try {
         globalShortcut.register(ESCAPE, () => this.hide())
@@ -101,9 +126,22 @@ export class Overlay {
   }
 
   hide(): void {
+    clearTimeout(this.revealTimer)
     if (globalShortcut.isRegistered(ESCAPE)) globalShortcut.unregister(ESCAPE)
     if (this.window.isVisible()) this.window.hide()
     this.window.setFocusable(false)
+    this.watchClicks(false)
+  }
+
+  private watchClicks(on: boolean): void {
+    if (on === this.hooked) return
+    try {
+      if (on) uIOhook.start()
+      else uIOhook.stop()
+      this.hooked = on
+    } catch (error) {
+      console.error('Could not watch mouse clicks', error)
+    }
   }
 
   private contains({ x, y }: { x: number; y: number }): boolean {
@@ -122,14 +160,16 @@ export class Overlay {
     const saved = this.store.current.overlayPosition
     const { workArea } = screen.getDisplayNearestPoint(saved ?? this.anchor)
     const height = Math.min(this.height, workArea.height - SCREEN_MARGIN * 2)
+    const bottom = workArea.y + workArea.height - height
+    const top = this.window.isVisible() && this.placed ? this.placed.y : workArea.y + (workArea.height - height) / 2
     const bounds = saved
       ? {
           x: clamp(saved.x, workArea.x, workArea.x + workArea.width - WIDTH),
-          y: clamp(saved.y, workArea.y, workArea.y + workArea.height - height),
+          y: clamp(saved.y, workArea.y, bottom),
         }
       : {
           x: Math.round(workArea.x + (workArea.width - WIDTH) / 2),
-          y: Math.round(workArea.y + (workArea.height - height) / 2),
+          y: clamp(top, workArea.y, bottom),
         }
     this.placed = { ...bounds, width: WIDTH, height }
     this.window.setBounds(this.placed)
