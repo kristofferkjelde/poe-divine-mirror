@@ -4,7 +4,7 @@ import { isGearSlot } from '../shared/gear'
 import type { OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
 import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
 import { TRADE_ORIGIN } from '../shared/trade/price'
-import { importBuild } from './buildImport'
+import { chooseItemSet, importBuild } from './buildImport'
 import type { BuildStore } from './buildStore'
 import type { GearStore } from './gearStore'
 import type { Hotkeys } from './hotkeys'
@@ -90,6 +90,16 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Services): H
       }
     },
     removeBuild: () => then(builds.set(null)),
+    setBuildItemSet: async (itemSet) => {
+      if (typeof itemSet === 'string' && builds.current) {
+        try {
+          await builds.set(chooseItemSet(builds.current, itemSet))
+        } catch (error) {
+          console.error('Could not switch build stage', error)
+        }
+      }
+      return state()
+    },
     setBuildWeight: async (stat, weight) => {
       const valid = weight === null || (isFiniteNumber(weight) && Math.abs(weight) <= MAX_WEIGHT)
       if (typeof stat === 'string' && valid) await builds.setWeight(stat, weight as number | null)

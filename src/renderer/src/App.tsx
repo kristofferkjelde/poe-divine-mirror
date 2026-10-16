@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PROFILE_VERSION } from '../../shared/build/profile'
+import { PROFILE_VERSION, stageTitle } from '../../shared/build/profile'
 import { GEAR_SLOTS, gearSlotsFor } from '../../shared/gear'
 import { SLOT_LABELS } from '../../shared/item/slots'
 import { ComparisonView } from './components/ComparisonView'
@@ -42,7 +42,7 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
     ? 'General weights. Add your build in Settings.'
     : build.version !== PROFILE_VERSION
       ? `Scored for ${build.name} (outdated: re-import it in Settings)`
-      : `Scored for ${build.name}`
+      : `Scored for ${[build.name, stageTitle(build)].filter(Boolean).join(' · ')}`
 
   if (evaluate.status !== 'closed') {
     return (

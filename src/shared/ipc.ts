@@ -57,6 +57,7 @@ export interface SettingsApi {
   setRecording: (recording: boolean) => Promise<void>
   importBuild: (input: string) => Promise<SettingsResponse>
   removeBuild: () => Promise<SettingsState>
+  setBuildItemSet: (itemSet: string) => Promise<SettingsState>
   setBuildWeight: (stat: string, weight: number | null) => Promise<SettingsState>
   resetBuildWeights: () => Promise<SettingsState>
   listLeagues: () => Promise<string[]>
@@ -95,6 +96,7 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setRecording: true,
   importBuild: true,
   removeBuild: true,
+  setBuildItemSet: true,
   setBuildWeight: true,
   resetBuildWeights: true,
   listLeagues: true,

@@ -19,6 +19,11 @@ type DamageType = 'Physical' | 'Fire' | 'Cold' | 'Lightning' | 'Chaos'
 
 const BASES = WEAPON_BASES as unknown as Record<string, WeaponBase>
 
+export interface ItemSet {
+  id: string
+  title: string
+}
+
 export interface PobBuild {
   className?: string
   ascendancy?: string
@@ -27,6 +32,8 @@ export interface PobBuild {
   stats: Record<string, number>
   minion: boolean
   items: PobItem[]
+  itemSets: ItemSet[]
+  itemSet?: string
 }
 
 export class PobParseError extends UserFacingError {}
@@ -56,7 +63,7 @@ function section(xml: string, name: string): string {
   return new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)</${name}>`).exec(xml)?.[1] ?? ''
 }
 
-export function parsePobXml(xml: string): PobBuild {
+export function parsePobXml(xml: string, itemSet?: string): PobBuild {
   const build = elements(xml, 'Build')[0]
   if (/<PathOfBuilding[\s>]/.test(xml)) throw new PobParseError('That is a Path of Exile 1 build. Use a PoE 2 build instead.')
   if (!build || !xml.includes('<PathOfBuilding2')) throw new PobParseError('That is not a Path of Building build')
@@ -74,7 +81,7 @@ export function parsePobXml(xml: string): PobBuild {
     mainSkill: mainSkill(xml, Number(build.attrs.mainSocketGroup) || 1),
     stats,
     minion: /<MinionStat\b/.test(build.body),
-    items: equippedItems(xml),
+    ...equippedItems(xml, itemSet),
   }
 }
 
@@ -88,13 +95,14 @@ function mainSkill(xml: string, group: number): string | undefined {
   return gem?.attrs.nameSpec || undefined
 }
 
-function equippedItems(xml: string): PobItem[] {
+function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | 'itemSets' | 'itemSet'> {
   const items = section(xml, 'Items')
   const byId = new Map(elements(items, 'Item').map(({ attrs, body }) => [attrs.id, decodeEntities(body.replace(/<[^>]*>/g, ''))]))
   const active = attributes(/<Items\b([^>]*)>/.exec(xml)?.[1] ?? '').activeItemSet ?? '1'
   const sets = elements(items, 'ItemSet')
-  const set = sets.find((entry) => entry.attrs.id === active) ?? sets[0]
+  const set = sets.find((entry) => entry.attrs.id === wanted) ?? sets.find((entry) => entry.attrs.id === active) ?? sets[0]
   const slots = set ? elements(set.body, 'Slot') : elements(items, 'Slot')
+  const itemSets = sets.map(({ attrs }) => ({ id: attrs.id, title: attrs.title?.trim() || `Set ${attrs.id}` }))
 
   const result: PobItem[] = []
   for (const { attrs } of slots) {
@@ -103,7 +111,7 @@ function equippedItems(xml: string): PobItem[] {
     if (!gearSlot || !text || attrs.itemId === '0') continue
     result.push({ gearSlot, item: parsePobItem(text, GEAR_SLOTS[gearSlot].slot) })
   }
-  return result
+  return { items: result, itemSets, itemSet: set?.attrs.id }
 }
 
 const RANGE = /\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g

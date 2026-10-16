@@ -1,11 +1,11 @@
 import type { ParsedGear } from '../compare/gear'
 import { DERIVED, statKeys } from '../compare/stats'
 import { DEFAULT_WEIGHTS, ruleWeight, weightFor, type WeightRule } from '../compare/weights'
-import type { PobBuild } from './pob'
+import type { ItemSet, PobBuild } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
 
-export const PROFILE_VERSION = 2
+export const PROFILE_VERSION = 3
 
 export interface BuildProfile {
   version?: number
@@ -18,6 +18,8 @@ export interface BuildProfile {
   lowLife: boolean
   gearStats: string[]
   items: ParsedGear
+  itemSets?: ItemSet[]
+  itemSet?: string
   custom: Record<string, number>
 }
 
@@ -80,8 +82,15 @@ export function profileFromPob(build: PobBuild, source: string): BuildProfile {
     lowLife: energyShield > life * 1.5,
     gearStats: [...gearStats].sort(),
     items,
+    itemSets: build.itemSets,
+    itemSet: build.itemSet,
     custom: {},
   }
+}
+
+export function stageTitle(profile: BuildProfile): string | undefined {
+  if (!profile.itemSets || profile.itemSets.length < 2) return undefined
+  return profile.itemSets.find(({ id }) => id === profile.itemSet)?.title
 }
 
 const SKILL_LEVEL = /^\+# to Level of all (.+) Skills$/i
