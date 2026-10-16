@@ -38,6 +38,8 @@ jobs:
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 7200
           output-artifact-directory: release
+      - name: Point the updater at the final installer
+        run: node scripts/latest-yml.mjs release
       - name: Attach the installer to the release
         shell: bash
         env:
@@ -45,4 +47,4 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Divine Mirror ${TAG#v}" --generate-notes
-          gh release upload "$TAG" release/Divine-Mirror-Setup-*.exe --clobber
+          gh release upload "$TAG" release/Divine-Mirror-Setup-*.exe release/latest.yml --clobber
