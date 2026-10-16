@@ -1,93 +1,43 @@
-import { useState } from 'react'
-import { formatNumber } from '../../../shared/compare/stats'
-import { estimate, formatAge, formatPrice } from '../../../shared/trade/price'
-import { toExalted } from './fixtures'
-import { Pips, PRESETS, Tier } from './shared'
+import { formatPrice } from '../../../shared/trade/price'
+import { LedgerTabs } from './LedgerTabs'
+import { Pips } from './shared'
 import type { VariantProps } from './types'
-import { useSearchState } from './useSearchState'
 
-export const name = 'Appraisal'
+export const name = 'Gilded reliquary'
 
-export function VariantA({ item, search: initial, result }: VariantProps) {
-  const { search, toggle, setScale } = useSearchState(initial)
-  const [showListings, setShowListings] = useState(false)
-  const value = estimate(result.listings, result.total)!
-  const prices = result.listings.map(toExalted)
-  const low = Math.log(Math.min(...prices) * 0.8)
-  const high = Math.log(Math.max(...prices) * 1.2)
-  const at = (price: number) => `${((Math.log(price) - low) / (high - low)) * 100}%`
-
+export function VariantA(props: VariantProps) {
   return (
-    <div className="window inventory ea">
-      <h3 className="gold-plate ea-plate">
-        <span>Appraisal</span>
-      </h3>
-      <p className="ea-item" data-rarity={item.rarity.toLowerCase()}>
-        {item.name}
-        <small>{item.baseType}</small>
-      </p>
-
-      <div className="item-slot-frame ea-price">
-        <small>Estimated value · {result.league}</small>
-        <strong>≈ {formatPrice(value.value)}</strong>
-        <span>
-          {formatPrice(value.low)} – {formatPrice(value.high)} · <Pips reliability={value.reliability} /> {value.reliability}
-        </span>
-        <div className="ea-spread" aria-label="Where the listings sit">
-          {prices.map((price, index) => (
-            <span key={index} className="ea-dot" style={{ left: at(price) }} />
-          ))}
-          <span className="ea-marker" style={{ left: at(toExalted(value.value)) }} />
-        </div>
-        <small>
-          {result.listings.length} of {formatNumber(result.total)} listed
-        </small>
-      </div>
-
-      <div className="ea-presets" role="group" aria-label="Search preset">
-        {PRESETS.map((preset) => (
-          <button key={preset.label} type="button" aria-pressed={search.scale === preset.scale} onClick={() => setScale(preset.scale)}>
-            {preset.label}
-          </button>
-        ))}
-      </div>
-
-      <ul className="ea-chips">
-        {search.filters.map((filter) => (
-          <li key={filter.key}>
-            <button type="button" aria-pressed={filter.enabled} onClick={() => toggle(filter.key)}>
-              <Tier filter={filter} />
-              {filter.label}
-              {filter.min !== null && <em>≥ {formatNumber(filter.min)}</em>}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="ea-actions">
-        <button type="button" className="ea-search">
-          Search again
-        </button>
-        <button type="button" className="panel-link">
-          Open on trade ↗
-        </button>
-      </div>
-
-      <button type="button" className="panel-link ea-toggle" aria-expanded={showListings} onClick={() => setShowListings(!showListings)}>
-        {showListings ? 'Hide listings' : `Show ${result.listings.length} listings`}
-      </button>
-      {showListings && (
-        <ol className="ea-listings">
-          {result.listings.map((listing, index) => (
-            <li key={index}>
-              <strong>{formatPrice(listing)}</strong>
-              <span>iLvl {listing.itemLevel}</span>
-              <span>{listing.account}</span>
-              <span>{formatAge(listing.indexed, Date.now())}</span>
-            </li>
-          ))}
-        </ol>
+    <LedgerTabs
+      {...props}
+      theme="reliquary"
+      renderEstimate={(value, listed) => (
+        <>
+          <small>Worth about</small>
+          <svg className="lt-coin" viewBox="0 0 120 120" role="img" aria-label={`About ${formatPrice(value.value)}`}>
+            <defs>
+              <radialGradient id="coin-face" cx="0.38" cy="0.32" r="0.75">
+                <stop offset="0%" stopColor="#fff4c8" />
+                <stop offset="45%" stopColor="#e2bd68" />
+                <stop offset="100%" stopColor="#7a5520" />
+              </radialGradient>
+            </defs>
+            <circle cx="60" cy="60" r="56" fill="#3b2a10" />
+            <circle cx="60" cy="60" r="52" fill="url(#coin-face)" />
+            <circle cx="60" cy="60" r="44" fill="none" stroke="#7a5520" strokeWidth="1.5" strokeDasharray="2 3" />
+            <text x="60" y="58" className="lt-coin-value">
+              {formatPrice(value.value).split(' ')[0]}
+            </text>
+            <text x="60" y="80" className="lt-coin-unit">
+              {formatPrice(value.value).split(' ').slice(1).join(' ')}
+            </text>
+          </svg>
+          <span className="lt-range">
+            {formatPrice(value.low)} – {formatPrice(value.high)}
+          </span>
+          <Pips reliability={value.reliability} />
+          <small>{listed}</small>
+        </>
       )}
-    </div>
+    />
   )
 }
