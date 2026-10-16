@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import type { Settings } from '../../../shared/settings'
 import { setOverlayLocked } from '../overlayStore'
 
 const TYPING_FIELDS = 'input:not([type="checkbox"]):not([type="range"]), select, textarea'
+const DRAG_HANDLES = '.ember-tabs, .item-header, .panel-footer'
+const DRAG_THRESHOLD = 4
 
 const reportHeight = (node: HTMLElement | null) => {
   if (!node) return
@@ -20,6 +22,24 @@ interface Props {
 export function Panel({ hotkeys, locked, children }: Props) {
   const [confirmClear, setConfirmClear] = useState(false)
   const hints = `${hotkeys.compare} compare · ${hotkeys.equip} equip · ${hotkeys.price} price`
+  const drag = useRef<{ x: number; y: number; moving: boolean } | null>(null)
+
+  const endDrag = () => {
+    if (drag.current?.moving) void window.overlay.endDrag()
+    drag.current = null
+  }
+
+  const moveDrag = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current
+    if (!current) return
+    if (!current.moving) {
+      if (Math.hypot(event.clientX - current.x, event.clientY - current.y) < DRAG_THRESHOLD) return
+      current.moving = true
+      event.currentTarget.setPointerCapture(event.pointerId)
+      void window.overlay.startDrag()
+    }
+    void window.overlay.drag()
+  }
 
   return (
     <>
@@ -29,20 +49,22 @@ export function Panel({ hotkeys, locked, children }: Props) {
           if (event.target instanceof Element && event.target.closest(TYPING_FIELDS)) void window.overlay.startTyping()
         }}
       >
-        <div ref={reportHeight} className="panel" data-locked={locked}>
+        <div
+          ref={reportHeight}
+          className="panel"
+          data-locked={locked}
+          onPointerDown={(event) => {
+            const handle = event.target instanceof Element && event.target.closest(DRAG_HANDLES)
+            if (locked || event.button !== 0 || !handle) return
+            drag.current = { x: event.clientX, y: event.clientY, moving: false }
+          }}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onLostPointerCapture={endDrag}
+        >
           {children}
-          <footer
-            className="panel-footer"
-            onPointerDown={(event) => {
-              if (locked || event.button !== 0 || (event.target instanceof Element && event.target.closest('button'))) return
-              event.currentTarget.setPointerCapture(event.pointerId)
-              void window.overlay.startDrag()
-            }}
-            onPointerMove={(event) => {
-              if (event.currentTarget.hasPointerCapture(event.pointerId)) void window.overlay.drag()
-            }}
-            onLostPointerCapture={() => void window.overlay.endDrag()}
-          >
+          <footer className="panel-footer">
             <span className="panel-hotkeys" title={hints}>
               {hints}
             </span>

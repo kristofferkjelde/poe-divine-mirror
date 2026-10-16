@@ -886,9 +886,8 @@ tr[data-direction='down'] .compare-delta {
   color: var(--text-muted);
 }
 
-.panel[data-locked='false'] > .panel-footer {
+.panel[data-locked='false'] :is(.ember-tabs, .item-header, .panel-footer) {
   cursor: move;
-  user-select: none;
   touch-action: none;
 }
 
