@@ -48,6 +48,7 @@ Works anywhere you can hover an item: your inventory, stash, vendors, or the gro
 
 1. Get your build's Path of Building code. On **Mobalytics**, open the build and click **Copy Code** next to Path of Building. In **Path of Building**, use **Import/Export Build → Generate**. A **pobb.in**, **poe.ninja** or **Maxroll** link works too.
 2. Open **Settings**, paste it under **Build**, and click **Import build**.
+3. If the build has gear stages, pick yours under **Gear stage**. Mobalytics often leaves some stages' gear out of the Path of Building code. To fix that, click **Download Build File** on the build page and add the zip under **Stage gear files**. Each stage then uses exactly the items from its .build file.
 
 The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it.
 

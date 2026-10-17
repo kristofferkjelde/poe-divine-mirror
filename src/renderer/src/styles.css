@@ -862,6 +862,16 @@ tr[data-direction='down'] .compare-delta {
   outline: none;
 }
 
+label.hotkey-button {
+  text-align: center;
+  white-space: nowrap;
+}
+
+label.hotkey-button[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 .hotkey-button[data-recording='true'] {
   color: var(--text-value);
   border-color: var(--accent-ink);

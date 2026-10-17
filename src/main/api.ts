@@ -2,15 +2,16 @@ import { net, shell } from 'electron'
 import { toResult } from '../shared/errors'
 import { isGearSlot } from '../shared/gear'
 import type { ParsedItem } from '../shared/item/types'
-import type { OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
+import type { BuildFile, OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
 import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
 import { TRADE_ORIGIN } from '../shared/trade/price'
-import { chooseItemSet, importBuild } from './buildImport'
+import { addStages, chooseItemSet, importBuild, stagesFromFiles } from './buildImport'
 import type { BuildStore } from './buildStore'
 import type { GearStore } from './gearStore'
 import type { Hotkeys } from './hotkeys'
 import type { Handlers } from './ipc'
 import type { Overlay } from './overlay'
+import { readPageState } from './pageReader'
 import type { SettingsStore } from './settingsStore'
 import type { SettingsWindow } from './settingsWindow'
 import type { TradeClient } from './trade'
@@ -27,6 +28,18 @@ interface Services {
   overlay: Overlay
   settingsWindow: SettingsWindow
 }
+
+const MAX_BUILD_FILES = 20
+const MAX_BUILD_FILE_BYTES = 10_000_000
+
+const isBuildFiles = (value: unknown): value is BuildFile[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.length <= MAX_BUILD_FILES &&
+  value.every(
+    (file: Partial<BuildFile> | null) =>
+      typeof file?.name === 'string' && file.data instanceof Uint8Array && file.data.length <= MAX_BUILD_FILE_BYTES,
+  )
 
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
@@ -88,10 +101,19 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Pick<Service
     importBuild: async (input) => {
       if (typeof input !== 'string' || input.trim() === '') return { ok: false, error: 'Paste a build code or link first' }
       try {
-        await builds.set(await importBuild(input, download))
+        await builds.set(await importBuild(input, download, readPageState))
         return { ok: true, state: state() }
       } catch (error) {
         return toResult(error, 'Could not read that build')
+      }
+    },
+    addBuildStages: async (files) => {
+      if (!isBuildFiles(files)) return { ok: false, error: 'Choose one or more .build files or a zip of them' }
+      try {
+        await builds.set(addStages(builds.current, stagesFromFiles(files)))
+        return { ok: true, state: state() }
+      } catch (error) {
+        return toResult(error, 'Could not read those .build files')
       }
     },
     removeBuild: () => then(builds.set(null)),
