@@ -235,7 +235,7 @@ const TOTALS_KEY = 'divine-mirror.totals-open'
 
 const MOD_TYPE_LABELS: Record<ModType, string> = {
   implicit: 'Implicit',
-  rune: 'Rune',
+  rune: 'Augment',
   enchant: 'Enchant',
   explicit: 'Other',
   fractured: 'Fractured',
