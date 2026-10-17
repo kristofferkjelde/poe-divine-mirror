@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
-import type { ParsedItem } from '../../../shared/item/types'
+import type { ModType, ParsedItem } from '../../../shared/item/types'
 import { formatNumber } from '../../../shared/compare/stats'
 import type { CurrencyIcons } from '../../../shared/trade/currency'
 import { estimate, formatAge, formatPrice, type Price, type PriceCheckResult, type Reliability } from '../../../shared/trade/price'
@@ -86,10 +86,21 @@ export function EvaluateView({ item, evaluate }: { item: ParsedItem; evaluate: O
       {ready &&
         (tab === 'filters' ? (
           <Filters search={ready.search} />
-        ) : listings.length > 0 ? (
-          <Listings listings={listings} icons={result?.ok ? result.icons : {}} />
         ) : (
-          <p className="ember-empty">{result ? 'No listings for this search.' : 'Press Search to see what is listed.'}</p>
+          <>
+            <section className="ember-own">
+              <h4>Your item</h4>
+              <div className="window listing-preview">
+                <ItemCard item={item} />
+              </div>
+            </section>
+            <h4 className="ember-heading">Listed</h4>
+            {listings.length > 0 ? (
+              <Listings listings={listings} icons={result?.ok ? result.icons : {}} />
+            ) : (
+              <p className="ember-empty">{result ? 'No listings for this search.' : 'Press Search to see what is listed.'}</p>
+            )}
+          </>
         ))}
 
       {ready && (
@@ -220,9 +231,71 @@ function Pips({ reliability }: { reliability: Reliability }) {
   )
 }
 
+const TOTALS_KEY = 'divine-mirror.totals-open'
+
+const MOD_TYPE_LABELS: Record<ModType, string> = {
+  implicit: 'Implicit',
+  rune: 'Augment',
+  enchant: 'Enchant',
+  explicit: 'Other',
+  fractured: 'Fractured',
+  desecrated: 'Desecrated',
+}
+
+function readTotalsOpen(): boolean {
+  try {
+    return localStorage.getItem(TOTALS_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+function saveTotalsOpen(open: boolean) {
+  try {
+    localStorage.setItem(TOTALS_KEY, String(open))
+  } catch {}
+}
+
+type ModFilter = Extract<SearchFilter, { modType: ModType }>
+
+const isModFilter = (filter: SearchFilter): filter is ModFilter => filter.kind === 'mod' || filter.kind === 'unsearchable'
+
+function sectionsOf(filters: SearchFilter[]) {
+  const mods = filters.filter(isModFilter)
+  const other = mods.filter((filter) => !filter.affix)
+  const otherTypes = [...new Set(other.map((filter) => MOD_TYPE_LABELS[filter.modType]))]
+  return {
+    properties: filters.filter((filter) => filter.kind === 'property'),
+    other: { label: otherTypes.join(' · '), filters: other },
+    prefixes: mods.filter((filter) => filter.affix === 'prefix'),
+    suffixes: mods.filter((filter) => filter.affix === 'suffix'),
+    totals: filters.filter((filter) => filter.kind === 'pseudo'),
+  }
+}
+
+function Section({ label, filters }: { label: string; filters: SearchFilter[] }) {
+  if (filters.length === 0) return null
+  return (
+    <>
+      <li className="ember-section">
+        <span>{label}</span>
+      </li>
+      {filters.map((filter) => (
+        <FilterRow key={filter.key} filter={filter} />
+      ))}
+    </>
+  )
+}
+
 function Filters({ search }: { search: ItemSearch }) {
-  const properties = search.filters.filter((filter) => filter.kind === 'property')
-  const mods = search.filters.filter((filter) => filter.kind !== 'property')
+  const [totalsOpen, setTotalsOpen] = useState(readTotalsOpen)
+  const { properties, other, prefixes, suffixes, totals } = sectionsOf(search.filters)
+  const totalsOn = totals.filter((filter) => filter.enabled).length
+  const toggleTotals = () => {
+    saveTotalsOpen(!totalsOpen)
+    setTotalsOpen(!totalsOpen)
+  }
+
   return (
     <>
       <div className="ember-options">
@@ -236,10 +309,20 @@ function Filters({ search }: { search: ItemSearch }) {
         {properties.map((filter) => (
           <FilterRow key={filter.key} filter={filter} />
         ))}
-        {properties.length > 0 && mods.length > 0 && <li className="ember-divider" aria-hidden />}
-        {mods.map((filter) => (
-          <FilterRow key={filter.key} filter={filter} />
-        ))}
+        <Section label={other.label} filters={other.filters} />
+        <Section label="Prefixes" filters={prefixes} />
+        <Section label="Suffixes" filters={suffixes} />
+        {totals.length > 0 && (
+          <li className="ember-section">
+            <button type="button" aria-expanded={totalsOpen} onClick={toggleTotals}>
+              Totals{totalsOn > 0 && ` · ${totalsOn} on`} {totalsOpen ? '▴' : '▾'}
+            </button>
+          </li>
+        )}
+        {totalsOpen &&
+          totals.map((filter) => (
+            <FilterRow key={filter.key} filter={filter} />
+          ))}
       </ul>
       <div className="ember-scale">
         <button type="button" onClick={() => setSearchScale(search.scale - SCALE_STEP)} aria-label="Lower minimums by 5%">

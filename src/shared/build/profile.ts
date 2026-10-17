@@ -1,11 +1,12 @@
 import type { ParsedGear } from '../compare/gear'
 import { DERIVED, statKeys } from '../compare/stats'
 import { DEFAULT_WEIGHTS, ruleWeight, weightFor, type WeightRule } from '../compare/weights'
+import type { GearSlot } from '../gear'
 import type { ItemSet, PobBuild } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
 
-export const PROFILE_VERSION = 4
+export const PROFILE_VERSION = 5
 
 export interface BuildProfile {
   version?: number
@@ -20,6 +21,7 @@ export interface BuildProfile {
   items: ParsedGear
   itemSets?: ItemSet[]
   itemSet?: string
+  borrowed?: Partial<Record<GearSlot, string>>
   custom: Record<string, number>
 }
 
@@ -84,6 +86,7 @@ export function profileFromPob(build: PobBuild, source: string): BuildProfile {
     items,
     itemSets: build.itemSets,
     itemSet: build.itemSet,
+    borrowed: build.borrowed,
     custom: {},
   }
 }

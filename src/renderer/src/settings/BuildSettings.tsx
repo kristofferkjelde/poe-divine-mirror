@@ -62,7 +62,9 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
 function stageGear(build: BuildProfile): string {
   const items = GEAR_SLOT_IDS.flatMap((slot) => {
     const item = build.items[slot]
-    return item ? [`${GEAR_SLOTS[slot].label}: ${item.name || item.baseType}`] : []
+    if (!item) return []
+    const from = build.borrowed?.[slot]
+    return [`${GEAR_SLOTS[slot].label}: ${item.name || item.baseType}${from ? ` (from ${from})` : ''}`]
   })
   return items.length > 0 ? items.join(' · ') : 'No gear in this stage'
 }

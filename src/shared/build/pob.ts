@@ -35,6 +35,7 @@ export interface PobBuild {
   items: PobItem[]
   itemSets: ItemSet[]
   itemSet?: string
+  borrowed: Partial<Record<GearSlot, string>>
 }
 
 export class PobParseError extends UserFacingError {}
@@ -96,36 +97,63 @@ function mainSkill(xml: string, group: number): string | undefined {
   return gem?.attrs.nameSpec || undefined
 }
 
-function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | 'itemSets' | 'itemSet'> {
+type SetGear = Map<GearSlot, string>
+
+function gearOfSet(body: string, byId: Map<string, string>): SetGear {
+  const gear: SetGear = new Map()
+  for (const { attrs } of elements(body, 'Slot')) {
+    const gearSlot = gearSlotForPob(attrs.name)
+    const text = byId.get(attrs.itemId)
+    if (gearSlot && text && attrs.itemId !== '0') gear.set(gearSlot, text)
+  }
+  return gear
+}
+
+function withBorrowedGear(sets: SetGear[], index: number): { gear: SetGear; borrowed: Map<GearSlot, number> } {
+  const gear = new Map(sets[index])
+  const borrowed = new Map<GearSlot, number>()
+  const nearest = [...sets.keys()]
+    .filter((other) => other !== index)
+    .sort((a, b) => (a < index === b < index ? Math.abs(a - index) - Math.abs(b - index) : a < index ? -1 : 1))
+  for (const slot of Object.keys(GEAR_SLOTS) as GearSlot[]) {
+    if (gear.has(slot) || slot === 'offhand') continue
+    const from = nearest.find((other) => sets[other].has(slot))
+    if (from === undefined) continue
+    gear.set(slot, sets[from].get(slot)!)
+    borrowed.set(slot, from)
+  }
+  const weaponFrom = borrowed.get('weapon')
+  const offhand = weaponFrom === undefined ? undefined : sets[weaponFrom].get('offhand')
+  if (!gear.has('offhand') && weaponFrom !== undefined && offhand) {
+    gear.set('offhand', offhand)
+    borrowed.set('offhand', weaponFrom)
+  }
+  return { gear, borrowed }
+}
+
+function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | 'itemSets' | 'itemSet' | 'borrowed'> {
   const items = section(xml, 'Items')
   const byId = new Map(elements(items, 'Item').map(({ attrs, body }) => [attrs.id, decodeEntities(body.replace(/<[^>]*>/g, ''))]))
   const active = attributes(/<Items\b([^>]*)>/.exec(xml)?.[1] ?? '').activeItemSet ?? '1'
   const sets = elements(items, 'ItemSet')
-  const set = sets.find((entry) => entry.attrs.id === wanted) ?? sets.find((entry) => entry.attrs.id === active) ?? sets[0]
-  const slots = set ? elements(set.body, 'Slot') : elements(items, 'Slot')
-  const gearOf = (body: string) =>
-    elements(body, 'Slot')
-      .filter(({ attrs }) => gearSlotForPob(attrs.name) && attrs.itemId !== '0' && byId.has(attrs.itemId))
-      .map(({ attrs }) => `${attrs.name}=${byId.get(attrs.itemId)}`)
-      .sort()
-      .join('\n')
+  const titles = sets.map(({ attrs }) => attrs.title?.trim() || `Set ${attrs.id}`)
+  const wantedIndex = sets.findIndex((entry) => entry.attrs.id === wanted)
+  const index = wantedIndex >= 0 ? wantedIndex : Math.max(sets.findIndex((entry) => entry.attrs.id === active), 0)
+  const setGear = sets.length > 0 ? sets.map(({ body }) => gearOfSet(body, byId)) : [gearOfSet(items, byId)]
+  const filled = setGear.map((_, at) => withBorrowedGear(setGear, at))
+
   const seen = new Map<string, string>()
-  const itemSets = sets.map(({ attrs, body }): ItemSet => {
-    const title = attrs.title?.trim() || `Set ${attrs.id}`
-    const gear = gearOf(body)
+  const itemSets = sets.map(({ attrs }, at): ItemSet => {
+    const gear = [...filled[at].gear].map(([slot, text]) => `${slot}=${text}`).sort().join('\n')
     const sameAs = seen.get(gear)
-    if (!sameAs) seen.set(gear, title)
-    return sameAs ? { id: attrs.id, title, sameAs } : { id: attrs.id, title }
+    if (!sameAs) seen.set(gear, titles[at])
+    return sameAs ? { id: attrs.id, title: titles[at], sameAs } : { id: attrs.id, title: titles[at] }
   })
 
-  const result: PobItem[] = []
-  for (const { attrs } of slots) {
-    const gearSlot = gearSlotForPob(attrs.name)
-    const text = byId.get(attrs.itemId)
-    if (!gearSlot || !text || attrs.itemId === '0') continue
-    result.push({ gearSlot, item: parsePobItem(text, GEAR_SLOTS[gearSlot].slot) })
-  }
-  return { items: result, itemSets, itemSet: set?.attrs.id }
+  const chosen = filled[index]
+  const result: PobItem[] = [...chosen.gear].map(([gearSlot, text]) => ({ gearSlot, item: parsePobItem(text, GEAR_SLOTS[gearSlot].slot) }))
+  const borrowed = Object.fromEntries([...chosen.borrowed].map(([slot, from]) => [slot, titles[from]]))
+  return { items: result, itemSets, itemSet: sets[index]?.attrs.id, borrowed }
 }
 
 const RANGE = /\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g
