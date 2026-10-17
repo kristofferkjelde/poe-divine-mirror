@@ -86,10 +86,21 @@ export function EvaluateView({ item, evaluate }: { item: ParsedItem; evaluate: O
       {ready &&
         (tab === 'filters' ? (
           <Filters search={ready.search} />
-        ) : listings.length > 0 ? (
-          <Listings listings={listings} icons={result?.ok ? result.icons : {}} />
         ) : (
-          <p className="ember-empty">{result ? 'No listings for this search.' : 'Press Search to see what is listed.'}</p>
+          <>
+            <section className="ember-own">
+              <h4>Your item</h4>
+              <div className="window listing-preview">
+                <ItemCard item={item} />
+              </div>
+            </section>
+            <h4 className="ember-heading">Listed</h4>
+            {listings.length > 0 ? (
+              <Listings listings={listings} icons={result?.ok ? result.icons : {}} />
+            ) : (
+              <p className="ember-empty">{result ? 'No listings for this search.' : 'Press Search to see what is listed.'}</p>
+            )}
+          </>
         ))}
 
       {ready && (

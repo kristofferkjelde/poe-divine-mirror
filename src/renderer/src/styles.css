@@ -1608,6 +1608,28 @@ tr[data-direction='down'] .compare-delta {
   color: var(--ink-dim);
 }
 
+.ember-own {
+  display: grid;
+  gap: 4px;
+}
+:is(.ember-own > h4, .ember-heading) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+:is(.ember-own > h4, .ember-heading)::before,
+:is(.ember-own > h4, .ember-heading)::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--frame-mid), transparent);
+}
+
 .ember-listings {
   max-height: 330px;
   overflow-y: auto;
