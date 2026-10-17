@@ -16,7 +16,7 @@ Divine Mirror is a small overlay for Path of Exile 2. It shows the item under yo
 
 ## Install
 
-1. Go to the [**Releases**](https://github.com/kristofferkjelde/poe-item-checker/releases/latest) page.
+1. Go to the [**Releases**](https://github.com/kristofferkjelde/poe-divine-mirror/releases/latest) page.
 2. Download `Divine-Mirror-Setup-x.y.z.exe` and run it.
 3. Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.
 
@@ -38,8 +38,8 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover any other item and press **Alt+Z** | It pops up in the middle of the screen next to the item you wear and your build's item, with a verdict (such as **Equip it** or **Keep yours**) and every stat that changes |
 | Hover an item and press **Ctrl+Alt+Z** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
-| Drag the popup by its bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
-| Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, change the hotkeys (click one and press the new keys), or pick a theme: Ember, Mana or Iron |
+| Drag the popup by its top banner or bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
+| Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, change the hotkeys (click one and press the new keys), pick a theme (Ember, Mana or Iron) or make everything bigger with **UI size** (100%, 110% or 120%) |
 | Right-click the tray icon → **Quit** | The app closes |
 
 Works anywhere you can hover an item: your inventory, stash, vendors, or the ground.
@@ -48,6 +48,8 @@ Works anywhere you can hover an item: your inventory, stash, vendors, or the gro
 
 1. Get your build's Path of Building code. On **Mobalytics**, open the build and click **Copy Code** next to Path of Building. In **Path of Building**, use **Import/Export Build → Generate**. A **pobb.in**, **poe.ninja** or **Maxroll** link works too.
 2. Open **Settings**, paste it under **Build**, and click **Import build**.
+3. If the build has gear stages (such as Early, Mid and Late Endgame), pick yours under **Gear stage**. A Mobalytics link opens on the stage it points at. Stages that leave a slot empty borrow the item from the nearest stage that has one, marked "(from …)".
+4. Mobalytics often leaves some stages' gear out of the Path of Building code. To get every stage's exact items, click **Download Build File** on the build page and add the zip (or single `.build` files) under **Stage gear files**. Files exported to the game's Build Planner from other sites work the same way.
 
 The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it.
 
@@ -69,10 +71,13 @@ Press **Ctrl+Alt+Z** on an item, or click **⚖ Evaluate price** at the bottom o
   <img src="docs/evaluate.png" alt="The Evaluate view for a rare spear with its item art, an estimated value with currency icons, stat filters and the range slider" width="420" />
 </p>
 
-- Every property (DPS, defences, item level, quality, rune sockets) and mod gets a row with a checkbox and **min**/**max** boxes. Tick the ones that matter and adjust the numbers. Mods the trade site can't search for are shown in italics.
-- The **range slider** starts at **Exact match** (your item's own values as the minimums) and moves every minimum down or up in 5% steps, from −50% to +50%. Click the label to go back to exact.
-- Pick the rarity, corrupted state, currency, **Instant buyout** or **In person** listings, and how recently they were listed.
-- Press **Search** (or Enter). You get an **estimated value** (the middle of the cheapest listings, with the range and how reliable it is), the cheapest listings with item level, quality, seller and when they were listed, and **Open on trade ↗** to continue in your browser.
+- The filters are grouped like the in-game tooltip: item properties (DPS, defences, item level, quality, rune sockets) at the top, then **Implicit**, **Prefixes** and **Suffixes**. Rune mods are labelled **Augment**. Mods the trade site can't search for are shown in italics.
+- **Totals** at the bottom adds up stats across mods the way the trade site does, and shows how, e.g. **+24% total Elemental Resistance (8×3)**, since "+% to all Elemental Resistances" counts three times. Click the heading to fold it away; the app remembers.
+- Tick the rows that matter. Scroll the mouse wheel over a **min** or **max** box to change it (hold **Shift** for ten times bigger steps), and right-click it to clear it. The popup never takes keyboard focus from the game.
+- The **range slider** starts at **Exact match** (your item's own values as the minimums) and moves every minimum down or up in 5% steps, from −50% to +50%. The **−20%** and **−10%** buttons jump straight there; click the active one again for an exact match.
+- Click the option buttons to cycle the rarity, corrupted state, currency, **Instant buyout** or **In person** listings, and how recently they were listed (right-click to go back).
+- Press **Search**. You get an **estimated value** (the middle of the cheapest listings, with the range and how reliable it is) and **Open on trade ↗** to continue in your browser.
+- The **Listings** tab shows your own item on top, then the cheapest listings with item level, quality, seller and when they were listed. Hover a listing to see the full item in a tooltip under the popup.
 
 The first search runs automatically with sensible defaults. Weapons are matched on DPS and armour on its defences, so their local mods start unticked. Normal items are priced as crafting bases by item level. Uniques are searched by name. Pick another league under **Settings → Trade**. The trade site limits how often anyone can search, so if you search a lot in a row, the popup asks you to wait a few seconds.
 
@@ -81,7 +86,7 @@ The first search runs automatically with sensible defaults. Weapons are matched 
 - The **verdict** at the top adds up every stat difference, weighted by how much it matters to your build (or in general, if you haven't added one). The percentage next to it is how much better or worse the new item is overall, e.g. **+57%**. Within ±2% counts as a sidegrade.
 - The table lists each stat that changes: what you have **now**, what the **new** item has, and the difference in green or red. Greyed-out rows aren't counted in the score yet.
 - Rings compare against whichever of your two rings is weaker, since that's the one you'd swap out.
-- Saved gear survives restarts. Click **✕ Forget** next to "vs your …" to forget that one item, or right-click the tray icon → **Clear saved gear** to start over.
+- Saved gear survives restarts. Click **✕ Forget** next to "vs your …" to forget that one item. To start over, click **Clear gear** in the popup's bottom bar twice (it turns green when it's done), or right-click the tray icon → **Clear saved gear**.
 - **P1–P6 / S1–S7** badges show whether a mod is a **P**refix or **S**uffix and its tier. Tier 1 is the best roll. T1 and T2 are highlighted.
 - Mod colors match the game: blue for normal mods, light blue for runes, red for corrupted.
 
@@ -99,7 +104,7 @@ Your clipboard is put back the way it was right after the item is read.
 ## Troubleshooting
 
 **Nothing happens when I press Alt+Z**
-- Check that the tray icon is there. Hover it: if it says a hotkey is taken, another app (often another overlay) already uses it. Open **Settings…** from the tray and pick a different combination. The Settings window also opens by itself when this happens.
+- Check that the tray icon is there. Hover it: if it says a hotkey is taken, another app (often another overlay) already uses it. Open **Settings…** from the tray and pick a different combination. Windows also shows a notification when the app starts; click it to open Settings.
 - Make sure your mouse is actually over an item and the game window is focused.
 - If the popup says **Couldn't read an item**, the game didn't copy anything. Hover the item and press the hotkey again. In a busy map it can help to hold the keys a moment longer.
 
@@ -107,7 +112,7 @@ Your clipboard is put back the way it was right after the item is read.
 - Switch the game to **Windowed Fullscreen** (see [Set up the game](#set-up-the-game)).
 
 **An item looks wrong**
-- Hover it, press **Ctrl+Alt+C** in game, paste the text into a [new issue](https://github.com/kristofferkjelde/poe-item-checker/issues/new), and say what's off.
+- Hover it, press **Ctrl+Alt+C** in game, paste the text into a [new issue](https://github.com/kristofferkjelde/poe-divine-mirror/issues/new), and say what's off.
 
 ## Roadmap
 

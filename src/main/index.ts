@@ -11,6 +11,7 @@ import { serveApp } from './appScheme'
 import { registerSchemes, serveCachedImages } from './imageCache'
 import { registerHandlers } from './ipc'
 import { Overlay } from './overlay'
+import { mayNavigate } from './pageReader'
 import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
@@ -154,7 +155,9 @@ function warnTakenHotkeys(taken: string[], openSettings: () => void): void {
 }
 
 app.on('web-contents-created', (_event, contents) => {
-  contents.on('will-navigate', (event) => event.preventDefault())
+  contents.on('will-navigate', (event, url) => {
+    if (!mayNavigate(contents, url)) event.preventDefault()
+  })
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))
 })
 

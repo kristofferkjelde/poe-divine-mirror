@@ -48,6 +48,7 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
           </select>
         </label>
       )}
+      {stageTitle(build) && <StageFiles build={build} />}
       {build.version !== PROFILE_VERSION && (
         <p className="hotkey-status">
           This build was imported by an older version of the app. Click Change and import it again to pick up the latest
@@ -55,6 +56,52 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
         </p>
       )}
       <BuildWeights build={build} />
+    </>
+  )
+}
+
+function StageFiles({ build }: { build: BuildProfile }) {
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const planned = build.itemSets?.filter(({ id }) => build.stageGear?.[id]).map(({ title }) => title) ?? []
+
+  const add = async (input: HTMLInputElement) => {
+    const files = [...(input.files ?? [])]
+    input.value = ''
+    if (files.length === 0) return
+    setPending(true)
+    const response = await window.settings.addBuildStages(
+      await Promise.all(files.map(async (file) => ({ name: file.name, data: new Uint8Array(await file.arrayBuffer()) }))),
+    )
+    setPending(false)
+    setError(response.ok ? null : response.error)
+    if (response.ok) setSettingsState(response.state)
+  }
+
+  return (
+    <>
+      <div className="settings-row">
+        <span>
+          Stage gear files
+          <small>
+            Mobalytics often leaves a stage's gear out of the Path of Building code. On the build page, click Download
+            Build File and add the zip (or single .build files) here to compare against exactly those items.
+          </small>
+          {planned.length > 0 && <small className="stage-gear">From .build files: {planned.join(' · ')}</small>}
+        </span>
+        <label className="hotkey-button" aria-disabled={pending}>
+          {pending ? 'Adding…' : 'Add build files'}
+          <input
+            type="file"
+            accept=".build,.zip"
+            multiple
+            hidden
+            disabled={pending}
+            onChange={(event) => void add(event.currentTarget)}
+          />
+        </label>
+      </div>
+      {error && <p className="hotkey-status">{error}</p>}
     </>
   )
 }

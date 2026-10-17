@@ -1,8 +1,8 @@
 import type { ParsedGear } from '../compare/gear'
 import { DERIVED, statKeys } from '../compare/stats'
 import { DEFAULT_WEIGHTS, ruleWeight, weightFor, type WeightRule } from '../compare/weights'
-import type { GearSlot } from '../gear'
-import type { ItemSet, PobBuild } from './pob'
+import { isGear, type GearSlot } from '../gear'
+import type { ItemSet, PobBuild, StageGear } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
 
@@ -22,6 +22,7 @@ export interface BuildProfile {
   itemSets?: ItemSet[]
   itemSet?: string
   borrowed?: Partial<Record<GearSlot, string>>
+  stageGear?: StageGear
   custom: Record<string, number>
 }
 
@@ -214,6 +215,8 @@ export function isStoredProfile(value: unknown): value is StoredProfile {
     typeof profile.custom === 'object' &&
     profile.custom !== null &&
     Object.values(profile.custom).every((weight) => Number.isFinite(weight)) &&
-    (profile.items === undefined || (typeof profile.items === 'object' && profile.items !== null))
+    (profile.items === undefined || (typeof profile.items === 'object' && profile.items !== null)) &&
+    (profile.stageGear === undefined ||
+      (typeof profile.stageGear === 'object' && profile.stageGear !== null && Object.values(profile.stageGear).every(isGear)))
   )
 }

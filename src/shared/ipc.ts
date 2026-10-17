@@ -66,6 +66,11 @@ export interface TooltipBridge extends TooltipApi {
   onContent: (listener: (content: TooltipContent | null) => void) => () => void
 }
 
+export interface BuildFile {
+  name: string
+  data: Uint8Array
+}
+
 export interface SettingsApi {
   get: () => Promise<SettingsState>
   setHotkey: (action: HotkeyAction, accelerator: string) => Promise<SettingsResponse>
@@ -74,6 +79,7 @@ export interface SettingsApi {
   setLocked: (locked: boolean) => Promise<SettingsState>
   setRecording: (recording: boolean) => Promise<void>
   importBuild: (input: string) => Promise<SettingsResponse>
+  addBuildStages: (files: BuildFile[]) => Promise<SettingsResponse>
   removeBuild: () => Promise<SettingsState>
   setBuildItemSet: (itemSet: string) => Promise<SettingsState>
   setBuildWeight: (stat: string, weight: number | null) => Promise<SettingsState>
@@ -115,6 +121,7 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setLocked: true,
   setRecording: true,
   importBuild: true,
+  addBuildStages: true,
   removeBuild: true,
   setBuildItemSet: true,
   setBuildWeight: true,

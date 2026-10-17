@@ -1,5 +1,5 @@
 import { UserFacingError } from '../errors'
-import { GEAR_SLOTS, gearSlotForPob, type GearSlot } from '../gear'
+import { GEAR_SLOTS, gearSlotForPob, type Gear, type GearSlot } from '../gear'
 import { parseModLine } from '../item/parse'
 import type { DamageRange, Mod, ModType, ParsedItem, Property, Rarity, Slot, WeaponStats } from '../item/types'
 import WEAPON_BASES from './weaponBases.json'
@@ -65,7 +65,9 @@ function section(xml: string, name: string): string {
   return new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)</${name}>`).exec(xml)?.[1] ?? ''
 }
 
-export function parsePobXml(xml: string, itemSet?: string): PobBuild {
+export type StageGear = Record<string, Gear>
+
+export function parsePobXml(xml: string, itemSet?: string, stageGear?: StageGear): PobBuild {
   const build = elements(xml, 'Build')[0]
   if (/<PathOfBuilding[\s>]/.test(xml)) throw new PobParseError('That is a Path of Exile 1 build. Use a PoE 2 build instead.')
   if (!build || !xml.includes('<PathOfBuilding2')) throw new PobParseError('That is not a Path of Building build')
@@ -83,7 +85,7 @@ export function parsePobXml(xml: string, itemSet?: string): PobBuild {
     mainSkill: mainSkill(xml, Number(build.attrs.mainSocketGroup) || 1),
     stats,
     minion: /<MinionStat\b/.test(build.body),
-    ...equippedItems(xml, itemSet),
+    ...equippedItems(xml, itemSet, stageGear),
   }
 }
 
@@ -109,6 +111,21 @@ function gearOfSet(body: string, byId: Map<string, string>): SetGear {
   return gear
 }
 
+function plannedGear(gear: Gear, byId: Map<string, string>): SetGear {
+  const pobUniques = new Map(
+    [...byId.values()].flatMap((text) => {
+      const [, name] = /^\s*Rarity: UNIQUE\s*\n\s*(.+?)\s*$/im.exec(text) ?? []
+      return name ? [[name.toLowerCase(), text] as const] : []
+    }),
+  )
+  const planned: SetGear = new Map()
+  for (const [slot, text] of Object.entries(gear) as Array<[GearSlot, string]>) {
+    const [, unique] = /^Rarity: UNIQUE\n(.+)\nImplicits: 0$/.exec(text) ?? []
+    planned.set(slot, (unique && pobUniques.get(unique.toLowerCase())) || text)
+  }
+  return planned
+}
+
 function withBorrowedGear(sets: SetGear[], index: number): { gear: SetGear; borrowed: Map<GearSlot, number> } {
   const gear = new Map(sets[index])
   const borrowed = new Map<GearSlot, number>()
@@ -131,7 +148,7 @@ function withBorrowedGear(sets: SetGear[], index: number): { gear: SetGear; borr
   return { gear, borrowed }
 }
 
-function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | 'itemSets' | 'itemSet' | 'borrowed'> {
+function equippedItems(xml: string, wanted?: string, stageGear: StageGear = {}): Pick<PobBuild, 'items' | 'itemSets' | 'itemSet' | 'borrowed'> {
   const items = section(xml, 'Items')
   const byId = new Map(elements(items, 'Item').map(({ attrs, body }) => [attrs.id, decodeEntities(body.replace(/<[^>]*>/g, ''))]))
   const active = attributes(/<Items\b([^>]*)>/.exec(xml)?.[1] ?? '').activeItemSet ?? '1'
@@ -139,7 +156,10 @@ function equippedItems(xml: string, wanted?: string): Pick<PobBuild, 'items' | '
   const titles = sets.map(({ attrs }) => attrs.title?.trim() || `Set ${attrs.id}`)
   const wantedIndex = sets.findIndex((entry) => entry.attrs.id === wanted)
   const index = wantedIndex >= 0 ? wantedIndex : Math.max(sets.findIndex((entry) => entry.attrs.id === active), 0)
-  const setGear = sets.length > 0 ? sets.map(({ body }) => gearOfSet(body, byId)) : [gearOfSet(items, byId)]
+  const setGear =
+    sets.length > 0
+      ? sets.map(({ attrs, body }) => new Map([...gearOfSet(body, byId), ...plannedGear(stageGear[attrs.id] ?? {}, byId)]))
+      : [gearOfSet(items, byId)]
   const filled = setGear.map((_, at) => withBorrowedGear(setGear, at))
 
   const seen = new Map<string, string>()
