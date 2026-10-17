@@ -76,13 +76,16 @@ export function pseudoTotals(sources: PseudoSource[], groups: TradeStatGroup[]):
     if (!stat) return []
     let value = 0
     const used: number[] = []
+    const parts: string[] = []
     for (const source of sources) {
       const weight = rule.contributions.find(([pattern]) => pattern.test(source.template))?.[1]
       if (weight === undefined) continue
       value += source.value * weight
       used.push(source.index)
+      parts.push(weight === 1 ? `${source.value}` : `${source.value}×${weight}`)
     }
     if (used.length === 0 || value <= 0) return []
-    return [{ key: rule.key, label: rule.label(value), value, statId: stat.id, sources: used }]
+    const label = parts.length > 1 || parts[0] !== `${value}` ? `${rule.label(value)} (${parts.join(' + ')})` : rule.label(value)
+    return [{ key: rule.key, label, value, statId: stat.id, sources: used }]
   })
 }

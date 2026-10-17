@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseItem } from '../item/parse'
+import { pseudoTotals } from './pseudo'
 import {
   applyEdit,
   defaultSearch,
@@ -64,7 +65,7 @@ describe('defaultSearch', () => {
     expect(enabled).toEqual([
       ['Evasion (at 20% quality)', 183],
       ['Energy Shield (at 20% quality)', 55],
-      ['+90 total maximum Mana', 90],
+      ['+90 total maximum Mana (54 + 18×2)', 90],
       ['+34% total Elemental Resistance', 34],
       ['+18 total to Attributes', 18],
     ])
@@ -75,6 +76,11 @@ describe('defaultSearch', () => {
       'pseudo.pseudo_total_elemental_resistance',
       'pseudo.pseudo_total_attributes',
     ])
+  })
+
+  it('shows how a total is made up, counting all elemental resistances three times like the trade site', () => {
+    const totals = pseudoTotals([{ index: 0, template: '+#% to all Elemental Resistances', value: 8 }], stats)
+    expect(totals).toMatchObject([{ label: '+24% total Elemental Resistance (8×3)', value: 24, statId: 'pseudo.pseudo_total_elemental_resistance' }])
   })
 
   it('searches uniques by name with their mods off', () => {
