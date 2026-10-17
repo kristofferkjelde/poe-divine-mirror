@@ -202,8 +202,9 @@ describe('importBuild', () => {
         .replace('<ItemSet useSecondWeaponSet="false" id="1">', '<ItemSet useSecondWeaponSet="false" title="Mid Endgame" id="1">')
         .replace(
           '</Items>',
-          '<ItemSet useSecondWeaponSet="false" title="Late Campaign" id="2"><Slot name="Helmet" itemId="2"/></ItemSet>' +
-            '<ItemSet useSecondWeaponSet="false" title="Early Atlas" id="3"><Slot name="Helmet" itemId="2"/><Slot name="Weapon 1" itemId="0"/></ItemSet></Items>',
+          '<Item id="9">Rarity: NORMAL\nGold Ring\nImplicits: 0</Item>' +
+            '<ItemSet useSecondWeaponSet="false" title="Late Campaign" id="2"><Slot name="Ring 1" itemId="9"/></ItemSet>' +
+            '<ItemSet useSecondWeaponSet="false" title="Early Atlas" id="3"><Slot name="Ring 1" itemId="9"/><Slot name="Weapon 1" itemId="0"/></ItemSet></Items>',
         ),
     )
 
@@ -222,8 +223,9 @@ describe('importBuild', () => {
       const profile = { ...(await importBuild(staged, offline)), custom: { '+# to maximum Life': 3 } }
       const late = chooseItemSet(profile, '2')
       expect(late.itemSet).toBe('2')
-      expect(late.items.weapon).toBeUndefined()
-      expect(late.items.helmet).toBeDefined()
+      expect(late.items.ring1?.name).toBe('Gold Ring')
+      expect(late.items.weapon?.name).toBe('Storm Impaler')
+      expect(late.borrowed).toEqual({ weapon: 'Mid Endgame', helmet: 'Mid Endgame', boots: 'Mid Endgame' })
       expect(late.custom).toEqual({ '+# to maximum Life': 3 })
       expect(chooseItemSet(profile, '9')).toBe(profile)
     })
