@@ -31,6 +31,7 @@ export type CurrencyWorthResult =
       ok: true
       league: string
       updatedAt: number
+      fetchedAt: number
       url: string
       item: CurrencyEntry
       group: string

@@ -67,9 +67,9 @@ export function overlayHandlers({ store, gear, characters, trade, market, overla
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>
       typeof id === 'string' ? trade.search(id, edit, store.current.league) : { ok: false, error: 'Nothing to search for' },
-    currencyWorth: (text, target) =>
+    currencyWorth: (text, target, fresh) =>
       typeof text === 'string' && isExchangeTarget(target)
-        ? market.worth(text, target, store.current.league)
+        ? market.worth(text, target, store.current.league, fresh === true)
         : { ok: false, error: 'No currency to price' },
     exchangeCatalog: () => trade.catalog().catch(() => []),
     setCurrencyTarget: async (target) => {

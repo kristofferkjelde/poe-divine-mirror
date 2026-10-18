@@ -4,7 +4,7 @@ import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
 import type { CurrencyEntry, ExchangeGroup } from '../../../shared/trade/currency'
 import { formatAmount, stackSize, type CurrencyWorthResult } from '../../../shared/trade/exchange'
-import { exchangeCatalog, flipWorth, retryWorth, showWorthIn, type WorthState } from '../overlayStore'
+import { exchangeCatalog, flipWorth, refreshWorth, retryWorth, showWorthIn, type WorthState } from '../overlayStore'
 import { Pips } from './EvaluateView'
 import { ItemArt } from './ItemArt'
 
@@ -86,11 +86,10 @@ export function CurrencyView({ item, text, worth, flipped }: Props) {
       </p>
 
       {shown && <Ledger worth={shown} stack={stack} flipped={flipped} />}
+      {shown && <PricesTime updatedAt={shown.updatedAt} />}
 
       <footer className="ember-links">
-        <span className="currency-league">
-          {shown ? [shown.league, traded(shown), age(shown.updatedAt)].filter(Boolean).join(' · ') : ''}
-        </span>
+        <span className="currency-league">{shown ? [shown.league, traded(shown)].filter(Boolean).join(' · ') : ''}</span>
         {result?.url && (
           <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(result.url!)}>
             poe.ninja ↗
@@ -103,9 +102,20 @@ export function CurrencyView({ item, text, worth, flipped }: Props) {
 
 const traded = ({ rate }: Worth) => (rate.traded !== undefined ? `${formatAmount(rate.traded)} traded` : '')
 
-function age(updatedAt: number): string {
+function PricesTime({ updatedAt }: { updatedAt: number }) {
   const minutes = Math.floor((Date.now() - updatedAt) / 60_000)
-  return minutes < 1 ? 'prices just now' : `prices ${minutes} min old`
+  const clock = new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const ago = minutes < 1 ? 'just now' : minutes < 120 ? `${minutes} min ago` : `${Math.floor(minutes / 60)} h ago`
+  return (
+    <p className="currency-time">
+      <span title="When poe.ninja last read the in-game Currency Exchange">
+        Prices from {clock} ({ago})
+      </span>
+      <button type="button" className="panel-link" title="Fetch the latest prices now" onClick={() => void refreshWorth()}>
+        ↻ Refresh
+      </button>
+    </p>
+  )
 }
 
 function Ratio({ worth: { loading, result }, flipped }: { worth: WorthState; flipped: boolean }) {
