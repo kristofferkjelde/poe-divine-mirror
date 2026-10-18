@@ -4,6 +4,7 @@
   "private": true,
   "license": "MIT",
   "author": "Kristoffer Kjelde",
+  "homepage": "https://www.poe-divine-mirror.com/",
   "description": "Path of Exile 2 overlay that compares hovered items against your equipped gear",
   "main": "out/main/index.js",
   "scripts": {

@@ -12,4 +12,4 @@ The windows on the page are screenshots of the real app at 2x, one set per theme
 
 ## Deploy on Vercel
 
-Import the repository and set **Root Directory** to `website`. Vercel detects Vite, so the defaults are right: build command `npm run build`, output directory `dist`.
+The site lives at [www.poe-divine-mirror.com](https://www.poe-divine-mirror.com/). Import the repository and set **Root Directory** to `website`. Vercel detects Vite, so the defaults are right: build command `npm run build`, output directory `dist`.
