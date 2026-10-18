@@ -9,7 +9,7 @@ export type UpdateStatus =
 
 export interface UpdateMenuItem {
   label: string
-  action?: 'check' | 'download' | 'install'
+  action?: 'check' | 'update'
 }
 
 export function updateMenuItem(status: UpdateStatus): UpdateMenuItem {
@@ -17,11 +17,11 @@ export function updateMenuItem(status: UpdateStatus): UpdateMenuItem {
     case 'checking':
       return { label: 'Checking for updates…' }
     case 'available':
-      return { label: `Update to ${status.version}`, action: 'download' }
+      return { label: `Update to ${status.version} and restart`, action: 'update' }
     case 'downloading':
-      return { label: `Downloading ${status.version}… ${Math.floor(status.percent)}%` }
+      return { label: `Updating to ${status.version}… ${Math.floor(status.percent)}%` }
     case 'ready':
-      return { label: `Restart to update to ${status.version}`, action: 'install' }
+      return { label: `Restart to update to ${status.version}`, action: 'update' }
     default:
       return { label: 'Check for updates', action: 'check' }
   }
@@ -29,9 +29,11 @@ export function updateMenuItem(status: UpdateStatus): UpdateMenuItem {
 
 export function trayTooltip(version: string, status: UpdateStatus, hint: string): string {
   const update =
-    status.kind === 'available' || status.kind === 'downloading'
+    status.kind === 'available'
       ? `Update ${status.version} available`
-      : status.kind === 'ready'
+      : status.kind === 'downloading'
+        ? `Updating to ${status.version}, restarts when done`
+        : status.kind === 'ready'
         ? `Update ${status.version} ready, restart to install`
         : null
   return [`Divine Mirror ${version}`, update ?? hint].join('\n')

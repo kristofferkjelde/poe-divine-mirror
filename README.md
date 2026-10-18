@@ -22,7 +22,7 @@ Divine Mirror is a small overlay for Path of Exile 2. It shows the item under yo
 
 The app starts in the system tray (bottom-right, near the clock). Hover the icon to see your version, and right-click it to quit.
 
-**Updates:** the app checks for a new release when it starts and every few hours. When one is out you get a notification; click it (or **Update to x.y.z** in the tray menu) to download, then **Restart to update**. Versions before 0.5.0 can't update themselves, so install 0.5.0 by hand once.
+**Updates:** the app checks for a new release when it starts and every few hours. When one is out you get a notification; click it (or **Update to x.y.z and restart** in the tray menu) once, and the app downloads the update, installs it and starts again by itself. Versions before 0.5.0 can't update themselves, so install 0.5.0 by hand once.
 
 **Requirements:** Windows 10 or 11.
 

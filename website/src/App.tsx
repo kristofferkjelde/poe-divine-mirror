@@ -325,8 +325,8 @@ function Download() {
           </li>
         </ol>
         <p className="download-note">
-          From version 0.5.0 on, Divine Mirror tells you when a new version is out. Click the notification, or use
-          the tray menu, to update without leaving the app.
+          From version 0.5.0 on, Divine Mirror tells you when a new version is out. Click the notification once, or use
+          the tray menu, and it updates and restarts by itself.
         </p>
         <div className="hero-actions">
           <a className="btn btn-primary" href={DOWNLOAD_URL}>

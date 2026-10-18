@@ -39,7 +39,7 @@ export class Updates {
     })
     autoUpdater.on('update-downloaded', ({ version }) => {
       this.set({ kind: 'ready', version })
-      notify(`Divine Mirror ${version} is ready`, 'Click here, or use the tray menu, to restart and update.', () => this.install())
+      this.install()
     })
     autoUpdater.on('error', (error: Error) => {
       const manual = this.state.kind === 'checking' && this.state.manual
@@ -73,7 +73,8 @@ export class Updates {
       })
   }
 
-  download(): void {
+  update(): void {
+    if (this.state.kind === 'ready') this.install()
     if (this.state.kind !== 'available') return
     this.set({ kind: 'downloading', version: this.state.version, percent: 0 })
     void this.load()
@@ -81,14 +82,18 @@ export class Updates {
       .catch(() => {})
   }
 
-  install(): void {
+  private install(): void {
     if (this.state.kind === 'ready') void this.load().then((updater) => updater.quitAndInstall(true, true))
   }
 
   private announce(version: string): void {
     if (this.announced === version) return
     this.announced = version
-    notify(`Divine Mirror ${version} is out`, 'Click here, or use the tray menu, to download the update.', () => this.download())
+    notify(
+      `Divine Mirror ${version} is out`,
+      'Click here, or use the tray menu, to update. Divine Mirror restarts by itself when it is done.',
+      () => this.update(),
+    )
   }
 
   private set(next: UpdateStatus): void {
