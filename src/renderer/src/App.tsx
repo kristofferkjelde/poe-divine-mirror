@@ -18,7 +18,7 @@ export function App() {
 
   if (state.status === 'error') {
     return (
-      <Panel hotkeys={state.hotkeys} locked={state.locked}>
+      <Panel hotkeys={state.hotkeys} locked={state.locked} character={state.character}>
         <div className="window detail">
           <p className="panel-message">{state.message}</p>
         </div>
@@ -27,7 +27,7 @@ export function App() {
   }
 
   return (
-    <Panel key={state.id} hotkeys={state.hotkeys} locked={state.locked}>
+    <Panel key={state.id} hotkeys={state.hotkeys} locked={state.locked} character={state.character}>
       <ItemWindows state={state} />
     </Panel>
   )

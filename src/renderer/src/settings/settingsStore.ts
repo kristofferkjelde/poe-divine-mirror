@@ -11,6 +11,8 @@ export function setSettingsState(next: SettingsState): void {
   listeners.forEach((listener) => listener())
 }
 
+window.addEventListener('focus', () => void window.settings.get().then(setSettingsState))
+
 function subscribe(listener: () => void) {
   listeners.add(listener)
   loading ??= window.settings.get().then(setSettingsState)

@@ -2,13 +2,28 @@ import { rulesForProfile, type BuildProfile } from '../shared/build/profile'
 import { chooseEquipSlot, parseGear } from '../shared/compare/gear'
 import { isGear, type Gear, type GearSlot } from '../shared/gear'
 import { parseItem } from '../shared/item/parse'
+import type { CharacterStore } from './characterStore'
 import { jsonFile } from './jsonFile'
 import { Listeners } from './listeners'
 
 export class GearStore {
-  private readonly file = jsonFile('gear.json')
-  private gear: Gear = this.load()
+  private fileName: string
+  private file: ReturnType<typeof jsonFile>
+  private gear: Gear
   private readonly listeners = new Listeners()
+
+  constructor(characters: CharacterStore) {
+    this.fileName = characters.fileName('gear')
+    this.file = jsonFile(this.fileName)
+    this.gear = this.load()
+    characters.onChange(() => {
+      if (characters.fileName('gear') === this.fileName) return
+      this.fileName = characters.fileName('gear')
+      this.file = jsonFile(this.fileName)
+      this.gear = this.load()
+      this.listeners.notify()
+    })
+  }
 
   get current(): Gear {
     return { ...this.gear }

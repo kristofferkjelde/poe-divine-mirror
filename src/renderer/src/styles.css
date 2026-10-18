@@ -2073,3 +2073,36 @@ label.hotkey-button[aria-disabled='true'] {
   --swatch-glow: #8f875e;
   --swatch-deep: #12110b;
 }
+
+.panel-character {
+  max-width: 12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent-ink);
+}
+
+.settings-input {
+  width: 180px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-value);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--frame-lo);
+  border-radius: 2px;
+  user-select: text;
+}
+
+.settings-input:focus {
+  border-color: var(--accent-ink);
+  outline: none;
+}
+
+.character-actions {
+  padding-bottom: 6px;
+}
+
+.settings-reset[data-confirm='true'] {
+  color: var(--delta-down);
+}

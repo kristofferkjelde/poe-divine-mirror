@@ -7,6 +7,7 @@ import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
 import { TRADE_ORIGIN } from '../shared/trade/price'
 import { addStages, chooseItemSet, importBuild, stagesFromFiles } from './buildImport'
 import type { BuildStore } from './buildStore'
+import type { CharacterStore } from './characterStore'
 import type { GearStore } from './gearStore'
 import type { Hotkeys } from './hotkeys'
 import type { Handlers } from './ipc'
@@ -23,6 +24,7 @@ interface Services {
   store: SettingsStore
   gear: GearStore
   builds: BuildStore
+  characters: CharacterStore
   hotkeys: Hotkeys
   trade: TradeClient
   overlay: Overlay
@@ -43,7 +45,7 @@ const isBuildFiles = (value: unknown): value is BuildFile[] =>
 
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
-export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }: Services): Handlers<OverlayApi> {
+export function overlayHandlers({ store, gear, characters, trade, overlay, settingsWindow }: Services): Handlers<OverlayApi> {
   return {
     resize: (height) => {
       if (isFiniteNumber(height)) overlay.resize(height)
@@ -55,6 +57,9 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
       if (isGearSlot(slot)) await gear.forget(slot)
     },
     clearGear: () => gear.clear(),
+    cycleCharacter: async (by) => {
+      if (by === 1 || by === -1) await characters.cycle(by)
+    },
     prepareSearch: (text) =>
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>
@@ -76,11 +81,18 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
   }
 }
 
-export function settingsHandlers({ store, builds, hotkeys, trade }: Pick<Services, 'store' | 'builds' | 'hotkeys' | 'trade'>): Handlers<SettingsApi> {
+export function settingsHandlers({
+  store,
+  builds,
+  characters,
+  hotkeys,
+  trade,
+}: Pick<Services, 'store' | 'builds' | 'characters' | 'hotkeys' | 'trade'>): Handlers<SettingsApi> {
   const state = (): SettingsState => ({
     settings: store.current,
     unavailable: hotkeys.unavailableActions,
     build: builds.current,
+    characters: characters.current,
   })
   const then = (change: Promise<void>) => change.then(state)
 
@@ -117,6 +129,11 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Pick<Service
       }
     },
     removeBuild: () => then(builds.set(null)),
+    addCharacter: (name) => then(characters.add(typeof name === 'string' ? name : '')),
+    renameCharacter: (id, name) =>
+      typeof id === 'string' && typeof name === 'string' ? then(characters.rename(id, name)) : Promise.resolve(state()),
+    removeCharacter: (id) => (typeof id === 'string' ? then(characters.remove(id)) : Promise.resolve(state())),
+    selectCharacter: (id) => (typeof id === 'string' ? then(characters.select(id)) : Promise.resolve(state())),
     setBuildItemSet: async (itemSet) => {
       if (typeof itemSet === 'string' && builds.current) {
         try {

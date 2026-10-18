@@ -1,4 +1,5 @@
 import type { BuildProfile } from './build/profile'
+import type { ActiveCharacter, CharacterList } from './characters'
 import type { Gear, GearSlot } from './gear'
 import type { ParsedItem } from './item/types'
 import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
@@ -14,13 +15,14 @@ export interface OverlayContext {
   hotkeys: Settings['hotkeys']
   locked: boolean
   build: BuildProfile | null
+  character: ActiveCharacter
   theme: Theme
 }
 
 export interface OverlayMessages {
   event: OverlayEvent
   preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme'>
-  gear: Pick<OverlayContext, 'gear' | 'build'>
+  gear: Pick<OverlayContext, 'gear' | 'build' | 'character'>
   revealed: null
 }
 
@@ -28,6 +30,7 @@ export interface SettingsState {
   settings: Settings
   unavailable: HotkeyAction[]
   build: BuildProfile | null
+  characters: CharacterList
 }
 
 export type SetHotkeyResult = { ok: true } | { ok: false; error: string }
@@ -40,6 +43,7 @@ export interface OverlayApi {
   setLocked: (locked: boolean) => Promise<void>
   forgetGear: (slot: GearSlot) => Promise<void>
   clearGear: () => Promise<void>
+  cycleCharacter: (by: number) => Promise<void>
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   openTrade: (url: string) => Promise<void>
@@ -81,6 +85,10 @@ export interface SettingsApi {
   importBuild: (input: string) => Promise<SettingsResponse>
   addBuildStages: (files: BuildFile[]) => Promise<SettingsResponse>
   removeBuild: () => Promise<SettingsState>
+  addCharacter: (name: string) => Promise<SettingsState>
+  renameCharacter: (id: string, name: string) => Promise<SettingsState>
+  removeCharacter: (id: string) => Promise<SettingsState>
+  selectCharacter: (id: string) => Promise<SettingsState>
   setBuildItemSet: (itemSet: string) => Promise<SettingsState>
   setBuildWeight: (stat: string, weight: number | null) => Promise<SettingsState>
   resetBuildWeights: () => Promise<SettingsState>
@@ -101,6 +109,7 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   setLocked: true,
   forgetGear: true,
   clearGear: true,
+  cycleCharacter: true,
   prepareSearch: true,
   runSearch: true,
   openTrade: true,
@@ -123,6 +132,10 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   importBuild: true,
   addBuildStages: true,
   removeBuild: true,
+  addCharacter: true,
+  renameCharacter: true,
+  removeCharacter: true,
+  selectCharacter: true,
   setBuildItemSet: true,
   setBuildWeight: true,
   resetBuildWeights: true,
