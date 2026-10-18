@@ -1,12 +1,27 @@
 import { isStoredProfile, type BuildProfile } from '../shared/build/profile'
 import { refreshProfile } from './buildImport'
+import type { CharacterStore } from './characterStore'
 import { jsonFile } from './jsonFile'
 import { Listeners } from './listeners'
 
 export class BuildStore {
-  private readonly file = jsonFile('build.json')
-  private profile: BuildProfile | null = this.load()
+  private fileName: string
+  private file: ReturnType<typeof jsonFile>
+  private profile: BuildProfile | null
   private readonly listeners = new Listeners()
+
+  constructor(characters: CharacterStore) {
+    this.fileName = characters.fileName('build')
+    this.file = jsonFile(this.fileName)
+    this.profile = this.load()
+    characters.onChange(() => {
+      if (characters.fileName('build') === this.fileName) return
+      this.fileName = characters.fileName('build')
+      this.file = jsonFile(this.fileName)
+      this.profile = this.load()
+      this.listeners.notify()
+    })
+  }
 
   get current(): BuildProfile | null {
     return this.profile

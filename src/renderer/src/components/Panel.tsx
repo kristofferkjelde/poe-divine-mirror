@@ -1,4 +1,5 @@
 import { useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import type { ActiveCharacter } from '../../../shared/characters'
 import type { Settings } from '../../../shared/settings'
 import { setOverlayLocked } from '../overlayStore'
 
@@ -26,10 +27,11 @@ const reportHeight = (node: HTMLElement | null) => {
 interface Props {
   hotkeys: Settings['hotkeys']
   locked: boolean
+  character: ActiveCharacter
   children: ReactNode
 }
 
-export function Panel({ hotkeys, locked, children }: Props) {
+export function Panel({ hotkeys, locked, character, children }: Props) {
   const [clear, setClear] = useState<ClearState>('idle')
   const clearTimer = useRef<number | undefined>(undefined)
   const hints = `${hotkeys.compare} compare · ${hotkeys.equip} equip · ${hotkeys.price} price`
@@ -98,6 +100,20 @@ export function Panel({ hotkeys, locked, children }: Props) {
               {hints}
             </span>
             <span className="panel-actions">
+              {character.count > 1 && (
+                <button
+                  type="button"
+                  className="panel-link panel-character"
+                  title="Your character. Click for the next one, right-click for the previous one."
+                  onClick={() => void window.overlay.cycleCharacter(1)}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    void window.overlay.cycleCharacter(-1)
+                  }}
+                >
+                  {character.label}
+                </button>
+              )}
               <button
                 type="button"
                 className="panel-link"

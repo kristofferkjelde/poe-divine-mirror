@@ -1,5 +1,6 @@
 import { HOTKEY_ACTIONS } from '../../../shared/settings'
 import { BuildSettings } from './BuildSettings'
+import { CharacterSettings } from './CharacterSettings'
 import { HotkeyField } from './HotkeyField'
 import { OverlaySettings } from './OverlaySettings'
 import { ThemeSettings } from './ThemeSettings'
@@ -14,8 +15,14 @@ export function SettingsApp() {
       <h1>Settings</h1>
       {state && (
         <section className="settings-section">
+          <h2>Character</h2>
+          <CharacterSettings list={state.characters} />
+        </section>
+      )}
+      {state && (
+        <section className="settings-section">
           <h2>Build</h2>
-          <BuildSettings build={state.build} />
+          <BuildSettings key={state.characters.active} build={state.build} />
         </section>
       )}
       <section className="settings-section">

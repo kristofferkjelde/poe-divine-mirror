@@ -56,6 +56,12 @@ The app reads the build's gear, main skill and defences. It then boosts the stat
 
 With a build added, **Alt+Z** also compares the item against your build's item for that slot, so you can see how close it gets to the build's gear. The popup shows the item you wear, the new item and your build's item side by side. Click **Show full comparison** for every stat and the full item text.
 
+**Play more than one character**
+
+Each character keeps its own build and saved gear. Open **Settings → Character**, click **Add character** and type its name exactly as in the game. Then import that character's build as usual.
+
+To switch, pick the character under **Playing**, or click its name in the popup's bottom bar (right-click goes back). The app also reads the game's log file, `Client.txt`, and switches by itself when one of your characters levels up, dies or writes in chat. The game doesn't log which character you log in with, so until one of those happens the app keeps the last one.
+
 **Pick a theme**
 
 Open **Settings → Theme** and choose **Ember** (glowing embers on obsidian), **Mana** (a sapphire glow in a bronze frame, like the mana globe) or **Iron** (gunmetal and pale gold, like the in-game menu). Every window follows the theme you pick.

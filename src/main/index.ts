@@ -4,6 +4,8 @@ import type { OverlayApi } from '../shared/ipc'
 import { HOTKEY_ACTIONS, HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
 import { overlayHandlers, settingsHandlers } from './api'
 import { BuildStore } from './buildStore'
+import { CharacterStore } from './characterStore'
+import { ClientLog } from './clientLog'
 import { copyHoveredItem } from './clipboard'
 import { GearStore } from './gearStore'
 import { Hotkeys } from './hotkeys'
@@ -39,8 +41,9 @@ function start(): void {
   session.defaultSession.setPermissionCheckHandler(() => false)
   const store = new SettingsStore()
   const overlay = new Overlay(store)
-  const gear = new GearStore()
-  const builds = new BuildStore()
+  const characters = new CharacterStore()
+  const gear = new GearStore(characters)
+  const builds = new BuildStore(characters)
   const trade = new TradeClient()
   const market = new MarketClient(trade)
 
@@ -51,7 +54,7 @@ function start(): void {
       theme: store.current.theme,
       currencyTarget: store.current.currencyTarget,
     })
-  const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current })
+  const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current, character: characters.active })
   overlay.onReady(() => {
     pushPreferences()
     pushGear()
@@ -62,6 +65,8 @@ function start(): void {
   )
   gear.onChange(pushGear)
   builds.onChange(pushGear)
+  characters.onChange(pushGear)
+  new ClientLog(characters).start()
 
   let busy = false
   let queued: HotkeyAction | null = null
@@ -91,8 +96,8 @@ function start(): void {
     store,
     Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
   )
-  const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, hotkeys, trade }))
-  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, hotkeys, trade, market, overlay, settingsWindow }))
+  const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, characters, hotkeys, trade }))
+  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, characters, hotkeys, trade, market, overlay, settingsWindow }))
 
   const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))

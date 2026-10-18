@@ -67,6 +67,7 @@ let context: OverlayContext = {
   hotkeys: DEFAULT_SETTINGS.hotkeys,
   locked: false,
   build: null,
+  character: { label: 'Character 1', count: 1 },
   theme: DEFAULT_SETTINGS.theme,
   currencyTarget: DEFAULT_SETTINGS.currencyTarget,
 }
