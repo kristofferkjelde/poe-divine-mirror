@@ -110,6 +110,15 @@ export function snapshotTime({ lastModified, date, age }: ResponseTimes, now: nu
   return now
 }
 
+export function inExalted(overview: MarketOverview): MarketOverview {
+  const exalted = overview.prices.exalted?.value
+  if (overview.primary === 'exalted' || !exalted) return overview
+  const prices = Object.fromEntries(
+    Object.entries(overview.prices).map(([id, price]) => [id, { ...price, value: price.value / exalted }]),
+  )
+  return { ...overview, primary: 'exalted', prices }
+}
+
 export interface ExchangeRate {
   value: number
   traded?: number

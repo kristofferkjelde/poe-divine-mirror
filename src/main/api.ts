@@ -16,7 +16,7 @@ import type { Overlay } from './overlay'
 import { readPageState } from './pageReader'
 import type { SettingsStore } from './settingsStore'
 import type { SettingsWindow } from './settingsWindow'
-import { MARKET_PAGE, type MarketClient } from './market'
+import { MARKET_PAGES, type MarketClient } from './market'
 import type { TradeClient } from './trade'
 
 const DOWNLOAD_TIMEOUT_MS = 15_000
@@ -79,7 +79,7 @@ export function overlayHandlers({ store, gear, characters, trade, market, overla
       if (typeof flipped === 'boolean') await store.update({ currencyFlipped: flipped })
     },
     openTrade: (url) => {
-      if (typeof url === 'string' && (url.startsWith(`${TRADE_ORIGIN}/trade2/`) || url === MARKET_PAGE)) void shell.openExternal(url)
+      if (typeof url === 'string' && (url.startsWith(`${TRADE_ORIGIN}/trade2/`) || MARKET_PAGES.includes(url))) void shell.openExternal(url)
     },
     rendered: (height) => {
       if (isFiniteNumber(height)) overlay.rendered(height)
