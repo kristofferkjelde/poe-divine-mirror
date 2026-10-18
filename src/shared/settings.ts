@@ -5,6 +5,8 @@ export type HotkeyAction = (typeof HOTKEY_ACTIONS)[number]
 export const isHotkeyAction = (value: unknown): value is HotkeyAction =>
   HOTKEY_ACTIONS.includes(value as HotkeyAction)
 
+import { isExchangeTarget, type ExchangeTarget } from './trade/exchange'
+
 export const THEMES = ['ember', 'mana', 'iron'] as const
 
 export type Theme = (typeof THEMES)[number]
@@ -41,6 +43,7 @@ export interface Settings {
   league: string | null
   theme: Theme
   uiScale: UiScale
+  currencyTarget: ExchangeTarget
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -54,6 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   league: null,
   theme: 'ember',
   uiScale: 100,
+  currencyTarget: 'chaos',
 }
 
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
@@ -85,5 +89,6 @@ export function normalizeSettings(value: unknown): Settings {
     league: typeof input?.league === 'string' && input.league.trim() !== '' ? input.league : null,
     theme: isTheme(input?.theme) ? input.theme : DEFAULT_SETTINGS.theme,
     uiScale: isUiScale(input?.uiScale) ? input.uiScale : DEFAULT_SETTINGS.uiScale,
+    currencyTarget: isExchangeTarget(input?.currencyTarget) ? input.currencyTarget : DEFAULT_SETTINGS.currencyTarget,
   }
 }

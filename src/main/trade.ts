@@ -15,7 +15,8 @@ import {
   type PriceCheckResult,
 } from '../shared/trade/price'
 import { baseTypeNames, magicBaseType } from '../shared/trade/baseTypes'
-import { currencyIcons, iconsFor } from '../shared/trade/currency'
+import { exchangeGroups, findEntry, iconsFor, iconsOf, type CurrencyEntry, type ExchangeGroup } from '../shared/trade/currency'
+import { exchangeNames } from '../shared/trade/exchange'
 import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
 import { diskBacked, expiring } from './cached'
 
@@ -61,12 +62,12 @@ export class TradeClient {
     ),
     DATA_MAX_AGE_MS,
   )
-  private readonly icons = expiring(
+  private readonly exchange = expiring(
     diskBacked(
-      'trade-currency-icons.json',
+      'trade-exchange.json',
       DATA_MAX_AGE_MS,
-      () => this.request('/api/trade2/data/static').then(currencyIcons),
-      (result) => (Object.keys(result).length > 0 ? null : new TradeError('The trade site sent unexpected currency data')),
+      () => this.request('/api/trade2/data/static').then(exchangeGroups),
+      (result) => (result.length > 0 ? null : new TradeError('The trade site sent unexpected currency data')),
     ),
     DATA_MAX_AGE_MS,
   )
@@ -120,7 +121,7 @@ export class TradeClient {
       }
 
       const icons = iconsFor(
-        await this.icons().catch(() => ({})),
+        iconsOf((await this.exchange().catch(() => [])).flatMap((group) => group.entries)),
         listings.map((listing) => listing.currency),
       )
       const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings, icons }
@@ -134,6 +135,21 @@ export class TradeClient {
         ...(error instanceof SlowDownError && { retryAt: error.retryAt }),
       }
     }
+  }
+
+  catalog(): Promise<ExchangeGroup[]> {
+    return this.exchange()
+  }
+
+  async exchangeItem(text: string): Promise<{ group: ExchangeGroup; entry: CurrencyEntry }> {
+    const item = parseItem(text)
+    const found = findEntry(await this.exchange(), exchangeNames(item))
+    if (!found) throw new TradeError(`The currency exchange does not list ${item.baseType ?? item.name}`)
+    return found
+  }
+
+  async league(league: string | null): Promise<string> {
+    return league ?? pickLeague(await this.leagues())
   }
 
   private async withBaseType(item: ParsedItem): Promise<ParsedItem> {

@@ -11,4 +11,11 @@ describe('settings', () => {
     const settings = normalizeSettings({ hotkeys: { compare: 'F2', equip: 'Alt+Shift+D', price: 'Ctrl+Shift+P' } })
     expect(settings.hotkeys).toEqual({ compare: 'F2', equip: 'Alt+Shift+Z', price: 'Ctrl+Shift+P' })
   })
+
+  it('keeps the currency worth is shown in, defaulting to Chaos', () => {
+    expect(normalizeSettings({ currencyTarget: 'divine' }).currencyTarget).toBe('divine')
+    expect(normalizeSettings({ currencyTarget: 'iron-rune' }).currencyTarget).toBe('iron-rune')
+    expect(normalizeSettings({ currencyTarget: 'Not an id!' }).currencyTarget).toBe('chaos')
+    expect(normalizeSettings(null).currencyTarget).toBe('chaos')
+  })
 })
