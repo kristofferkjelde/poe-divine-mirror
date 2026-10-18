@@ -6,7 +6,7 @@ import type { ItemSet, PobBuild, StageGear } from './pob'
 
 export type Defence = 'armour' | 'evasion' | 'energyShield'
 
-export const PROFILE_VERSION = 5
+export const PROFILE_VERSION = 6
 
 export interface BuildProfile {
   version?: number
@@ -61,7 +61,7 @@ export function profileFromPob(build: PobBuild, source: string): BuildProfile {
 
   const stats = build.stats
   const attack = 'HitChance' in stats || 'AverageDamage' in stats || [...gearStats].some((key) => /Attack/.test(key))
-  const minion = build.minion
+  const minion = build.minion || [...gearStats].some((key) => /Minion/.test(key))
   const spell = (!attack && !minion) || [...gearStats].some((key) => /Spell/.test(key))
 
   const life = stats.Life ?? 0

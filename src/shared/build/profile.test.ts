@@ -39,6 +39,21 @@ describe('parsePobXml', () => {
     ])
   })
 
+  it('works out the defences of planned armour from its base type, local mods and quality', () => {
+    const planned = (...lines: string[]) => parsePobItem(['Rarity: RARE', 'Ancestral Tiara', 'Ancestral Tiara', ...lines].join('\n'), 'helmet')
+    const energyShield = (item: ReturnType<typeof planned>) => item.properties.find(({ name }) => name === 'Energy Shield')?.value
+    expect(energyShield(planned('Implicits: 0', '+42 to maximum Energy Shield', '86% increased Energy Shield'))).toBe('337')
+    expect(energyShield(planned('Quality: 0', 'Implicits: 0', '+42 to maximum Energy Shield'))).toBe('151')
+    expect(energyShield(planned('Energy Shield: 300', 'Implicits: 0', '+42 to maximum Energy Shield'))).toBe('300')
+  })
+
+  it('treats a build as a minion build when its gear has minion stats', () => {
+    const tiara = parsePobItem('Rarity: RARE\nAncestral Tiara\nAncestral Tiara\nImplicits: 0\n+2 to Level of all Minion Skills', 'helmet')
+    const profile = profileFromPob({ ...build, minion: false, stats: {}, items: [{ gearSlot: 'helmet', item: tiara }] }, 'test')
+    expect(profile.focus.minion).toBe(true)
+    expect(weightFor('+# to Level of all Minion Skills', 'helmet', rulesForProfile(profile))).toBeGreaterThan(10)
+  })
+
   it('works out weapon damage from the base type and local mods', () => {
     const weapon = build.items[0].item
     expect(weapon.baseType).toBe('Hunting Spear')

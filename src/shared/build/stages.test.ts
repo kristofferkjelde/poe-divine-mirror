@@ -1,15 +1,18 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { addStages, BuildImportError, chooseItemSet, importBuild, refreshProfile, stagesFromFiles } from '../../main/buildImport'
+import { compareItems } from '../compare/compare'
+import { parseItem } from '../item/parse'
 import { mobalyticsStages } from './mobalytics'
 import { parsePlannerBuild, PlannerParseError, type PlannerStage } from './planner'
-import { isStoredProfile } from './profile'
+import { isStoredProfile, rulesForProfile } from './profile'
 
 const fixture = (name: string) => readFileSync(new URL(`./__fixtures__/${name}`, import.meta.url), 'utf8')
 const code = fixture('navira.pob')
 const state = fixture('mobalytics-navira-state.json')
 const early = parsePlannerBuild(fixture('navira-early-endgame.build'), 'Early Endgame.build')
 const uber = parsePlannerBuild(fixture('navira-uber-endgame.build'), 'Uber Endgame.build')
+const late = parsePlannerBuild(fixture('navira-late-endgame.build'), 'Late Endgame.build')
 const files = (...stages: PlannerStage[]) => ({ stages: stages.map((stage) => ({ file: `${stage.title}.build`, ...stage })), failed: [] })
 const offline = () => Promise.reject(new Error('offline'))
 
@@ -86,10 +89,47 @@ describe('stage gear', () => {
     expect(earlyStage.borrowed).toEqual({})
     expect(earlyStage.items.boots?.mods.map(({ text }) => text)).toContain('20% increased Movement Speed')
 
+    expect(earlyStage.items.helmet?.properties).toEqual([{ name: 'Energy Shield', value: '218', augmented: true }])
+
     const uberStage = chooseItemSet(staged, '7')
+    expect(uberStage.items.helmet?.properties).toEqual([{ name: 'Energy Shield', value: '326', augmented: true }])
     expect(uberStage.items.ring2).toMatchObject({ name: 'Evergrasping Ring', rarity: 'Unique' })
     expect(uberStage.items.ring2?.mods.length).toBeGreaterThan(0)
     expect(staged.itemSets?.find(({ id }) => id === '1')?.sameAs).toBe('Early Endgame')
+  })
+
+  it("compares a helmet with the build's planned helmet, counting its Energy Shield and minion levels", async () => {
+    const { profile: staged } = addStages(await importBuild(code, offline), files(late))
+    const lateStage = chooseItemSet(staged, '8')
+    const helmet = lateStage.items.helmet!
+    expect(helmet.name).toBe('Ancestral Tiara')
+    expect(helmet.properties).toEqual([{ name: 'Energy Shield', value: '326', augmented: true }])
+
+    const hateDome = parseItem(
+      [
+        'Item Class: Helmets',
+        'Rarity: Rare',
+        'Hate Dome',
+        'Skycrown Tiara',
+        '--------',
+        'Energy Shield: 235 (augmented)',
+        '--------',
+        'Item Level: 80',
+        '--------',
+        '+109 to maximum Mana',
+        '+25 to Intelligence',
+        '+38 to maximum Life',
+        '36% increased Energy Shield',
+        '+11% to Cold Resistance',
+      ].join('\n'),
+    )
+    const { rows, verdict } = compareItems(hateDome, helmet, rulesForProfile(lateStage))
+    const row = (stat: string) => rows.find((entry) => entry.stat === stat)
+    expect(verdict).toBe('downgrade')
+    expect(row('Energy Shield')).toMatchObject({ delta: -91 })
+    expect(row('+# to Level of all Minion Skills')).toMatchObject({ delta: -2, weight: expect.any(Number) })
+    expect(row('+# to Level of all Minion Skills')!.weight).toBeGreaterThan(10)
+    expect(row('+# to maximum Energy Shield')).toMatchObject({ local: true, equipped: { value: 42 } })
   })
 
   it('keeps the stage gear when a build is re-read by a newer version', async () => {
@@ -123,6 +163,13 @@ describe('Mobalytics pages', () => {
       '+29 to maximum Mana',
     ])
     expect(stages[1].gear).toEqual({ ring1: 'Rarity: UNIQUE\nEvergrasping Ring\nImplicits: 0' })
+    expect(stages[0].gear.helmet?.split('\n').slice(0, 5)).toEqual([
+      'Rarity: RARE',
+      'Runeforged Sandsworn Tiara',
+      'Runeforged Sandsworn Tiara',
+      'Energy Shield: 211',
+      'Implicits: 0',
+    ])
   })
 
   it('imports a link with the gear of every stage and opens the linked one', async () => {
@@ -130,6 +177,7 @@ describe('Mobalytics pages', () => {
     const profile = await importBuild(url, offline, async () => state)
     expect(profile.itemSet).toBe('6')
     expect(profile.items.helmet?.name).toBe('Runeforged Sandsworn Tiara')
+    expect(profile.items.helmet?.properties).toEqual([{ name: 'Energy Shield', value: '211', augmented: false }])
     expect(profile.borrowed).toEqual({})
     expect(Object.keys(profile.stageGear ?? {}).sort()).toEqual(['6', '8'])
   })

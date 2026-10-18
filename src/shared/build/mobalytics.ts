@@ -6,7 +6,17 @@ interface MobalyticsItem {
     name?: unknown
     isUnique?: unknown
     explicitDescriptions?: unknown
+    stats?: unknown
   } | null
+}
+
+const STAT_FIELDS: Partial<Record<string, string>> = {
+  Armour: 'Armour',
+  'Evasion Rating': 'Evasion',
+  Evasion: 'Evasion',
+  'Energy Shield': 'Energy Shield',
+  Quality: 'Quality',
+  'Item Level': 'Item Level',
 }
 
 export interface MobalyticsStage extends PlannerStage {
@@ -85,5 +95,11 @@ function itemText(value: unknown): string | undefined {
         isObject(entry) && typeof entry.description === 'string' ? entry.description.split(/\r?\n/) : [],
       )
     : []
-  return ['Rarity: RARE', name, name, 'Implicits: 0', ...mods].join('\n')
+  const fields = Array.isArray(item.stats)
+    ? item.stats.flatMap((stat) => {
+        const field = isObject(stat) && typeof stat.name === 'string' ? STAT_FIELDS[stat.name] : undefined
+        return field && typeof stat.value === 'string' && /^\d+$/.test(stat.value) ? [`${field}: ${stat.value}`] : []
+      })
+    : []
+  return ['Rarity: RARE', name, name, ...fields, 'Implicits: 0', ...mods].join('\n')
 }
