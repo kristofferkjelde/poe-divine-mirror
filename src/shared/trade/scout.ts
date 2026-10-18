@@ -32,10 +32,8 @@ export const scoutCurrenciesUrl = (league: string, category: string, page: numbe
     category,
     page: String(page),
     perPage: String(SCOUT_PAGE_SIZE),
-    dataPoints: '1',
+    dataPoints: '7',
   })}`
-
-export const scoutSnapshotUrl = (league: string) => `${leaguePath(league)}/ExchangeSnapshot`
 
 interface ScoutItem {
   ApiId?: unknown
@@ -72,10 +70,4 @@ export function scoutOverview(items: ScoutItem[]): MarketOverview {
   }
   prices.exalted = { ...prices.exalted, value: 1 }
   return { primary: 'exalted', prices, names }
-}
-
-export function scoutSnapshotTime(body: unknown): number | undefined {
-  const epoch = number((body as { Epoch?: unknown } | null)?.Epoch)
-  if (epoch === undefined || epoch <= 0) return undefined
-  return epoch < 1e12 ? epoch * 1000 : epoch
 }

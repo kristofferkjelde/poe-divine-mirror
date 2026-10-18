@@ -21,8 +21,6 @@ import {
   scoutCategory,
   scoutCurrenciesUrl,
   scoutOverview,
-  scoutSnapshotTime,
-  scoutSnapshotUrl,
 } from '../shared/trade/scout'
 import { jsonFile } from './jsonFile'
 import type { TradeClient } from './trade'
@@ -154,10 +152,7 @@ async function fetchOverview(league: string, type: string, fresh: boolean): Prom
 async function fetchScout(league: string, type: string, fresh: boolean): Promise<Fetched | null> {
   const category = scoutCategory(type)
   if (!category) return null
-  const [first, snapshot] = await Promise.all([
-    request(scoutCurrenciesUrl(league, category, 1), fresh),
-    request(scoutSnapshotUrl(league), fresh),
-  ])
+  const first = await request(scoutCurrenciesUrl(league, category, 1), fresh)
   const page = first && parseScoutPage(first.body)
   if (!first || !page) return null
   const items = [...page.items]
@@ -170,7 +165,7 @@ async function fetchScout(league: string, type: string, fresh: boolean): Promise
   if (items.length === 0) return null
   return {
     overview: scoutOverview(items),
-    pricesFrom: (snapshot && scoutSnapshotTime(snapshot.body)) ?? first.pricesFrom,
+    pricesFrom: first.pricesFrom,
     source: 'poe2scout',
   }
 }
@@ -194,14 +189,18 @@ async function request(url: string, fresh: boolean): Promise<{ body: unknown; pr
       cache: fresh ? 'no-store' : 'default',
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
-    if (!response.ok) return null
+    if (!response.ok) {
+      console.warn(`Price request failed with HTTP ${response.status}: ${url}`)
+      return null
+    }
     const { headers } = response
     const pricesFrom = snapshotTime(
       { lastModified: headers.get('last-modified'), date: headers.get('date'), age: headers.get('age') },
       Date.now(),
     )
     return { body: await response.json(), pricesFrom }
-  } catch {
+  } catch (error) {
+    console.warn(`Price request failed: ${url}`, error)
     return null
   }
 }

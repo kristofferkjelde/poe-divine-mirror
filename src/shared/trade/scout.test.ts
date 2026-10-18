@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { inExalted, marketPrice, marketRate, parseOverview } from './market'
-import { parseScoutPage, scoutCategory, scoutCurrenciesUrl, scoutOverview, scoutSnapshotTime } from './scout'
+import { parseScoutPage, scoutCategory, scoutCurrenciesUrl, scoutOverview } from './scout'
 
 const page = {
   CurrentPage: 1,
@@ -21,7 +21,7 @@ describe('poe2scout prices', () => {
     expect(scoutCategory('SoulCores')).toBe('ultimatum')
     expect(scoutCategory('Maps')).toBeUndefined()
     expect(scoutCurrenciesUrl('Forbidden Rites', 'currency', 2)).toBe(
-      'https://api.poe2scout.com/poe2/Leagues/Forbidden%20Rites/Currencies/ByCategory?category=currency&page=2&perPage=250&dataPoints=1',
+      'https://api.poe2scout.com/poe2/Leagues/Forbidden%20Rites/Currencies/ByCategory?category=currency&page=2&perPage=250&dataPoints=7',
     )
   })
 
@@ -37,11 +37,6 @@ describe('poe2scout prices', () => {
     expect(rate.value).toBeCloseTo(1674.1, 1)
     expect(marketRate(overview.prices.divine, overview.prices.chaos).value).toBeCloseTo(10.16, 2)
     expect(parseScoutPage({ error: 'nope' })).toBeNull()
-  })
-
-  it('dates prices by the exchange snapshot', () => {
-    expect(scoutSnapshotTime({ Epoch: 1792345200 })).toBe(1792345200000)
-    expect(scoutSnapshotTime({})).toBeUndefined()
   })
 
   it('puts poe.ninja prices in Exalted Orbs too, so both sources can be mixed', () => {
