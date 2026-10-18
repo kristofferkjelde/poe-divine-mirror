@@ -164,18 +164,19 @@ function editSearch(update: (search: ItemSearch) => ItemSearch) {
 
 export const isExchangeItem = (item: ParsedItem) => item.rarity === 'Currency' || item.rarity === 'Gem'
 
-async function loadWorth(again = false): Promise<void> {
+async function loadWorth(again = false, fresh = false): Promise<void> {
   if (view.status !== 'item' || !view.worth) return
   const { id, text } = view
   const target = context.currencyTarget
   if (!again && !view.worth.loading && view.worth.target === target && view.worth.result) return
   setView({ ...view, worth: { ...view.worth, target, loading: true } })
-  const result = await window.overlay.currencyWorth(text, target)
+  const result = await window.overlay.currencyWorth(text, target, fresh)
   if (view.status !== 'item' || view.id !== id || view.worth?.target !== target) return
   setView({ ...view, worth: { target, loading: false, result } })
 }
 
 export const retryWorth = (): Promise<void> => loadWorth(true)
+export const refreshWorth = (): Promise<void> => loadWorth(true, true)
 
 let saveTarget: ReturnType<typeof setTimeout> | undefined
 

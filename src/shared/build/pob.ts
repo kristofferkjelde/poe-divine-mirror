@@ -2,6 +2,8 @@ import { UserFacingError } from '../errors'
 import { GEAR_SLOTS, gearSlotForPob, type Gear, type GearSlot } from '../gear'
 import { parseModLine } from '../item/parse'
 import type { DamageRange, Mod, ModType, ParsedItem, Property, Rarity, Slot, WeaponStats } from '../item/types'
+import { isArmourSlot } from '../item/slots'
+import ARMOUR_BASES from './armourBases.json'
 import WEAPON_BASES from './weaponBases.json'
 
 export interface PobItem {
@@ -18,6 +20,12 @@ interface WeaponBase {
 type DamageType = 'Physical' | 'Fire' | 'Cold' | 'Lightning' | 'Chaos'
 
 const BASES = WEAPON_BASES as unknown as Partial<Record<string, WeaponBase>>
+
+type Defence = 'armour' | 'evasion' | 'energyShield'
+type ArmourBase = Partial<Record<Defence, number>>
+
+const ARMOURS = ARMOUR_BASES as Partial<Record<string, ArmourBase>>
+const PLANNED_QUALITY = 20
 
 export interface ItemSet {
   id: string
@@ -211,6 +219,10 @@ export function parsePobItem(text: string, slot: Slot): ParsedItem {
   const base = baseType ? BASES[baseType] : undefined
   const weapon = slot === 'weapon' && base ? weaponStats(base, mods, quality) : undefined
   if (weapon && base) properties.push(...weaponProperties(weapon, base))
+  const armour = baseType ? ARMOURS[baseType] : undefined
+  if (armour && isArmourSlot(slot) && properties.length === 0) {
+    properties.push(...defenceProperties(armour, mods, field('Quality') === undefined ? PLANNED_QUALITY : quality))
+  }
 
   return {
     itemClass: '',
@@ -228,6 +240,30 @@ export function parsePobItem(text: string, slot: Slot): ParsedItem {
     unidentified: false,
     mirrored: false,
   }
+}
+
+const DEFENCE_NAMES: Record<Defence, { property: string; pattern: RegExp }> = {
+  armour: { property: 'Armour', pattern: /Armour/ },
+  evasion: { property: 'Evasion Rating', pattern: /Evasion/ },
+  energyShield: { property: 'Energy Shield', pattern: /Energy Shield/ },
+}
+
+function defenceProperties(base: ArmourBase, mods: Mod[], quality: number): Property[] {
+  const properties: Property[] = []
+  for (const [defence, value] of Object.entries(base) as Array<[Defence, number]>) {
+    const { property, pattern } = DEFENCE_NAMES[defence]
+    let flat = value
+    let increased = 0
+    for (const { template, values } of mods) {
+      if (/^\+# to (?:maximum )?(?:Armour|Evasion Rating|Energy Shield)$/.test(template) && pattern.test(template)) flat += values[0] ?? 0
+      if (/^#% increased (?:Armour|Evasion(?: Rating)?|Energy Shield)(?: and (?:Armour|Evasion(?: Rating)?|Energy Shield))?$/.test(template) && pattern.test(template)) {
+        increased += values[0] ?? 0
+      }
+    }
+    const total = Math.round(flat * (1 + increased / 100) * (1 + quality / 100))
+    properties.push({ name: property, value: String(total), augmented: flat !== value || increased !== 0 || quality !== 0 })
+  }
+  return properties
 }
 
 function findWeaponBase(name: string): string | undefined {

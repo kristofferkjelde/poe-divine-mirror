@@ -22,7 +22,7 @@ Divine Mirror is a small overlay for Path of Exile 2. It shows the item under yo
 
 The app starts in the system tray (bottom-right, near the clock). Hover the icon to see your version, and right-click it to quit.
 
-**Updates:** the app checks for a new release when it starts and every few hours. When one is out you get a notification; click it (or **Update to x.y.z** in the tray menu) to download, then **Restart to update**. Versions before 0.5.0 can't update themselves, so install 0.5.0 by hand once.
+**Updates:** the app checks for a new release when it starts and every few hours. When one is out you get a notification; click it (or **Update to x.y.z and restart** in the tray menu) once, and the app downloads the update, installs it and starts again by itself. Versions before 0.5.0 can't update themselves, so install 0.5.0 by hand once.
 
 **Requirements:** Windows 10 or 11.
 
@@ -50,7 +50,7 @@ Works anywhere you can hover an item: your inventory, stash, vendors, or the gro
 1. Get your build's Path of Building code. On **Mobalytics**, open the build and click **Copy Code** next to Path of Building. In **Path of Building**, use **Import/Export Build → Generate**. A **pobb.in**, **poe.ninja** or **Maxroll** link works too.
 2. Open **Settings**, paste it under **Build**, and click **Import build**.
 3. If the build has gear stages (such as Early, Mid and Late Endgame), pick yours under **Gear stage**. A Mobalytics link opens on the stage it points at. Stages that leave a slot empty borrow the item from the nearest stage that has one, marked "(from …)".
-4. Mobalytics often leaves some stages' gear out of the Path of Building code. To get every stage's exact items, click **Download Build File** on the build page and add the zip (or single `.build` files) under **Stage gear files**. Files exported to the game's Build Planner from other sites work the same way. Below the button, the app lists each file it just added (or why it couldn't), and for every stage whether its gear comes from a `.build` file or the Path of Building code.
+4. Mobalytics often leaves some stages' gear out of the Path of Building code. To get every stage's exact items, click **Download Build File** on the build page and add the zip (or single `.build` files) under **Stage gear files**. Files exported to the game's Build Planner from other sites work the same way. Below the button, the app lists each file it just added (or why it couldn't), and for every stage whether its gear comes from a `.build` file or the Path of Building code. `.build` files only list each item's mods (at the low end of their roll ranges), so the app works out the item's Armour, Evasion and Energy Shield from its base type, those mods and 20% quality.
 
 The app reads the build's gear, main skill and defences. It then boosts the stats your build uses (★ in the list) and ignores ones it doesn't, such as cast speed on an attack build or energy shield on an evasion build. You can change any number in the list to fine-tune it.
 
@@ -94,7 +94,7 @@ Hover anything the in-game Currency Exchange trades (orbs, runes, omens, essence
 
 To price it in another currency, scroll over the **Worth in** slot to step through every currency (hold **Shift** to jump a whole group, like Runes or Essences), or click it to pick from a grid. The app remembers your pick. Click the **⇄** between the two to flip it around, for example to see what 1 Hinekora's Lock costs in Divine Orbs instead of what 1 Divine Orb is worth in Locks. The app remembers that too.
 
-Prices come from [poe.ninja](https://poe.ninja/poe2/economy), which reads the in-game exchange from GGG once an hour, so they match the game's market ratio. The app fetches each category at most once an hour, through a small cache on poe-divine-mirror.com, and keeps the prices on your PC between restarts.
+Prices come from [poe.ninja](https://poe.ninja/poe2/economy), which reads the in-game exchange from GGG once an hour, so they match the game's market ratio. The app fetches each category at most once an hour, through a small cache on poe-divine-mirror.com, and keeps the prices on your PC between restarts. Under the prices the popup shows when poe.ninja made them ("Prices from 18:00 (41 min ago)"); and when the app last checked. Click **↻ Refresh** to check poe.ninja again right away. The price time only moves once poe.ninja has a newer read, about once an hour.
 
 **Reading the popup**
 

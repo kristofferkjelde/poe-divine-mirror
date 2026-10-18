@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isMarketType, marketPrice, marketRate, ninjaUrl, parseOverview, relayUrl } from './market'
+import { isMarketType, marketPrice, marketRate, ninjaUrl, parseOverview, relayUrl, snapshotTime } from './market'
 
 const overview = {
   core: {
@@ -66,5 +66,14 @@ describe('currency market', () => {
       reliability: 'Very low',
     })
     expect(marketRate(parsed.prices.exalted, parsed.prices.divine).reliability).toBe('High')
+  })
+
+  it('dates prices by when the market data was made, not when the app fetched it', () => {
+    const now = Date.parse('2026-10-18T18:41:00Z')
+    const none = { lastModified: null, date: null, age: null }
+    expect(snapshotTime({ ...none, lastModified: 'Sun, 18 Oct 2026 18:00:00 GMT' }, now)).toBe(Date.parse('2026-10-18T18:00:00Z'))
+    expect(snapshotTime({ ...none, date: 'Sun, 18 Oct 2026 18:40:00 GMT', age: '600' }, now)).toBe(Date.parse('2026-10-18T18:30:00Z'))
+    expect(snapshotTime({ ...none, lastModified: 'Mon, 19 Oct 2026 18:00:00 GMT' }, now)).toBe(now)
+    expect(snapshotTime(none, now)).toBe(now)
   })
 })

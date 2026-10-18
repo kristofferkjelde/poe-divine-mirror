@@ -123,8 +123,7 @@ function start(): void {
           enabled: update.action !== undefined,
           click: () => {
             if (update.action === 'check') updates.check()
-            if (update.action === 'download') updates.download()
-            if (update.action === 'install') updates.install()
+            if (update.action === 'update') updates.update()
           },
         },
         { type: 'separator' },

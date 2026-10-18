@@ -59,7 +59,7 @@ export interface OverlayApi {
   cycleCharacter: (by: number) => Promise<void>
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
-  currencyWorth: (text: string, target: ExchangeTarget) => Promise<CurrencyWorthResult>
+  currencyWorth: (text: string, target: ExchangeTarget, fresh?: boolean) => Promise<CurrencyWorthResult>
   exchangeCatalog: () => Promise<ExchangeGroup[]>
   setCurrencyTarget: (target: ExchangeTarget) => Promise<void>
   setCurrencyFlipped: (flipped: boolean) => Promise<void>

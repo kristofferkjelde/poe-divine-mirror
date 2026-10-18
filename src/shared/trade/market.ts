@@ -95,6 +95,21 @@ export function marketPrice(overview: MarketOverview, entry: CurrencyEntry): Mar
   return id ? overview.prices[id] : undefined
 }
 
+export interface ResponseTimes {
+  lastModified: string | null
+  date: string | null
+  age: string | null
+}
+
+export function snapshotTime({ lastModified, date, age }: ResponseTimes, now: number): number {
+  const modified = lastModified ? Date.parse(lastModified) : NaN
+  if (modified <= now) return modified
+  const sent = date ? Date.parse(date) : NaN
+  const seconds = Number(age ?? 0)
+  if (Number.isFinite(sent) && Number.isFinite(seconds) && sent <= now) return sent - seconds * 1000
+  return now
+}
+
 export interface ExchangeRate {
   value: number
   traded?: number
