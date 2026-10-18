@@ -21,6 +21,7 @@ import {
   scoutCategory,
   scoutCurrenciesUrl,
   scoutOverview,
+  scoutPricesFrom,
 } from '../shared/trade/scout'
 import { jsonFile } from './jsonFile'
 import type { TradeClient } from './trade'
@@ -165,7 +166,7 @@ async function fetchScout(league: string, type: string, fresh: boolean): Promise
   if (items.length === 0) return null
   return {
     overview: scoutOverview(items),
-    pricesFrom: first.pricesFrom,
+    pricesFrom: Math.min(scoutPricesFrom(items) ?? first.pricesFrom, first.pricesFrom),
     source: 'poe2scout',
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { inExalted, marketPrice, marketRate, parseOverview } from './market'
-import { parseScoutPage, scoutCategory, scoutCurrenciesUrl, scoutOverview } from './scout'
+import { parseScoutPage, scoutCategory, scoutCurrenciesUrl, scoutOverview, scoutPricesFrom } from './scout'
 
 const page = {
   CurrentPage: 1,
@@ -21,7 +21,7 @@ describe('poe2scout prices', () => {
     expect(scoutCategory('SoulCores')).toBe('ultimatum')
     expect(scoutCategory('Maps')).toBeUndefined()
     expect(scoutCurrenciesUrl('Forbidden Rites', 'currency', 2)).toBe(
-      'https://api.poe2scout.com/poe2/Leagues/Forbidden%20Rites/Currencies/ByCategory?category=currency&page=2&perPage=250&dataPoints=7',
+      'https://api.poe2scout.com/poe2/Leagues/Forbidden%20Rites/Currencies/ByCategory?category=currency&page=2&perPage=250&dataPoints=7&frequencyHours=1',
     )
   })
 
@@ -37,6 +37,19 @@ describe('poe2scout prices', () => {
     expect(rate.value).toBeCloseTo(1674.1, 1)
     expect(marketRate(overview.prices.divine, overview.prices.chaos).value).toBeCloseTo(10.16, 2)
     expect(parseScoutPage({ error: 'nope' })).toBeNull()
+  })
+
+  it('dates prices by the latest hour poe2scout has priced', () => {
+    const logs = (...hours: (string | null)[]) =>
+      hours.map((hour, i) => (hour ? { Price: 100 - i, Time: `2026-10-18T${hour}:00:00.0000000Z`, Quantity: 5 } : null))
+    expect(
+      scoutPricesFrom([
+        { ApiId: 'mirror', PriceLogs: logs(null, '18', '17') },
+        { ApiId: 'rare', PriceLogs: logs(null, null, '15') },
+        { ApiId: 'none', PriceLogs: [{ Price: null, Time: '2026-10-18T19:00:00Z' }] },
+      ]),
+    ).toBe(Date.parse('2026-10-18T18:00:00Z'))
+    expect(scoutPricesFrom([{ ApiId: 'divine' }])).toBeUndefined()
   })
 
   it('puts poe.ninja prices in Exalted Orbs too, so both sources can be mixed', () => {

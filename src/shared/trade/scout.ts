@@ -33,6 +33,7 @@ export const scoutCurrenciesUrl = (league: string, category: string, page: numbe
     page: String(page),
     perPage: String(SCOUT_PAGE_SIZE),
     dataPoints: '7',
+    frequencyHours: '1',
   })}`
 
 interface ScoutItem {
@@ -40,6 +41,7 @@ interface ScoutItem {
   Text?: unknown
   CurrentPrice?: unknown
   CurrentQuantity?: unknown
+  PriceLogs?: unknown
 }
 
 export interface ScoutPage {
@@ -70,4 +72,17 @@ export function scoutOverview(items: ScoutItem[]): MarketOverview {
   }
   prices.exalted = { ...prices.exalted, value: 1 }
   return { primary: 'exalted', prices, names }
+}
+
+export function scoutPricesFrom(items: ScoutItem[]): number | undefined {
+  let latest: number | undefined
+  for (const { PriceLogs } of items) {
+    if (!Array.isArray(PriceLogs)) continue
+    for (const log of PriceLogs as ({ Price?: unknown; Time?: unknown } | null)[]) {
+      if (number(log?.Price) === undefined || typeof log?.Time !== 'string') continue
+      const time = Date.parse(log.Time)
+      if (Number.isFinite(time) && (latest === undefined || time > latest)) latest = time
+    }
+  }
+  return latest
 }
