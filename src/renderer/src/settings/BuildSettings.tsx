@@ -128,7 +128,7 @@ function StageFiles({ build }: { build: BuildProfile }) {
                 {gear ? '✓' : '–'}
               </span>
               <span>{title}</span>
-              <small>{gear ? `From a .build file · ${count} ${count === 1 ? 'item' : 'items'}` : 'From the Path of Building code'}</small>
+              <small>{gear ? `.build file · ${count} ${count === 1 ? 'item' : 'items'}` : 'PoB code'}</small>
             </li>
           )
         })}

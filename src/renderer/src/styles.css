@@ -925,7 +925,7 @@ label.hotkey-button[aria-disabled='true'] {
 
 .stage-files {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   margin: 0 0 10px;
   padding: 0;
   list-style: none;
@@ -933,10 +933,12 @@ label.hotkey-button[aria-disabled='true'] {
 
 .stage-files li {
   display: grid;
-  grid-template-columns: 16px auto minmax(0, 1fr);
+  grid-template-columns: 12px auto minmax(0, 1fr);
   align-items: baseline;
-  gap: 8px;
-  padding: 5px 8px;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 13px;
+  line-height: 1.4;
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -951,7 +953,7 @@ label.hotkey-button[aria-disabled='true'] {
 }
 
 .stage-files[data-kind='report'] li:not(.stage-files-title) {
-  grid-template-columns: 16px minmax(0, 1fr);
+  grid-template-columns: 12px minmax(0, 1fr);
 }
 
 .stage-files[data-kind='report'] li:not(.stage-files-title) > span:nth-child(2) {
@@ -959,6 +961,7 @@ label.hotkey-button[aria-disabled='true'] {
 }
 
 .stage-files[data-kind='report'] small {
+  white-space: normal;
   grid-column: 2;
   justify-self: start;
   text-align: left;
@@ -967,7 +970,8 @@ label.hotkey-button[aria-disabled='true'] {
 .stage-files small {
   justify-self: end;
   text-align: right;
-  font-size: 12px;
+  white-space: nowrap;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
