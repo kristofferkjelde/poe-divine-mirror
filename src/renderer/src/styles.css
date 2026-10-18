@@ -907,7 +907,7 @@ label.hotkey-button[aria-disabled='true'] {
 .settings-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  align-items: center;
+  align-items: start;
   gap: 4px 12px;
   padding: 10px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -919,6 +919,82 @@ label.hotkey-button[aria-disabled='true'] {
   color: var(--text-muted);
 }
 
+.settings-row > span:first-child {
+  padding-top: 6px;
+}
+
+.stage-files {
+  display: grid;
+  gap: 1px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-files li {
+  display: grid;
+  grid-template-columns: 12px auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.stage-files li.stage-files-title {
+  display: block;
+  padding: 4px 0 2px;
+  background: none;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stage-files[data-kind='report'] li:not(.stage-files-title) {
+  grid-template-columns: 12px minmax(0, 1fr);
+}
+
+.stage-files[data-kind='report'] li:not(.stage-files-title) > span:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+
+.stage-files[data-kind='report'] small {
+  white-space: normal;
+  grid-column: 2;
+  justify-self: start;
+  text-align: left;
+}
+
+.stage-files small {
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stage-files-mark {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.stage-files li[data-state='file'] .stage-files-mark,
+.stage-files li[data-state='added'] .stage-files-mark {
+  color: var(--delta-up);
+}
+
+.stage-files li[data-state='file'] small,
+.stage-files li[data-state='added'] small {
+  color: var(--accent-ink);
+}
+
+.stage-files li[data-state='failed'] .stage-files-mark,
+.stage-files li[data-state='failed'] small {
+  color: var(--delta-down);
+}
+
 .settings-row .stage-gear {
   margin-top: 4px;
   color: var(--accent-ink);
@@ -927,6 +1003,7 @@ label.hotkey-button[aria-disabled='true'] {
 .settings-toggle {
   width: 18px;
   height: 18px;
+  margin-top: 8px;
   accent-color: var(--accent-ink);
 }
 
@@ -973,24 +1050,32 @@ label.hotkey-button[aria-disabled='true'] {
 
 .build-weight {
   display: grid;
-  grid-template-columns: 1fr 72px;
+  grid-template-columns: 1fr 56px;
   align-items: center;
-  gap: 12px;
-  padding: 3px 0;
-  font-size: 13px;
+  gap: 10px;
+  padding: 1px 0;
+  font-size: 12px;
+  line-height: 1.3;
   color: var(--text-magic);
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .build-weight input {
   width: 100%;
-  padding: 2px 6px;
+  height: 20px;
+  padding: 0 6px;
   font: inherit;
   text-align: right;
   color: var(--text-value);
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid var(--frame-lo);
   border-radius: 2px;
+}
+
+.build-weight input::-webkit-inner-spin-button,
+.build-weight input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 .build-weight[data-custom='true'] input {
@@ -2188,11 +2273,30 @@ label.hotkey-button[aria-disabled='true'] {
     animation: ember-breathe 1.6s ease-in-out infinite;
   }
 }
+.currency-pair[data-flipped='true'] > .currency-mine {
+  order: 3;
+}
+.currency-pair[data-flipped='true'] > .currency-target {
+  order: 1;
+}
+.currency-pair[data-flipped='true'] > .currency-ratio {
+  order: 2;
+}
 .currency-arrows {
-  font-style: normal;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
   font-size: 20px;
+  line-height: 1.2;
   color: var(--accent);
   text-shadow: 0 0 8px var(--aura);
+  cursor: pointer;
+}
+.currency-arrows:hover {
+  border-color: var(--frame-mid);
+  color: var(--accent-ink);
 }
 .currency-ratio .ember-value {
   font-size: 22px;

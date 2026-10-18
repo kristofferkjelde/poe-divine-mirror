@@ -20,11 +20,12 @@ export interface OverlayContext {
   character: ActiveCharacter
   theme: Theme
   currencyTarget: ExchangeTarget
+  currencyFlipped: boolean
 }
 
 export interface OverlayMessages {
   event: OverlayEvent
-  preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme' | 'currencyTarget'>
+  preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme' | 'currencyTarget' | 'currencyFlipped'>
   gear: Pick<OverlayContext, 'gear' | 'build' | 'character'>
   revealed: null
 }
@@ -39,6 +40,15 @@ export interface SettingsState {
 export type SetHotkeyResult = { ok: true } | { ok: false; error: string }
 export type SettingsResponse = { ok: true; state: SettingsState } | { ok: false; error: string }
 
+export interface StageFileResult {
+  file: string
+  stage?: string
+  items?: number
+  error?: string
+}
+
+export type AddStagesResponse = { ok: true; state: SettingsState; report: StageFileResult[] } | { ok: false; error: string }
+
 export interface OverlayApi {
   resize: (height: number) => Promise<void>
   hide: () => Promise<void>
@@ -52,6 +62,7 @@ export interface OverlayApi {
   currencyWorth: (text: string, target: ExchangeTarget) => Promise<CurrencyWorthResult>
   exchangeCatalog: () => Promise<ExchangeGroup[]>
   setCurrencyTarget: (target: ExchangeTarget) => Promise<void>
+  setCurrencyFlipped: (flipped: boolean) => Promise<void>
   openTrade: (url: string) => Promise<void>
   ready: () => Promise<void>
   rendered: (height: number) => Promise<void>
@@ -89,7 +100,7 @@ export interface SettingsApi {
   setLocked: (locked: boolean) => Promise<SettingsState>
   setRecording: (recording: boolean) => Promise<void>
   importBuild: (input: string) => Promise<SettingsResponse>
-  addBuildStages: (files: BuildFile[]) => Promise<SettingsResponse>
+  addBuildStages: (files: BuildFile[]) => Promise<AddStagesResponse>
   removeBuild: () => Promise<SettingsState>
   addCharacter: (name: string) => Promise<SettingsState>
   renameCharacter: (id: string, name: string) => Promise<SettingsState>
@@ -121,6 +132,7 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   currencyWorth: true,
   exchangeCatalog: true,
   setCurrencyTarget: true,
+  setCurrencyFlipped: true,
   openTrade: true,
   ready: true,
   rendered: true,

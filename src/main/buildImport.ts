@@ -4,7 +4,7 @@ import { parsePlannerBuild, PlannerParseError, stageKey, type PlannerStage } fro
 import { parsePobXml, type ItemSet, type StageGear } from '../shared/build/pob'
 import { hasItems, PROFILE_VERSION, profileFromPob, type BuildProfile, type StoredProfile } from '../shared/build/profile'
 import { UserFacingError } from '../shared/errors'
-import type { BuildFile } from '../shared/ipc'
+import type { BuildFile, StageFileResult } from '../shared/ipc'
 import { isZip, unzip } from './zip'
 
 export type Fetcher = (url: string) => Promise<string>
@@ -71,32 +71,53 @@ function withStageGear(profile: BuildProfile, stages: PlannerStage[]): BuildProf
   return reparse({ ...profile, code: profile.code }, profile.itemSet, { ...profile.stageGear, ...Object.fromEntries(matched) })
 }
 
-export function stagesFromFiles(files: BuildFile[]): PlannerStage[] {
-  const stages = files.flatMap(({ name, data }) => {
-    if (!isZip(data)) return [parsePlannerBuild(Buffer.from(data).toString('utf8'), name)]
-    let entries
-    try {
-      entries = unzip(Buffer.from(data))
-    } catch {
-      throw new PlannerParseError(`${name} is not a zip file the app can open`)
-    }
-    return entries
-      .filter((entry) => /\.build$/i.test(entry.name))
-      .map((entry) => parsePlannerBuild(entry.data.toString('utf8'), entry.name.split('/').pop() ?? entry.name))
-  })
-  if (stages.length === 0) throw new PlannerParseError('There are no .build files in that zip')
-  return stages
+export interface FileStage extends PlannerStage {
+  file: string
 }
 
-export function addStages(profile: BuildProfile | null, stages: PlannerStage[]): BuildProfile {
+export interface ReadStages {
+  stages: FileStage[]
+  failed: StageFileResult[]
+}
+
+export function stagesFromFiles(files: BuildFile[]): ReadStages {
+  const stages: FileStage[] = []
+  const failed: StageFileResult[] = []
+  const read = (file: string, text: string) => {
+    try {
+      stages.push({ file, ...parsePlannerBuild(text, file) })
+    } catch (error) {
+      failed.push({ file, error: error instanceof UserFacingError ? error.message : `${file} could not be read` })
+    }
+  }
+  for (const { name, data } of files) {
+    if (!isZip(data)) {
+      read(name, Buffer.from(data).toString('utf8'))
+      continue
+    }
+    let entries
+    try {
+      entries = unzip(Buffer.from(data)).filter((entry) => /\.build$/i.test(entry.name))
+    } catch {
+      failed.push({ file: name, error: `${name} is not a zip file the app can open` })
+      continue
+    }
+    if (entries.length === 0) failed.push({ file: name, error: `There are no .build files in ${name}` })
+    for (const entry of entries) read(entry.name.split('/').pop() ?? entry.name, entry.data.toString('utf8'))
+  }
+  return { stages, failed }
+}
+
+export function addStages(profile: BuildProfile | null, { stages, failed }: ReadStages): { profile: BuildProfile; report: StageFileResult[] } {
   if (!profile?.code) throw new BuildImportError("Import the build's Path of Building code or link first, then add its .build files.")
   const ids = stageIds(profile)
-  const unmatched = stages.filter(({ title }) => !ids.has(stageKey(title))).map(({ title }) => `"${title}"`)
-  if (unmatched.length > 0) {
-    const titles = profile.itemSets?.map(({ title }) => title).join(', ') || 'none'
-    throw new BuildImportError(`${unmatched.join(', ')} did not match a gear stage of this build. Its stages are: ${titles}.`)
-  }
-  return withStageGear(profile, stages)
+  const titles = profile.itemSets?.map(({ title }) => title).join(', ') || 'none'
+  const report: StageFileResult[] = stages.map(({ file, title, gear }) => {
+    if (!ids.has(stageKey(title))) return { file, error: `"${title}" is not a gear stage of this build. Its stages are: ${titles}.` }
+    const items = Object.keys(gear).length
+    return items > 0 ? { file, stage: title, items } : { file, error: `"${title}" has no equipped items` }
+  })
+  return { profile: withStageGear(profile, stages), report: [...report, ...failed] }
 }
 
 async function download(fetcher: Fetcher, url: string): Promise<string> {

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { addStages, BuildImportError, chooseItemSet, importBuild, refreshProfile, stagesFromFiles } from '../../main/buildImport'
 import { mobalyticsStages } from './mobalytics'
-import { parsePlannerBuild, PlannerParseError } from './planner'
+import { parsePlannerBuild, PlannerParseError, type PlannerStage } from './planner'
 import { isStoredProfile } from './profile'
 
 const fixture = (name: string) => readFileSync(new URL(`./__fixtures__/${name}`, import.meta.url), 'utf8')
@@ -10,6 +10,7 @@ const code = fixture('navira.pob')
 const state = fixture('mobalytics-navira-state.json')
 const early = parsePlannerBuild(fixture('navira-early-endgame.build'), 'Early Endgame.build')
 const uber = parsePlannerBuild(fixture('navira-uber-endgame.build'), 'Uber Endgame.build')
+const files = (...stages: PlannerStage[]) => ({ stages: stages.map((stage) => ({ file: `${stage.title}.build`, ...stage })), failed: [] })
 const offline = () => Promise.reject(new Error('offline'))
 
 const EARLY = '74dc2930-4344-402d-a0a9-f0eaba5d0bf2'
@@ -31,12 +32,26 @@ describe('.build files', () => {
 
   it('reads every .build file in the zip Mobalytics downloads', () => {
     const zip = new Uint8Array(readFileSync(new URL('./__fixtures__/navira-stages.zip', import.meta.url)))
-    const stages = stagesFromFiles([{ name: 'navira.zip', data: zip }])
+    const { stages, failed } = stagesFromFiles([{ name: 'navira.zip', data: zip }])
     expect(stages.map(({ title }) => title)).toEqual(['Early Endgame', 'Uber Endgame'])
-    expect(stages[0]).toEqual(early)
+    expect(stages[0]).toEqual({ file: expect.stringMatching(/\.build$/), ...early })
+    expect(failed).toEqual([])
     const single = stagesFromFiles([{ name: 'early.build', data: new TextEncoder().encode(fixture('navira-early-endgame.build')) }])
-    expect(single).toEqual([early])
-    expect(() => stagesFromFiles([{ name: 'broken.zip', data: zip.subarray(0, 100) }])).toThrow(/not a zip file/)
+    expect(single.stages).toEqual([{ file: 'early.build', ...early }])
+  })
+
+  it('reports each file that could not be read and keeps the rest', () => {
+    const zip = new Uint8Array(readFileSync(new URL('./__fixtures__/navira-stages.zip', import.meta.url)))
+    const { stages, failed } = stagesFromFiles([
+      { name: 'broken.zip', data: zip.subarray(0, 100) },
+      { name: 'notes.build', data: new TextEncoder().encode('{"name":"x"}') },
+      { name: 'early.build', data: new TextEncoder().encode(fixture('navira-early-endgame.build')) },
+    ])
+    expect(stages.map(({ file }) => file)).toEqual(['early.build'])
+    expect(failed).toEqual([
+      { file: 'broken.zip', error: expect.stringMatching(/not a zip file/) },
+      { file: 'notes.build', error: expect.stringMatching(/not a .build file/) },
+    ])
   })
 
   it('rejects files that are not .build files', () => {
@@ -52,7 +67,11 @@ describe('stage gear', () => {
     expect(before.items.helmet?.baseType).toBe('Iron Crown')
     expect(before.borrowed?.helmet).toBe('Act 4 to Endgame')
 
-    const staged = addStages({ ...imported, custom: { '+# to maximum Life': 2 } }, [early, uber])
+    const { profile: staged, report } = addStages({ ...imported, custom: { '+# to maximum Life': 2 } }, files(early, uber))
+    expect(report).toEqual([
+      { file: 'Early Endgame.build', stage: 'Early Endgame', items: 10 },
+      { file: 'Uber Endgame.build', stage: 'Uber Endgame', items: expect.any(Number) },
+    ])
     expect(staged.itemSet).toBe(imported.itemSet)
     expect(staged.custom).toEqual({ '+# to maximum Life': 2 })
 
@@ -74,18 +93,21 @@ describe('stage gear', () => {
   })
 
   it('keeps the stage gear when a build is re-read by a newer version', async () => {
-    const staged = addStages(await importBuild(code, offline), [early])
+    const { profile: staged } = addStages(await importBuild(code, offline), files(early))
     const refreshed = refreshProfile({ ...chooseItemSet(staged, '6'), version: 1 })
     expect(refreshed.items.helmet?.name).toBe('Runeforged Sandsworn Tiara')
     expect(isStoredProfile(refreshed)).toBe(true)
     expect(isStoredProfile({ ...refreshed, stageGear: { 6: { helmet: 3 } } })).toBe(false)
   })
 
-  it('says which files do not match a stage', async () => {
+  it('says which files do not match a stage and still adds the others', async () => {
     const imported = await importBuild(code, offline)
     const other = { title: 'Campaign Speedrun', gear: {} }
-    expect(() => addStages(imported, [early, other])).toThrow(/"Campaign Speedrun" did not match.*Early Endgame/)
-    expect(() => addStages(null, [early])).toThrow(BuildImportError)
+    const { profile, report } = addStages(imported, files(early, other))
+    expect(report[0]).toEqual({ file: 'Early Endgame.build', stage: 'Early Endgame', items: 10 })
+    expect(report[1]).toEqual({ file: 'Campaign Speedrun.build', error: expect.stringMatching(/"Campaign Speedrun" is not a gear stage.*Early Endgame/) })
+    expect(Object.keys(profile.stageGear ?? {})).toEqual(['6'])
+    expect(() => addStages(null, files(early))).toThrow(BuildImportError)
   })
 })
 

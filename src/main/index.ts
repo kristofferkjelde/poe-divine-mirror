@@ -53,6 +53,7 @@ function start(): void {
       locked: store.current.overlayLocked,
       theme: store.current.theme,
       currencyTarget: store.current.currencyTarget,
+      currencyFlipped: store.current.currencyFlipped,
     })
   const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current, character: characters.active })
   overlay.onReady(() => {
@@ -60,7 +61,7 @@ function start(): void {
     pushGear()
   })
   store.watch(
-    (settings) => [settings.hotkeys, settings.overlayLocked, settings.theme, settings.currencyTarget],
+    (settings) => [settings.hotkeys, settings.overlayLocked, settings.theme, settings.currencyTarget, settings.currencyFlipped],
     pushPreferences,
   )
   gear.onChange(pushGear)
