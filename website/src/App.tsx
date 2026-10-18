@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { Divider } from './components/Divider'
 import { EvaluateShots } from './components/EvaluateShots'
 import { HeroDemo } from './components/HeroDemo'
@@ -98,6 +99,7 @@ export function App() {
         <Download />
       </main>
       <Footer />
+      <Analytics />
     </div>
   )
 }
