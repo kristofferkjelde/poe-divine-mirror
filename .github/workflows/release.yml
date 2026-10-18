@@ -11,7 +11,15 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    env:
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
     steps:
+      - name: Hide the release from the updater until the installer is attached
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release view "$TAG" >/dev/null 2>&1 && gh release edit "$TAG" --prerelease || true
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -40,11 +48,11 @@ jobs:
           output-artifact-directory: release
       - name: Point the updater at the final installer
         run: node scripts/latest-yml.mjs release
-      - name: Attach the installer to the release
+      - name: Attach the installer and make the release the latest again
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Divine Mirror ${TAG#v}" --generate-notes
           gh release upload "$TAG" release/Divine-Mirror-Setup-*.exe release/latest.yml --clobber
+          gh release edit "$TAG" --prerelease=false --latest
