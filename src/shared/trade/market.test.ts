@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isMarketType, marketPrice, marketRate, ninjaUrl, parseOverview, relayUrl, snapshotTime } from './market'
+import { isMarketType, marketPrice, marketRate, ninjaUrl, parseOverview, relayUrl, responseTimes, snapshotTime } from './market'
 
 const overview = {
   core: {
@@ -41,12 +41,12 @@ describe('currency market', () => {
     expect(parsed?.prices.exalted.traded).toBeCloseTo(210_750)
     expect(parsed?.prices.annul).toEqual({ value: 0.5, traded: 3 })
     expect(parsed?.prices.broken).toBeUndefined()
-    expect(parseOverview({ lines: [] })).toBeNull()
-    expect(parseOverview(null)).toBeNull()
+    expect(() => parseOverview({ lines: [] })).toThrow("poe.ninja's currency market sent unexpected data")
+    expect(() => parseOverview(null)).toThrow()
   })
 
   it('finds prices by id, then by name', () => {
-    const parsed = parseOverview(overview)!
+    const parsed = parseOverview(overview)
     expect(marketPrice(parsed, { id: 'annul' })).toEqual({
       value: 0.5,
       traded: 3,
@@ -56,7 +56,7 @@ describe('currency market', () => {
   })
 
   it('converts between any two currencies through the primary one', () => {
-    const parsed = parseOverview(overview)!
+    const parsed = parseOverview(overview)
     const divineInExalted = marketRate(parsed.prices.divine, parsed.prices.exalted)
     expect(divineInExalted.value).toBeCloseTo(702.5)
     expect(divineInExalted.reliability).toBe('Medium')
@@ -75,5 +75,12 @@ describe('currency market', () => {
     expect(snapshotTime({ ...none, date: 'Sun, 18 Oct 2026 18:40:00 GMT', age: '600' }, now)).toBe(Date.parse('2026-10-18T18:30:00Z'))
     expect(snapshotTime({ ...none, lastModified: 'Mon, 19 Oct 2026 18:00:00 GMT' }, now)).toBe(now)
     expect(snapshotTime(none, now)).toBe(now)
+  })
+
+  it("reads poe.ninja's own times when the relay passes them on", () => {
+    const relayed = new Headers({ date: 'Sun, 18 Oct 2026 18:40:00 GMT', 'x-source-date': 'Sun, 18 Oct 2026 18:20:00 GMT', 'x-source-age': '600' })
+    expect(responseTimes(relayed)).toEqual({ lastModified: null, date: 'Sun, 18 Oct 2026 18:20:00 GMT', age: '600' })
+    const direct = new Headers({ date: 'Sun, 18 Oct 2026 18:40:00 GMT', age: '60' })
+    expect(responseTimes(direct)).toEqual({ lastModified: null, date: 'Sun, 18 Oct 2026 18:40:00 GMT', age: '60' })
   })
 })

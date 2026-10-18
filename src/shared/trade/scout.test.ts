@@ -36,7 +36,7 @@ describe('poe2scout prices', () => {
     const rate = marketRate(overview.prices['hinekoras-lock'], overview.prices.divine)
     expect(rate.value).toBeCloseTo(1674.1, 1)
     expect(marketRate(overview.prices.divine, overview.prices.chaos).value).toBeCloseTo(10.16, 2)
-    expect(parseScoutPage({ error: 'nope' })).toBeNull()
+    expect(() => parseScoutPage({ error: 'nope' })).toThrow('poe2scout sent unexpected price data')
   })
 
   it('dates prices by the latest hour poe2scout has priced', () => {
@@ -53,7 +53,7 @@ describe('poe2scout prices', () => {
   })
 
   it('puts poe.ninja prices in Exalted Orbs too, so both sources can be mixed', () => {
-    const ninja = parseOverview({ core: { primary: 'divine', rates: { exalted: 750, chaos: 10 } }, lines: [] })!
+    const ninja = parseOverview({ core: { primary: 'divine', rates: { exalted: 750, chaos: 10 } }, lines: [] })
     const exalted = inExalted(ninja)
     expect(exalted.prices.divine.value).toBeCloseTo(750)
     expect(exalted.prices.chaos.value).toBeCloseTo(75)

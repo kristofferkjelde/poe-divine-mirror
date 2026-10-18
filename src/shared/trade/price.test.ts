@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimate, formatAge, formatPrice, leagueIds, parseListings, pickLeague, rateLimitWait, tradeUrl } from './price'
+import { estimate, formatAge, formatPrice, leagueIds, parseListings, parseSearch, pickLeague, rateLimitWait, tradeUrl } from './price'
 
 describe('trade price helpers', () => {
   it('reads priced listings and skips unpriced ones', () => {
@@ -18,6 +18,15 @@ describe('trade price helpers', () => {
       { amount: 3, currency: 'exalted', indexed: '2026-10-15T10:00:00Z', account: 'Exile#1234', itemLevel: 79, quality: 20 },
       { amount: 1, currency: 'divine', indexed: undefined },
     ])
+    expect(() => parseListings({ error: { message: 'nope' } })).toThrow('The trade site sent unexpected listings')
+  })
+
+  it('checks the search answer before using it', () => {
+    expect(parseSearch({ id: 'abc', result: ['a', 'b'], total: 40 })).toEqual({ id: 'abc', result: ['a', 'b'], total: 40 })
+    expect(parseSearch({ id: 'abc', result: [] })).toEqual({ id: 'abc', result: [], total: 0 })
+    expect(() => parseSearch({ id: 'abc' })).toThrow('The trade site sent unexpected search results')
+    expect(() => parseSearch({ id: 'abc', result: [1] })).toThrow()
+    expect(() => parseSearch(null)).toThrow()
   })
 
   it('formats prices, ages and the typical listing', () => {
@@ -49,6 +58,7 @@ describe('trade price helpers', () => {
     expect(ids).toEqual(['Rise of the Abyssal', 'Hardcore Rise of the Abyssal', 'Standard'])
     expect(pickLeague(ids)).toBe('Rise of the Abyssal')
     expect(pickLeague(['Standard', 'Hardcore'])).toBe('Standard')
+    expect(() => leagueIds({ result: [null, { realm: 'poe2' }] })).toThrow('The trade site sent unexpected league data')
   })
 
   it('waits out a rate limit rule that is full or restricted', () => {

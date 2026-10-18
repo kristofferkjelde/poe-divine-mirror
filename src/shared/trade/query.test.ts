@@ -6,14 +6,14 @@ import {
   applyEdit,
   defaultSearch,
   matchStat,
+  parseStats,
   PriceCheckUnsupported,
   toSearchEdit,
   toTradeQuery,
   withScale,
-  type TradeStatGroup,
 } from './query'
 
-const stats = (JSON.parse(readFileSync(new URL('./__fixtures__/stats.json', import.meta.url), 'utf8')) as { result: TradeStatGroup[] }).result
+const stats = parseStats(JSON.parse(readFileSync(new URL('./__fixtures__/stats.json', import.meta.url), 'utf8')))
 const fixture = (name: string) =>
   parseItem(readFileSync(new URL(`../item/__fixtures__/${name}.txt`, import.meta.url), 'utf8'))
 const byLabel = (search: ReturnType<typeof defaultSearch>, label: string) =>
@@ -100,6 +100,12 @@ describe('defaultSearch', () => {
   it('keeps mods the trade site has no stat for, but not searchable', () => {
     const item = parseItem('Item Class: Rings\nRarity: Rare\nX\nIron Ring\n--------\nItem Level: 1\n--------\n+20 to maximum Life\nSomething Unheard Of')
     expect(byLabel(defaultSearch(item, stats), 'Something Unheard Of')).toMatchObject({ kind: 'unsearchable', enabled: false })
+  })
+
+  it('checks the stat list from the trade site', () => {
+    expect(stats.length).toBeGreaterThan(0)
+    expect(() => parseStats({ result: [] })).toThrow('The trade site sent unexpected stat data')
+    expect(() => parseStats(null)).toThrow()
   })
 
   it('refuses currency', () => {

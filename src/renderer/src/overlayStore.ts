@@ -10,7 +10,6 @@ import type { ParsedItem } from '../../shared/item/types'
 import { DEFAULT_SETTINGS } from '../../shared/settings'
 import type { ExchangeGroup } from '../../shared/trade/currency'
 import type { CurrencyWorthResult, ExchangeTarget } from '../../shared/trade/exchange'
-import { isMarketType } from '../../shared/trade/market'
 import type { PriceCheckResult } from '../../shared/trade/price'
 import {
   toSearchEdit,
@@ -22,6 +21,7 @@ import {
 
 const ART_DECODE_LIMIT_MS = 100
 const SAVE_TARGET_DELAY_MS = 800
+const CATALOG_RETRY_MS = 30_000
 
 const MISSED_ITEM = "Couldn't read an item. Hover it in the game and press the hotkey again."
 
@@ -164,13 +164,13 @@ function editSearch(update: (search: ItemSearch) => ItemSearch) {
 
 export const isExchangeItem = (item: ParsedItem) => item.rarity === 'Currency' || item.rarity === 'Gem'
 
-async function loadWorth(again = false, fresh = false): Promise<void> {
+async function loadWorth(again = false, refresh = false): Promise<void> {
   if (view.status !== 'item' || !view.worth) return
   const { id, text } = view
   const target = context.currencyTarget
   if (!again && !view.worth.loading && view.worth.target === target && view.worth.result) return
   setView({ ...view, worth: { ...view.worth, target, loading: true } })
-  const result = await window.overlay.currencyWorth(text, target, fresh)
+  const result = await window.overlay.currencyWorth(text, target, refresh)
   if (view.status !== 'item' || view.id !== id || view.worth?.target !== target) return
   setView({ ...view, worth: { target, loading: false, result } })
 }
@@ -198,9 +198,10 @@ export function flipWorth(): void {
 let catalog: Promise<ExchangeGroup[]> | null = null
 
 export const exchangeCatalog = (): Promise<ExchangeGroup[]> =>
-  (catalog ??= window.overlay.exchangeCatalog().then((groups) => {
-    if (groups.length === 0) catalog = null
-    return groups.filter((group) => isMarketType(group.id))
+  (catalog ??= window.overlay.exchangeCatalog().then((result) => {
+    if (result.ok) return result.groups
+    setTimeout(() => (catalog = null), CATALOG_RETRY_MS)
+    return []
   }))
 
 export async function openEvaluate(): Promise<void> {

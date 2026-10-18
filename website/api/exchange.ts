@@ -1,52 +1,38 @@
-const TYPES = new Set([
-  'Currency',
-  'Fragments',
-  'Abyss',
-  'UncutGems',
-  'LineageSupportGems',
-  'Essences',
-  'SoulCores',
-  'Idols',
-  'Runes',
-  'Ritual',
-  'Expedition',
-  'Delirium',
-  'Breach',
-  'Verisium',
-])
-
 const LEAGUE = /^[\p{L}\p{N} '()-]{1,60}$/u
+const TYPE = /^[A-Za-z]{1,40}$/
+const APP_AGENT = /^DivineMirror\/[\w.-]{1,20} /
 const SOURCE = 'https://poe.ninja/poe2/api/economy/exchange/current/overview'
-const USER_AGENT = 'DivineMirror/1.0 (+https://www.poe-divine-mirror.com)'
+const USER_AGENT = 'DivineMirror (+https://www.poe-divine-mirror.com)'
+const SOURCE_TIMES = { 'last-modified': 'X-Source-Last-Modified', date: 'X-Source-Date', age: 'X-Source-Age' }
 
-const reply = (status: number, body: string, cache: string, lastModified?: string) =>
+const reply = (status: number, body: string, cache: string, extra: Record<string, string> = {}) =>
   new Response(body, {
     status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': cache,
-      ...(lastModified && { 'Last-Modified': lastModified }),
-    },
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': cache, ...extra },
   })
 
-function snapshotTime(headers: Headers): string {
+function sourceTimes(headers: Headers): Record<string, string> {
+  const times: Record<string, string> = {}
+  for (const [name, header] of Object.entries(SOURCE_TIMES)) {
+    const value = headers.get(name)
+    if (value) times[header] = value
+  }
   const modified = headers.get('last-modified')
-  if (modified && Number.isFinite(Date.parse(modified))) return modified
-  const sent = Date.parse(headers.get('date') ?? '')
-  const age = Number(headers.get('age') ?? 0)
-  return new Date(Number.isFinite(sent) && Number.isFinite(age) ? sent - age * 1000 : Date.now()).toUTCString()
+  return modified ? { ...times, 'Last-Modified': modified } : times
 }
 
 export async function GET(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams
   const league = params.get('league') ?? ''
   const type = params.get('type') ?? ''
-  if (!LEAGUE.test(league) || !TYPES.has(type)) {
+  if (!LEAGUE.test(league) || !TYPE.test(type)) {
     return reply(400, JSON.stringify({ error: 'Unknown league or type' }), 'public, max-age=3600')
   }
 
+  const agent = request.headers.get('user-agent') ?? ''
   const upstream = await fetch(`${SOURCE}?${new URLSearchParams({ league, type })}`, {
-    headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+    headers: { 'User-Agent': APP_AGENT.test(agent) ? agent : USER_AGENT, Accept: 'application/json' },
+    signal: AbortSignal.timeout(10_000),
   }).catch(() => null)
   if (!upstream?.ok) {
     return reply(
@@ -61,6 +47,6 @@ export async function GET(request: Request): Promise<Response> {
     200,
     await upstream.text(),
     'public, max-age=300, s-maxage=900, stale-while-revalidate=600',
-    snapshotTime(upstream.headers),
+    sourceTimes(upstream.headers),
   )
 }

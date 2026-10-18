@@ -12,7 +12,7 @@ describe('base types', () => {
       ],
     }
     expect(baseTypeNames(body)).toEqual(['Iron Ring', 'Soaring Spear'])
-    expect(baseTypeNames(null)).toEqual([])
+    expect(() => baseTypeNames(null)).toThrow('The trade site sent unexpected item data')
   })
 
   it('finds the base type inside a magic item name', () => {

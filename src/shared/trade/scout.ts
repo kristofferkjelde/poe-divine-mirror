@@ -1,3 +1,4 @@
+import { UserFacingError } from '../errors'
 import type { MarketOverview, MarketPrice } from './market'
 
 export const SCOUT_ORIGIN = 'https://poe2scout.com'
@@ -54,9 +55,9 @@ const number = (value: unknown): number | undefined => {
   return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : undefined
 }
 
-export function parseScoutPage(body: unknown): ScoutPage | null {
+export function parseScoutPage(body: unknown): ScoutPage {
   const data = body as { Pages?: unknown; Items?: unknown } | null
-  if (!data || !Array.isArray(data.Items)) return null
+  if (!data || !Array.isArray(data.Items)) throw new UserFacingError('poe2scout sent unexpected price data')
   return { pages: number(data.Pages) ?? 1, items: data.Items as ScoutItem[] }
 }
 

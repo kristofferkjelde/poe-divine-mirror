@@ -4,8 +4,8 @@ import type { Gear, GearSlot } from './gear'
 import type { ParsedItem } from './item/types'
 import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
-import type { ExchangeGroup } from './trade/currency'
-import type { CurrencyWorthResult, ExchangeTarget } from './trade/exchange'
+import type { Result } from './errors'
+import type { CatalogResult, CurrencyWorthResult, ExchangeTarget } from './trade/exchange'
 import type { SearchEdit } from './trade/query'
 
 export type OverlayEvent =
@@ -37,8 +37,9 @@ export interface SettingsState {
   characters: CharacterList
 }
 
-export type SetHotkeyResult = { ok: true } | { ok: false; error: string }
-export type SettingsResponse = { ok: true; state: SettingsState } | { ok: false; error: string }
+export type SetHotkeyResult = Result<object>
+export type SettingsResponse = Result<{ state: SettingsState }>
+export type LeaguesResult = Result<{ leagues: string[] }>
 
 export interface StageFileResult {
   file: string
@@ -47,7 +48,7 @@ export interface StageFileResult {
   error?: string
 }
 
-export type AddStagesResponse = { ok: true; state: SettingsState; report: StageFileResult[] } | { ok: false; error: string }
+export type AddStagesResponse = Result<{ state: SettingsState; report: StageFileResult[] }>
 
 export interface OverlayApi {
   resize: (height: number) => Promise<void>
@@ -59,8 +60,8 @@ export interface OverlayApi {
   cycleCharacter: (by: number) => Promise<void>
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
-  currencyWorth: (text: string, target: ExchangeTarget, fresh?: boolean) => Promise<CurrencyWorthResult>
-  exchangeCatalog: () => Promise<ExchangeGroup[]>
+  currencyWorth: (text: string, target: ExchangeTarget, refresh?: boolean) => Promise<CurrencyWorthResult>
+  exchangeCatalog: () => Promise<CatalogResult>
   setCurrencyTarget: (target: ExchangeTarget) => Promise<void>
   setCurrencyFlipped: (flipped: boolean) => Promise<void>
   openTrade: (url: string) => Promise<void>
@@ -109,7 +110,7 @@ export interface SettingsApi {
   setBuildItemSet: (itemSet: string) => Promise<SettingsState>
   setBuildWeight: (stat: string, weight: number | null) => Promise<SettingsState>
   resetBuildWeights: () => Promise<SettingsState>
-  listLeagues: () => Promise<string[]>
+  listLeagues: () => Promise<LeaguesResult>
   setLeague: (league: string | null) => Promise<SettingsState>
   setTheme: (theme: Theme) => Promise<SettingsState>
   setUiScale: (scale: UiScale) => Promise<SettingsState>

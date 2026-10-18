@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { exchangeNames, exchangeUrl, formatAmount, stackSize, targetFor } from './exchange'
+import { exchangeNames, formatAmount, stackSize, targetFor } from './exchange'
 
 describe('currency exchange', () => {
-  it('links the league on the trade site exchange', () => {
-    expect(exchangeUrl('Rise of the Abyssal')).toBe(
-      'https://www.pathofexile.com/trade2/exchange/poe2/Rise%20of%20the%20Abyssal',
-    )
-  })
-
   it('never compares a currency with itself', () => {
     expect(targetFor('divine', 'chaos')).toBe('chaos')
     expect(targetFor('chaos', 'chaos')).toBe('divine')

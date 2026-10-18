@@ -18,6 +18,12 @@ export interface TradeStatGroup {
   entries: TradeStatEntry[]
 }
 
+export function parseStats(body: unknown): TradeStatGroup[] {
+  const groups = (body as { result?: unknown } | null)?.result
+  if (!Array.isArray(groups) || groups.length === 0) throw new UserFacingError('The trade site sent unexpected stat data')
+  return groups as TradeStatGroup[]
+}
+
 export type Corrupted = 'any' | 'yes' | 'no'
 export type SearchRarity = 'nonunique' | 'normal' | 'magic' | 'rare' | 'unique'
 export type SaleStatus = 'available' | 'securable' | 'online' | 'any'

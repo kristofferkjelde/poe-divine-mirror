@@ -1,3 +1,5 @@
+import { UserFacingError } from '../errors'
+
 export const IMAGE_ORIGIN = 'https://web.poecdn.com'
 
 export type CurrencyIcons = Record<string, string>
@@ -28,8 +30,7 @@ interface StaticGroup {
 
 export function exchangeGroups(body: unknown): ExchangeGroup[] {
   const groups = (body as { result?: StaticGroup[] } | null)?.result
-  if (!Array.isArray(groups)) return []
-  return groups.flatMap((group) => {
+  const parsed = (Array.isArray(groups) ? groups : []).flatMap((group) => {
     if (typeof group?.id !== 'string' || !Array.isArray(group.entries)) return []
     const entries = group.entries.flatMap(({ id, text, image }) => {
       if (typeof id !== 'string') return []
@@ -38,10 +39,9 @@ export function exchangeGroups(body: unknown): ExchangeGroup[] {
     })
     return [{ id: group.id, label: typeof group.label === 'string' && group.label ? group.label : group.id, entries }]
   })
+  if (parsed.length === 0) throw new UserFacingError('The trade site sent unexpected currency data')
+  return parsed
 }
-
-export const currencyEntries = (body: unknown): CurrencyEntry[] =>
-  exchangeGroups(body).flatMap((group) => group.entries)
 
 export function iconsOf(entries: CurrencyEntry[]): CurrencyIcons {
   const icons: CurrencyIcons = {}
@@ -49,17 +49,23 @@ export function iconsOf(entries: CurrencyEntry[]): CurrencyIcons {
   return icons
 }
 
-export const currencyIcons = (body: unknown): CurrencyIcons => iconsOf(currencyEntries(body))
+export interface FoundEntry {
+  group: ExchangeGroup
+  entry: CurrencyEntry
+}
 
-export function findEntry(
-  groups: ExchangeGroup[],
-  names: string[],
-): { group: ExchangeGroup; entry: CurrencyEntry } | undefined {
+export function findEntry(groups: ExchangeGroup[], match: (entry: CurrencyEntry) => boolean): FoundEntry | undefined {
+  for (const group of groups) {
+    const entry = group.entries.find(match)
+    if (entry) return { group, entry }
+  }
+  return undefined
+}
+
+export function findByName(groups: ExchangeGroup[], names: string[]): FoundEntry | undefined {
   for (const name of names.map((value) => value.toLowerCase())) {
-    for (const group of groups) {
-      const entry = group.entries.find(({ text }) => text?.toLowerCase() === name)
-      if (entry) return { group, entry }
-    }
+    const found = findEntry(groups, ({ text }) => text?.toLowerCase() === name)
+    if (found) return found
   }
   return undefined
 }
