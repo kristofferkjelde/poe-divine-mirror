@@ -86,13 +86,13 @@ export function CurrencyView({ item, text, worth, flipped }: Props) {
       </p>
 
       {shown && <Ledger worth={shown} stack={stack} flipped={flipped} />}
-      {shown && <PricesTime updatedAt={shown.updatedAt} fetchedAt={shown.fetchedAt} />}
+      {shown && <PricesTime worth={shown} />}
 
       <footer className="ember-links">
         <span className="currency-league">{shown ? [shown.league, traded(shown)].filter(Boolean).join(' · ') : ''}</span>
         {result?.url && (
           <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(result.url!)}>
-            poe.ninja ↗
+            {result.ok ? result.source : 'poe2scout'} ↗
           </button>
         )}
       </footer>
@@ -104,15 +104,15 @@ const traded = ({ rate }: Worth) => (rate.traded !== undefined ? `${formatAmount
 
 const clock = (time: number) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-function PricesTime({ updatedAt, fetchedAt }: { updatedAt: number; fetchedAt: number }) {
+function PricesTime({ worth: { updatedAt, fetchedAt, source } }: { worth: Worth }) {
   const minutes = Math.floor((Date.now() - updatedAt) / 60_000)
   const ago = minutes < 1 ? 'just now' : minutes < 120 ? `${minutes} min ago` : `${Math.floor(minutes / 60)} h ago`
   return (
     <p className="currency-time">
-      <span title="When poe.ninja last read the in-game Currency Exchange. poe.ninja reads it about once an hour.">
+      <span title={`When ${source} last read the in-game Currency Exchange. It reads it about once an hour.`}>
         Prices from {clock(updatedAt)} ({ago})
       </span>
-      <span title="When the app last asked poe.ninja for prices">· checked {clock(fetchedAt)}</span>
+      <span title={`When the app last asked ${source} for prices`}>· checked {clock(fetchedAt)}</span>
       <button type="button" className="panel-link" title="Fetch the latest prices now" onClick={() => void refreshWorth()}>
         ↻ Refresh
       </button>

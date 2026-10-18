@@ -94,7 +94,7 @@ Hover anything the in-game Currency Exchange trades (orbs, runes, omens, essence
 
 To price it in another currency, scroll over the **Worth in** slot to step through every currency (hold **Shift** to jump a whole group, like Runes or Essences), or click it to pick from a grid. The app remembers your pick. Click the **⇄** between the two to flip it around, for example to see what 1 Hinekora's Lock costs in Divine Orbs instead of what 1 Divine Orb is worth in Locks. The app remembers that too.
 
-Prices come from [poe.ninja](https://poe.ninja/poe2/economy), which reads the in-game exchange from GGG once an hour, so they match the game's market ratio. The app fetches each category at most once an hour, through a small cache on poe-divine-mirror.com, and keeps the prices on your PC between restarts. Under the prices the popup shows when poe.ninja made them ("Prices from 18:00 (41 min ago)"); and when the app last checked. Click **↻ Refresh** to check poe.ninja again right away. The price time only moves once poe.ninja has a newer read, about once an hour.
+Prices come from [poe2scout](https://poe2scout.com) (the same source as PoE Overlay), which reads the in-game exchange from GGG about once an hour, so they match the game's market ratio. If poe2scout can't be reached, the app uses [poe.ninja](https://poe.ninja/poe2/economy) instead, through a small cache on poe-divine-mirror.com. The app fetches each category at most once an hour and keeps the prices on your PC between restarts. Under the prices the popup shows when they were made ("Prices from 18:00 (41 min ago)") and when the app last checked. Click **↻ Refresh** to check again right away. The price time only moves once there is a newer read, about once an hour.
 
 **Reading the popup**
 
@@ -173,7 +173,7 @@ Windows releases are built from this repository by [GitHub Actions](.github/work
 
 ## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It connects to the internet only for these: a price check sends searches to the official Path of Exile trade site ; hovering currency fetches market prices from poe.ninja through poe-divine-mirror.com, importing a build fetches the link you paste, showing an item loads its picture (item art from GitHub, currency icons from the trade site's image server), and the update check asks GitHub for the latest Divine Mirror release when the app starts and every few hours. Your settings, saved gear and build stay on your PC.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It connects to the internet only for these: a price check sends searches to the official Path of Exile trade site ; hovering currency fetches market prices from poe2scout (or, if that fails, from poe.ninja through poe-divine-mirror.com), importing a build fetches the link you paste, showing an item loads its picture (item art from GitHub, currency icons from the trade site's image server), and the update check asks GitHub for the latest Divine Mirror release when the app starts and every few hours. Your settings, saved gear and build stay on your PC.
 
 ## License
 

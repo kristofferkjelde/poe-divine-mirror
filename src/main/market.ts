@@ -1,8 +1,9 @@
 import { app, net } from 'electron'
 import { toResult, UserFacingError } from '../shared/errors'
 import type { CurrencyEntry, ExchangeGroup } from '../shared/trade/currency'
-import { DEFAULT_TARGET, targetFor, type CurrencyWorthResult, type ExchangeTarget } from '../shared/trade/exchange'
+import { DEFAULT_TARGET, targetFor, type CurrencyWorthResult, type ExchangeTarget, type MarketSource } from '../shared/trade/exchange'
 import {
+  inExalted,
   isMarketType,
   marketPrice,
   marketRate,
@@ -13,6 +14,16 @@ import {
   snapshotTime,
   type MarketOverview,
 } from '../shared/trade/market'
+import {
+  parseScoutPage,
+  SCOUT_MAX_PAGES,
+  SCOUT_PAGE,
+  scoutCategory,
+  scoutCurrenciesUrl,
+  scoutOverview,
+  scoutSnapshotTime,
+  scoutSnapshotUrl,
+} from '../shared/trade/scout'
 import { jsonFile } from './jsonFile'
 import type { TradeClient } from './trade'
 
@@ -20,7 +31,9 @@ const TIMEOUT_MS = 15_000
 const MAX_AGE_MS = 60 * 60 * 1000
 const REFRESH_COOLDOWN_MS = 10 * 1000
 const KEPT_OVERVIEWS = 40
-export const MARKET_PAGE = `${NINJA_ORIGIN}/poe2/economy`
+const NINJA_PAGE = `${NINJA_ORIGIN}/poe2/economy`
+const PAGES: Record<MarketSource, string> = { poe2scout: SCOUT_PAGE, 'poe.ninja': NINJA_PAGE }
+export const MARKET_PAGES: readonly string[] = Object.values(PAGES)
 
 class MarketError extends UserFacingError {}
 
@@ -51,7 +64,8 @@ export class MarketClient {
         league: leagueId,
         updatedAt: Math.min(item.pricesFrom, worthIn.pricesFrom),
         fetchedAt: Math.min(item.fetchedAt, worthIn.fetchedAt),
-        url: MARKET_PAGE,
+        source: item.source,
+        url: PAGES[item.source],
         item: entry,
         group: group.label,
         target: target.entry,
@@ -60,15 +74,15 @@ export class MarketClient {
     } catch (error) {
       return {
         ...toResult(error, 'Could not reach the currency market'),
-        url: MARKET_PAGE,
+        url: SCOUT_PAGE,
       }
     }
   }
 
   private async price(league: string, type: string, entry: CurrencyEntry, fresh: boolean) {
     if (!isMarketType(type)) throw new MarketError(`The market has no prices for ${entry.text ?? entry.id}`)
-    const { fetchedAt, pricesFrom = fetchedAt, overview } = await this.overview(league, type, fresh)
-    return { fetchedAt, pricesFrom, price: marketPrice(overview, entry) }
+    const { fetchedAt, pricesFrom = fetchedAt, source = 'poe.ninja', overview } = await this.overview(league, type, fresh)
+    return { fetchedAt, pricesFrom, source, price: marketPrice(inExalted(overview), entry) }
   }
 
   private async overview(league: string, type: string, fresh: boolean): Promise<Saved> {
@@ -81,8 +95,8 @@ export class MarketClient {
     let loading = this.pending.get(key)
     if (!loading) {
       loading = fetchOverview(league, type, fresh)
-        .then(({ overview, pricesFrom }) => {
-          const latest = { fetchedAt: Date.now(), pricesFrom, overview }
+        .then(({ overview, pricesFrom, source }) => {
+          const latest = { fetchedAt: Date.now(), pricesFrom, source, overview }
           saved[key] = latest
           for (const old of Object.keys(saved)
             .sort((a, b) => saved[b].fetchedAt - saved[a].fetchedAt)
@@ -105,6 +119,7 @@ export class MarketClient {
 interface Saved {
   fetchedAt: number
   pricesFrom?: number
+  source?: MarketSource
   overview: MarketOverview
 }
 
@@ -126,13 +141,47 @@ function findTarget(groups: ExchangeGroup[], id: string): { group: ExchangeGroup
   throw new MarketError('The currency exchange does not list Chaos Orbs')
 }
 
-async function fetchOverview(league: string, type: string, fresh: boolean): Promise<{ overview: MarketOverview; pricesFrom: number }> {
+interface Fetched {
+  overview: MarketOverview
+  pricesFrom: number
+  source: MarketSource
+}
+
+async function fetchOverview(league: string, type: string, fresh: boolean): Promise<Fetched> {
+  return (await fetchScout(league, type, fresh)) ?? fetchNinja(league, type, fresh)
+}
+
+async function fetchScout(league: string, type: string, fresh: boolean): Promise<Fetched | null> {
+  const category = scoutCategory(type)
+  if (!category) return null
+  const [first, snapshot] = await Promise.all([
+    request(scoutCurrenciesUrl(league, category, 1), fresh),
+    request(scoutSnapshotUrl(league), fresh),
+  ])
+  const page = first && parseScoutPage(first.body)
+  if (!first || !page) return null
+  const items = [...page.items]
+  for (let next = 2; next <= Math.min(page.pages, SCOUT_MAX_PAGES); next++) {
+    const more = await request(scoutCurrenciesUrl(league, category, next), fresh)
+    const parsed = more && parseScoutPage(more.body)
+    if (!parsed) return null
+    items.push(...parsed.items)
+  }
+  if (items.length === 0) return null
+  return {
+    overview: scoutOverview(items),
+    pricesFrom: (snapshot && scoutSnapshotTime(snapshot.body)) ?? first.pricesFrom,
+    source: 'poe2scout',
+  }
+}
+
+async function fetchNinja(league: string, type: string, fresh: boolean): Promise<Fetched> {
   const response =
     (!fresh && (await request(relayUrl(league, type), false))) || (await request(ninjaUrl(league, type), fresh))
-  if (!response) throw new MarketError("Could not reach poe.ninja's currency market")
+  if (!response) throw new MarketError('Could not reach poe2scout or poe.ninja for currency prices')
   const overview = parseOverview(response.body)
   if (!overview) throw new MarketError("poe.ninja's currency market sent unexpected data")
-  return { overview, pricesFrom: response.pricesFrom }
+  return { overview, pricesFrom: response.pricesFrom, source: 'poe.ninja' }
 }
 
 async function request(url: string, fresh: boolean): Promise<{ body: unknown; pricesFrom: number } | null> {

@@ -26,12 +26,15 @@ export function exchangeNames(item: Pick<ParsedItem, 'name' | 'baseType' | 'prop
   ].filter((name, index, all) => name && all.indexOf(name) === index)
 }
 
+export type MarketSource = 'poe2scout' | 'poe.ninja'
+
 export type CurrencyWorthResult =
   | {
       ok: true
       league: string
       updatedAt: number
       fetchedAt: number
+      source: MarketSource
       url: string
       item: CurrencyEntry
       group: string
