@@ -94,7 +94,7 @@ Hover anything the in-game Currency Exchange trades (orbs, runes, omens, essence
 
 To price it in another currency, scroll over the **Worth in** slot to step through every currency (hold **Shift** to jump a whole group, like Runes or Essences), or click it to pick from a grid. The app remembers your pick. Click the **⇄** between the two to flip it around, for example to see what 1 Hinekora's Lock costs in Divine Orbs instead of what 1 Divine Orb is worth in Locks. The app remembers that too.
 
-Prices come from [poe.ninja](https://poe.ninja/poe2/economy), which reads the in-game exchange from GGG once an hour, so they match the game's market ratio. The app fetches each category at most once an hour, through a small cache on poe-divine-mirror.com, and keeps the prices on your PC between restarts. Under the prices the popup shows when poe.ninja made them ("Prices from 18:00 (41 min ago)"); click **↻ Refresh** to fetch the latest straight from poe.ninja. That only helps once poe.ninja has a newer read, and the app asks at most once a minute.
+Prices come from [poe.ninja](https://poe.ninja/poe2/economy), which reads the in-game exchange from GGG once an hour, so they match the game's market ratio. The app fetches each category at most once an hour, through a small cache on poe-divine-mirror.com, and keeps the prices on your PC between restarts. Under the prices the popup shows when poe.ninja made them ("Prices from 18:00 (41 min ago)"); and when the app last checked. Click **↻ Refresh** to check poe.ninja again right away. The price time only moves once poe.ninja has a newer read, about once an hour.
 
 **Reading the popup**
 

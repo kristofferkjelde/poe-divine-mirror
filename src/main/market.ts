@@ -18,7 +18,7 @@ import type { TradeClient } from './trade'
 
 const TIMEOUT_MS = 15_000
 const MAX_AGE_MS = 60 * 60 * 1000
-const REFRESH_COOLDOWN_MS = 60 * 1000
+const REFRESH_COOLDOWN_MS = 10 * 1000
 const KEPT_OVERVIEWS = 40
 export const MARKET_PAGE = `${NINJA_ORIGIN}/poe2/economy`
 
