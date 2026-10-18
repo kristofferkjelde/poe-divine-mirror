@@ -1,21 +1,12 @@
+import { Suspense, use, useState, type ReactNode, type WheelEvent } from 'react'
 import { cachedImageUrl } from '../../../shared/imageCache'
 import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
-import type { CurrencyIcons } from '../../../shared/trade/currency'
-import {
-  formatAmount,
-  stackSize,
-  TARGET_NAMES,
-  targetsFor,
-  type CurrencyWorthResult,
-  type ExchangeTarget,
-} from '../../../shared/trade/exchange'
-import { useCountdown } from '../countdown'
-import { retryWorth, showWorthIn, type WorthState } from '../overlayStore'
-import { Embers, Pips } from './EvaluateView'
+import type { CurrencyEntry, ExchangeGroup } from '../../../shared/trade/currency'
+import { formatAmount, stackSize, type CurrencyWorthResult } from '../../../shared/trade/exchange'
+import { exchangeCatalog, retryWorth, showWorthIn, type WorthState } from '../overlayStore'
+import { Pips } from './EvaluateView'
 import { ItemArt } from './ItemArt'
-
-const SHORT_NAMES: Record<ExchangeTarget, string> = { chaos: 'Chaos', exalted: 'Exalted', divine: 'Divine' }
 
 interface Props {
   item: ParsedItem
@@ -23,13 +14,16 @@ interface Props {
   worth: WorthState
 }
 
+type Worth = Extract<CurrencyWorthResult, { ok: true }>
+
 export function CurrencyView({ item, text, worth }: Props) {
+  const [picking, setPicking] = useState(false)
   const { target, loading, result } = worth
   const name = item.baseType ?? item.name
   const stack = stackSize(text)
-  const icons = result?.ok ? result.icons : {}
-  const shown = result?.ok && result.target === target ? result : null
-  const url = result?.url
+  const shown = result?.ok && !loading ? result : null
+  const itemId = result?.ok ? result.item.id : undefined
+  const current = shown ? shown.target.id : target
 
   return (
     <section className="window ember currency">
@@ -45,73 +39,57 @@ export function CurrencyView({ item, text, worth }: Props) {
         <span />
       </header>
 
-      <div className="ember-top">
+      <div className="currency-pair">
         <figure className="ember-slot">
-          <figcaption>Your currency</figcaption>
+          <figcaption>You have</figcaption>
           <span className="currency-stack">
-            <CurrencyArt item={item} icon={result?.ok ? icons[result.currency] : undefined} />
+            <Art src={result?.ok ? result.item.image : undefined} fallback={<ItemArt item={item} />} />
             {stack && <b>{stack.count.toLocaleString('en-US')}</b>}
           </span>
-          <strong data-rarity="currency">{name}</strong>
-          {stack && <small>{stack.max ? `Stack ${stack.count} / ${stack.max}` : `Stack ${stack.count}`}</small>}
+          <strong className="currency-name" data-rarity={item.rarity === 'Gem' ? 'gem' : 'currency'}>
+            {result?.ok ? (result.item.text ?? name) : name}
+          </strong>
+          <small>{result?.ok ? result.group : stack?.max ? `Stack ${stack.count} / ${stack.max}` : ' '}</small>
         </figure>
-        <div className="ember-estimate" data-searching={loading}>
-          <WorthBody worth={worth} />
+
+        <div className="currency-ratio" data-searching={loading}>
+          <Ratio worth={worth} />
         </div>
+
+        <Suspense fallback={<TargetSlot entry={shown ? shown.target : { id: target }} />}>
+          <CyclingTarget
+            current={current}
+            fallback={shown ? shown.target : { id: target }}
+            exclude={itemId}
+            onOpen={() => setPicking(!picking)}
+          />
+        </Suspense>
       </div>
 
-      <div className="currency-picker">
-        <span>Show in</span>
-        <div className="ember-presets" role="group" aria-label="Show the worth in">
-          {targetsFor(name).map((option) => (
-            <button key={option} type="button" aria-pressed={option === target} onClick={() => showWorthIn(option)}>
-              <TargetIcon target={option} icons={icons} />
-              {SHORT_NAMES[option]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {shown && (
-        <>
-          <div className="ember-rule" aria-hidden>
-            <span />
-          </div>
-          <dl className="currency-ledger">
-            {stack && stack.count > 1 && (
-              <div>
-                <dt>Your stack of {stack.count.toLocaleString('en-US')}</dt>
-                <dd>
-                  <Amount value={shown.rate.value * stack.count} target={target} icons={icons} />
-                </dd>
-              </div>
-            )}
-            {stack?.max && stack.max !== stack.count && (
-              <div>
-                <dt>Full stack of {stack.max.toLocaleString('en-US')}</dt>
-                <dd>
-                  <Amount value={shown.rate.value * stack.max} target={target} icons={icons} />
-                </dd>
-              </div>
-            )}
-            <div>
-              <dt>1 {TARGET_NAMES[target]} buys</dt>
-              <dd>
-                <span className="ember-amount">
-                  <CurrencyIcon src={icons[shown.currency]} />
-                  <span>{formatAmount(1 / shown.rate.value)}</span>
-                </span>
-              </dd>
-            </div>
-          </dl>
-        </>
+      {picking && (
+        <Suspense fallback={<p className="ember-message">Loading currencies…</p>}>
+          <CurrencyGrid
+            current={current}
+            exclude={itemId}
+            onPick={(id) => {
+              setPicking(false)
+              showWorthIn(id)
+            }}
+          />
+        </Suspense>
       )}
 
+      <p className="currency-hint">Scroll over the currency to change it, Shift skips a group, click to see them all</p>
+
+      {shown && <Ledger worth={shown} stack={stack} />}
+
       <footer className="ember-links">
-        <span className="currency-league">{result?.ok ? result.league : ''}</span>
-        {url && (
-          <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(url)}>
-            Open currency exchange ↗
+        <span className="currency-league">
+          {shown ? [shown.league, traded(shown), age(shown.updatedAt)].filter(Boolean).join(' · ') : ''}
+        </span>
+        {result?.url && (
+          <button type="button" className="panel-link" onClick={() => void window.overlay.openTrade(result.url!)}>
+            poe.ninja ↗
           </button>
         )}
       </footer>
@@ -119,78 +97,216 @@ export function CurrencyView({ item, text, worth }: Props) {
   )
 }
 
-function WorthBody({ worth }: { worth: WorthState }) {
-  const { target, loading, result } = worth
-  const wait = useCountdown(result?.ok === false ? result.retryAt : undefined)
+const traded = ({ rate }: Worth) => (rate.traded !== undefined ? `${formatAmount(rate.traded)} traded` : '')
 
-  if (!result || (loading && !(result.ok && result.target === target))) {
-    return <p className="ember-message">Checking the currency exchange…</p>
-  }
-  if (!result.ok) return <Failed result={result} wait={wait} />
-
-  const { rate, icons } = result
-  return (
-    <>
-      <small title="The middle of the cheapest offers on the trade site's currency exchange">Worth each</small>
-      <strong className="ember-value">
-        <Amount value={rate.value} target={result.target} icons={icons} />
-      </strong>
-      <Embers />
-      <span className="ember-range">
-        <Amount value={rate.low} target={result.target} icons={icons} /> –{' '}
-        <Amount value={rate.high} target={result.target} icons={icons} />
-      </span>
-      <Pips reliability={rate.reliability} />
-      <span className="ember-range">
-        {rate.offers.toLocaleString('en-US')} {rate.offers === 1 ? 'offer' : 'offers'}
-      </span>
-    </>
-  )
+function age(updatedAt: number): string {
+  const minutes = Math.floor((Date.now() - updatedAt) / 60_000)
+  return minutes < 1 ? 'prices just now' : `prices ${minutes} min old`
 }
 
-function Failed({ result, wait }: { result: Extract<CurrencyWorthResult, { ok: false }>; wait: number }) {
-  if (result.retryAt !== undefined && wait > 0) {
+function Ratio({ worth: { loading, result } }: { worth: WorthState }) {
+  if (!result || loading) {
+    return (
+      <span className="currency-loading" role="status">
+        <span className="currency-spinner" aria-hidden />
+        <small>Checking prices…</small>
+      </span>
+    )
+  }
+  if (!result.ok) {
     return (
       <>
-        <small>Slow down</small>
-        <strong className="ember-value" role="timer">
-          {wait}s
-        </strong>
-        <span className="ember-range">The trade site asked us to wait before checking again.</span>
+        <p className="ember-message" data-error>
+          {result.error}
+        </p>
+        <button type="button" className="panel-link" onClick={() => void retryWorth()}>
+          Try again
+        </button>
       </>
     )
   }
   return (
     <>
-      {result.retryAt === undefined && (
-        <p className="ember-message" data-error>
-          {result.error}
-        </p>
-      )}
-      <button type="button" className="panel-link" onClick={() => void retryWorth()}>
-        Try again
-      </button>
+      <span className="currency-one">1</span>
+      <i className="currency-arrows" aria-hidden>
+        ⇄
+      </i>
+      <strong
+        className="ember-value"
+        title={`1 ${result.item.text ?? result.item.id} is worth this many ${result.target.text ?? result.target.id}`}
+      >
+        {formatAmount(result.rate.value)}
+      </strong>
+      <Pips reliability={result.rate.reliability} />
     </>
   )
 }
 
-function Amount({ value, target, icons }: { value: number; target: ExchangeTarget; icons: CurrencyIcons }) {
+interface CyclingProps {
+  current: string
+  fallback: CurrencyEntry
+  exclude: string | undefined
+  onOpen: () => void
+}
+
+function CyclingTarget({ current, fallback, exclude, onOpen }: CyclingProps) {
+  const groups = choicesOf(use(exchangeCatalog()), exclude)
+  const choices = groups.flatMap((group) => group.entries.map((entry) => ({ group, entry })))
+  const index = choices.findIndex(({ entry }) => entry.id === current)
+  const found = choices[index]
+
+  const onWheel = (event: WheelEvent) => {
+    if (choices.length === 0) return
+    const step = event.deltaY > 0 ? 1 : -1
+    if (!event.shiftKey || !found) {
+      showWorthIn(choices[(Math.max(index, 0) + step + choices.length) % choices.length].entry.id)
+      return
+    }
+    const next = groups[(groups.indexOf(found.group) + step + groups.length) % groups.length]
+    showWorthIn(next.entries[0].id)
+  }
+
+  return (
+    <TargetSlot
+      entry={found?.entry ?? fallback}
+      place={
+        found && `${found.group.label} · ${found.group.entries.indexOf(found.entry) + 1}/${found.group.entries.length}`
+      }
+      onWheel={onWheel}
+      onClick={onOpen}
+    />
+  )
+}
+
+interface TargetSlotProps {
+  entry: CurrencyEntry
+  place?: string
+  onWheel?: (event: WheelEvent) => void
+  onClick?: () => void
+}
+
+function TargetSlot({ entry, place, onWheel, onClick }: TargetSlotProps) {
+  return (
+    <button
+      type="button"
+      className="ember-slot currency-target"
+      onWheel={onWheel}
+      onClick={onClick}
+      title="Scroll to change the currency (Shift skips a group). Click to see them all."
+    >
+      <figcaption>Worth in</figcaption>
+      <Art src={entry.image ?? currencyArt(entry.id)} />
+      <strong className="currency-name">{entry.text ?? entry.id}</strong>
+      <small>{place ?? ' '}</small>
+      <span className="currency-wheel" aria-hidden>
+        ▲<br />▼
+      </span>
+    </button>
+  )
+}
+
+interface GridProps {
+  current: string
+  exclude: string | undefined
+  onPick: (id: string) => void
+}
+
+function CurrencyGrid({ current, exclude, onPick }: GridProps) {
+  const groups = choicesOf(use(exchangeCatalog()), exclude)
+  const [shown, setShown] = useState(
+    () => groups.find((group) => group.entries.some((entry) => entry.id === current))?.id ?? groups[0]?.id,
+  )
+  const group = groups.find(({ id }) => id === shown) ?? groups[0]
+  if (!group) return <p className="ember-message">Couldn't load the currency list.</p>
+
+  return (
+    <div className="currency-grid-panel">
+      <div className="currency-group-tabs" role="tablist">
+        {groups.map(({ id, label }) => (
+          <button key={id} type="button" role="tab" aria-selected={id === group.id} onClick={() => setShown(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="currency-grid">
+        {group.entries.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            title={entry.text ?? entry.id}
+            aria-pressed={entry.id === current}
+            onClick={() => onPick(entry.id)}
+          >
+            <Art src={entry.image} />
+            <span>{entry.text ?? entry.id}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const choicesOf = (groups: ExchangeGroup[], exclude: string | undefined): ExchangeGroup[] =>
+  groups
+    .map((group) => ({
+      ...group,
+      entries: group.entries.filter((entry) => entry.id !== exclude),
+    }))
+    .filter((group) => group.entries.length > 0)
+
+function Ledger({ worth, stack }: { worth: Worth; stack: ReturnType<typeof stackSize> }) {
+  const { rate, item, target } = worth
+  return (
+    <dl className="currency-ledger">
+      {stack && stack.count > 1 && (
+        <div>
+          <dt>Your stack of {stack.count.toLocaleString('en-US')}</dt>
+          <dd>
+            <Amount value={rate.value * stack.count} entry={target} />
+          </dd>
+        </div>
+      )}
+      {stack?.max && stack.max !== stack.count && (
+        <div>
+          <dt>Full stack of {stack.max.toLocaleString('en-US')}</dt>
+          <dd>
+            <Amount value={rate.value * stack.max} entry={target} />
+          </dd>
+        </div>
+      )}
+      <div>
+        <dt>1 {target.text ?? target.id} buys</dt>
+        <dd>
+          <Amount value={1 / rate.value} entry={item} />
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
+function Amount({ value, entry }: { value: number; entry: CurrencyEntry }) {
   return (
     <span className="ember-amount">
-      <TargetIcon target={target} icons={icons} />
+      <Art src={entry.image ?? currencyArt(entry.id)} icon />
       <span>{formatAmount(value)}</span>
     </span>
   )
 }
 
-const TargetIcon = ({ target, icons }: { target: ExchangeTarget; icons: CurrencyIcons }) => (
-  <CurrencyIcon src={icons[target] ?? currencyArt(target)} />
-)
-
-function CurrencyIcon({ src }: { src: string | undefined }) {
+function Art({
+  src,
+  fallback = null,
+  icon = false,
+}: {
+  src: string | undefined
+  fallback?: ReactNode
+  icon?: boolean
+}) {
   const url = cachedImageUrl(src)
-  return url ? (
+  if (!url) return fallback
+  return (
     <img
+      className={icon ? undefined : 'item-art'}
       src={url}
       alt=""
       draggable={false}
@@ -198,10 +314,5 @@ function CurrencyIcon({ src }: { src: string | undefined }) {
         event.currentTarget.hidden = true
       }}
     />
-  ) : null
-}
-
-function CurrencyArt({ item, icon }: { item: ParsedItem; icon: string | undefined }) {
-  const url = cachedImageUrl(icon)
-  return url ? <img className="item-art" src={url} alt="" draggable={false} /> : <ItemArt item={item} />
+  )
 }

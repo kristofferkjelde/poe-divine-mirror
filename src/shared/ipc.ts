@@ -3,6 +3,7 @@ import type { Gear, GearSlot } from './gear'
 import type { ParsedItem } from './item/types'
 import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
+import type { ExchangeGroup } from './trade/currency'
 import type { CurrencyWorthResult, ExchangeTarget } from './trade/exchange'
 import type { SearchEdit } from './trade/query'
 
@@ -45,6 +46,7 @@ export interface OverlayApi {
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
   currencyWorth: (text: string, target: ExchangeTarget) => Promise<CurrencyWorthResult>
+  exchangeCatalog: () => Promise<ExchangeGroup[]>
   setCurrencyTarget: (target: ExchangeTarget) => Promise<void>
   openTrade: (url: string) => Promise<void>
   ready: () => Promise<void>
@@ -92,7 +94,6 @@ export interface SettingsApi {
   setLeague: (league: string | null) => Promise<SettingsState>
   setTheme: (theme: Theme) => Promise<SettingsState>
   setUiScale: (scale: UiScale) => Promise<SettingsState>
-  setCurrencyTarget: (target: ExchangeTarget) => Promise<SettingsState>
 }
 
 export interface OverlayBridge extends OverlayApi {
@@ -109,6 +110,7 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   prepareSearch: true,
   runSearch: true,
   currencyWorth: true,
+  exchangeCatalog: true,
   setCurrencyTarget: true,
   openTrade: true,
   ready: true,
@@ -137,7 +139,6 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setLeague: true,
   setTheme: true,
   setUiScale: true,
-  setCurrencyTarget: true,
 }
 
 const TOOLTIP_METHODS: Record<keyof TooltipApi, true> = {

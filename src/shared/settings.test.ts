@@ -14,7 +14,8 @@ describe('settings', () => {
 
   it('keeps the currency worth is shown in, defaulting to Chaos', () => {
     expect(normalizeSettings({ currencyTarget: 'divine' }).currencyTarget).toBe('divine')
-    expect(normalizeSettings({ currencyTarget: 'mirror' }).currencyTarget).toBe('chaos')
+    expect(normalizeSettings({ currencyTarget: 'iron-rune' }).currencyTarget).toBe('iron-rune')
+    expect(normalizeSettings({ currencyTarget: 'Not an id!' }).currencyTarget).toBe('chaos')
     expect(normalizeSettings(null).currencyTarget).toBe('chaos')
   })
 })

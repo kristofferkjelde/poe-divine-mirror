@@ -15,17 +15,8 @@ import {
   type PriceCheckResult,
 } from '../shared/trade/price'
 import { baseTypeNames, magicBaseType } from '../shared/trade/baseTypes'
-import { currencyEntries, currencyId, iconsFor, iconsOf } from '../shared/trade/currency'
-import {
-  EXCHANGE_TARGETS,
-  exchangeQuery,
-  exchangeRate,
-  exchangeUrl,
-  TARGET_NAMES,
-  targetFor,
-  type CurrencyWorthResult,
-  type ExchangeTarget,
-} from '../shared/trade/exchange'
+import { exchangeGroups, findEntry, iconsFor, iconsOf, type CurrencyEntry, type ExchangeGroup } from '../shared/trade/currency'
+import { exchangeNames } from '../shared/trade/exchange'
 import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
 import { diskBacked, expiring } from './cached'
 
@@ -71,18 +62,17 @@ export class TradeClient {
     ),
     DATA_MAX_AGE_MS,
   )
-  private readonly currencies = expiring(
+  private readonly exchange = expiring(
     diskBacked(
-      'trade-currencies.json',
+      'trade-exchange.json',
       DATA_MAX_AGE_MS,
-      () => this.request('/api/trade2/data/static').then(currencyEntries),
+      () => this.request('/api/trade2/data/static').then(exchangeGroups),
       (result) => (result.length > 0 ? null : new TradeError('The trade site sent unexpected currency data')),
     ),
     DATA_MAX_AGE_MS,
   )
   private blockedUntil = 0
   private readonly cache = new Map<string, { at: number; result: PriceCheckResult }>()
-  private readonly worthCache = new Map<string, { at: number; result: CurrencyWorthResult }>()
   private readonly searches = new Map<string, ItemSearch>()
 
   listLeagues(): Promise<string[]> {
@@ -131,7 +121,7 @@ export class TradeClient {
       }
 
       const icons = iconsFor(
-        iconsOf(await this.currencies().catch(() => [])),
+        iconsOf((await this.exchange().catch(() => [])).flatMap((group) => group.entries)),
         listings.map((listing) => listing.currency),
       )
       const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings, icons }
@@ -147,48 +137,19 @@ export class TradeClient {
     }
   }
 
-  async worth(text: string, preferred: ExchangeTarget, league: string | null): Promise<CurrencyWorthResult> {
-    let url: string | undefined
-    try {
-      const item = parseItem(text)
-      const name = item.baseType ?? item.name
-      const target = targetFor(name, preferred)
-      const entries = await this.currencies()
-      const currency = currencyId(entries, name)
-      if (!currency) throw new TradeError(`The currency exchange does not list ${name}`)
+  catalog(): Promise<ExchangeGroup[]> {
+    return this.exchange()
+  }
 
-      const leagueId = league ?? pickLeague(await this.leagues())
-      const cacheKey = `${leagueId}\n${currency}\n${target}`
-      const cached = this.worthCache.get(cacheKey)
-      if (cached && Date.now() - cached.at < RESULT_CACHE_MS) return cached.result
+  async exchangeItem(text: string): Promise<{ group: ExchangeGroup; entry: CurrencyEntry }> {
+    const item = parseItem(text)
+    const found = findEntry(await this.exchange(), exchangeNames(item))
+    if (!found) throw new TradeError(`The currency exchange does not list ${item.baseType ?? item.name}`)
+    return found
+  }
 
-      const response = (await this.request(
-        `/api/trade2/exchange/poe2/${encodeURIComponent(leagueId)}`,
-        exchangeQuery(currency, target),
-      )) as { id?: unknown }
-      if (typeof response.id === 'string') url = exchangeUrl(leagueId, response.id)
-      const rate = exchangeRate(response, currency, target)
-      if (!rate) throw new TradeError(`Nobody is selling ${name} for ${TARGET_NAMES[target]}s right now`)
-
-      const result: CurrencyWorthResult = {
-        ok: true,
-        league: leagueId,
-        url: url ?? exchangeUrl(leagueId),
-        currency,
-        target,
-        rate,
-        icons: iconsFor(iconsOf(entries), [currency, ...EXCHANGE_TARGETS]),
-      }
-      for (const [key, entry] of this.worthCache) if (Date.now() - entry.at >= RESULT_CACHE_MS) this.worthCache.delete(key)
-      this.worthCache.set(cacheKey, { at: Date.now(), result })
-      return result
-    } catch (error) {
-      return {
-        ...toResult(error, 'Could not reach the trade site'),
-        url,
-        ...(error instanceof SlowDownError && { retryAt: error.retryAt }),
-      }
-    }
+  async league(league: string | null): Promise<string> {
+    return league ?? pickLeague(await this.leagues())
   }
 
   private async withBaseType(item: ParsedItem): Promise<ParsedItem> {

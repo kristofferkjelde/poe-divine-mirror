@@ -8,7 +8,9 @@ import type { OverlayContext, OverlayEvent } from '../../shared/ipc'
 import { parseItem } from '../../shared/item/parse'
 import type { ParsedItem } from '../../shared/item/types'
 import { DEFAULT_SETTINGS } from '../../shared/settings'
-import { targetFor, type CurrencyWorthResult, type ExchangeTarget } from '../../shared/trade/exchange'
+import type { ExchangeGroup } from '../../shared/trade/currency'
+import type { CurrencyWorthResult, ExchangeTarget } from '../../shared/trade/exchange'
+import { isMarketType } from '../../shared/trade/market'
 import type { PriceCheckResult } from '../../shared/trade/price'
 import {
   toSearchEdit,
@@ -19,6 +21,7 @@ import {
 } from '../../shared/trade/query'
 
 const ART_DECODE_LIMIT_MS = 100
+const SAVE_TARGET_DELAY_MS = 800
 
 const MISSED_ITEM = "Couldn't read an item. Hover it in the game and press the hotkey again."
 
@@ -98,7 +101,7 @@ function show(event: Extract<OverlayEvent, { kind: 'item' }>): View {
   const id = nextId++
   try {
     const item = parseItem(event.text)
-    const worth = isCurrency(item) ? { target: targetFor(currencyName(item), context.currencyTarget), loading: true, result: null } : undefined
+    const worth = isExchangeItem(item) ? { target: context.currencyTarget, loading: true, result: null } : undefined
     return { status: 'item', id, text: event.text, item, equippedTo: event.equippedTo, evaluate: { status: 'closed' }, worth }
   } catch (error) {
     return { status: 'error', id, message: error instanceof UserFacingError ? error.message : 'Could not read that item' }
@@ -157,14 +160,12 @@ function editSearch(update: (search: ItemSearch) => ItemSearch) {
   setEvaluate(view.id, (evaluate) => (evaluate.status === 'ready' ? { ...evaluate, search: update(evaluate.search) } : evaluate))
 }
 
-export const isCurrency = (item: ParsedItem) => item.rarity === 'Currency'
-
-const currencyName = (item: ParsedItem) => item.baseType ?? item.name
+export const isExchangeItem = (item: ParsedItem) => item.rarity === 'Currency' || item.rarity === 'Gem'
 
 async function loadWorth(again = false): Promise<void> {
   if (view.status !== 'item' || !view.worth) return
-  const { id, text, item } = view
-  const target = targetFor(currencyName(item), context.currencyTarget)
+  const { id, text } = view
+  const target = context.currencyTarget
   if (!again && !view.worth.loading && view.worth.target === target && view.worth.result) return
   setView({ ...view, worth: { ...view.worth, target, loading: true } })
   const result = await window.overlay.currencyWorth(text, target)
@@ -174,13 +175,24 @@ async function loadWorth(again = false): Promise<void> {
 
 export const retryWorth = (): Promise<void> => loadWorth(true)
 
+let saveTarget: ReturnType<typeof setTimeout> | undefined
+
 export function showWorthIn(target: ExchangeTarget): void {
   if (target === context.currencyTarget) return
   context = { ...context, currencyTarget: target }
   render()
   void loadWorth()
-  void window.overlay.setCurrencyTarget(target)
+  clearTimeout(saveTarget)
+  saveTarget = setTimeout(() => void window.overlay.setCurrencyTarget(target), SAVE_TARGET_DELAY_MS)
 }
+
+let catalog: Promise<ExchangeGroup[]> | null = null
+
+export const exchangeCatalog = (): Promise<ExchangeGroup[]> =>
+  (catalog ??= window.overlay.exchangeCatalog().then((groups) => {
+    if (groups.length === 0) catalog = null
+    return groups.filter((group) => isMarketType(group.id))
+  }))
 
 export async function openEvaluate(): Promise<void> {
   if (view.status !== 'item' || view.evaluate.status !== 'closed' || view.worth) return

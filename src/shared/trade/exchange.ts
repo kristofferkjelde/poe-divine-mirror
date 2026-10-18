@@ -1,37 +1,43 @@
-import type { CurrencyIcons } from './currency'
-import { TRADE_ORIGIN, type Reliability } from './price'
+import type { ParsedItem } from '../item/types'
+import type { CurrencyEntry } from './currency'
+import type { ExchangeRate } from './market'
+import { TRADE_ORIGIN } from './price'
 
-export const EXCHANGE_TARGETS = ['chaos', 'exalted', 'divine'] as const
+export type ExchangeTarget = string
 
-export type ExchangeTarget = (typeof EXCHANGE_TARGETS)[number]
+export const DEFAULT_TARGET = 'chaos'
 
 export const isExchangeTarget = (value: unknown): value is ExchangeTarget =>
-  EXCHANGE_TARGETS.includes(value as ExchangeTarget)
+  typeof value === 'string' && /^[a-z0-9-]{1,80}$/.test(value)
 
-export const TARGET_NAMES: Record<ExchangeTarget, string> = {
-  chaos: 'Chaos Orb',
-  exalted: 'Exalted Orb',
-  divine: 'Divine Orb',
-}
+export const targetFor = (currency: string, preferred: ExchangeTarget): ExchangeTarget =>
+  preferred !== currency ? preferred : currency === DEFAULT_TARGET ? 'divine' : DEFAULT_TARGET
 
-export const targetsFor = (name: string): ExchangeTarget[] => EXCHANGE_TARGETS.filter((target) => TARGET_NAMES[target] !== name)
-
-export function targetFor(name: string, preferred: ExchangeTarget): ExchangeTarget {
-  const targets = targetsFor(name)
-  return targets.includes(preferred) ? preferred : targets[0]
-}
-
-export interface ExchangeRate {
-  value: number
-  low: number
-  high: number
-  offers: number
-  reliability: Reliability
+export function exchangeNames(item: Pick<ParsedItem, 'name' | 'baseType' | 'properties'>): string[] {
+  const base = item.baseType ?? item.name
+  const number = (name: string) => item.properties.find((property) => property.name === name)?.value.match(/\d+/)?.[0]
+  const level = number('Level')
+  const tier = number('Waystone Tier')
+  return [
+    ...(level ? [`${base} (Level ${level})`] : []),
+    ...(tier ? [`${base} (Tier ${tier})`] : []),
+    item.name,
+    base,
+  ].filter((name, index, all) => name && all.indexOf(name) === index)
 }
 
 export type CurrencyWorthResult =
-  | { ok: true; league: string; url: string; currency: string; target: ExchangeTarget; rate: ExchangeRate; icons: CurrencyIcons }
-  | { ok: false; error: string; url?: string; retryAt?: number }
+  | {
+      ok: true
+      league: string
+      updatedAt: number
+      url: string
+      item: CurrencyEntry
+      group: string
+      target: CurrencyEntry
+      rate: ExchangeRate
+    }
+  | { ok: false; error: string; url?: string }
 
 export interface StackSize {
   count: number
@@ -46,48 +52,7 @@ export function stackSize(text: string): StackSize | undefined {
   return count > 0 ? { count, ...(max && { max }) } : undefined
 }
 
-export const exchangeQuery = (want: string, have: ExchangeTarget) => ({
-  engine: 'new',
-  query: { status: { option: 'online' }, have: [have], want: [want] },
-  sort: { have: 'asc' },
-})
-
-export const exchangeUrl = (league: string, queryId?: string) =>
-  `${TRADE_ORIGIN}/trade2/exchange/poe2/${encodeURIComponent(league)}${queryId ? `/${encodeURIComponent(queryId)}` : ''}`
-
-interface Offer {
-  exchange?: { currency?: unknown; amount?: unknown }
-  item?: { currency?: unknown; amount?: unknown; stock?: unknown }
-}
-
-const SAMPLE = 10
-
-const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
-
-export function exchangeRate(body: unknown, want: string, have: ExchangeTarget): ExchangeRate | null {
-  const response = body as { result?: unknown; total?: unknown } | null
-  const results = response?.result && typeof response.result === 'object' ? Object.values(response.result) : []
-  const prices = results
-    .flatMap((result) => ((result as { listing?: { offers?: Offer[] } } | null)?.listing?.offers ?? []) as Offer[])
-    .flatMap(({ exchange, item }) => {
-      if (!item || exchange?.currency !== have || (item.currency !== undefined && item.currency !== want)) return []
-      if (!positive(exchange.amount) || !positive(item.amount)) return []
-      if (typeof item.stock === 'number' && item.stock < item.amount) return []
-      return [exchange.amount / item.amount]
-    })
-    .sort((a, b) => a - b)
-  if (prices.length === 0) return null
-
-  const sample = prices.slice(0, SAMPLE)
-  const offers = positive(response?.total) ? Math.max(response.total, prices.length) : prices.length
-  return {
-    value: sample[Math.floor((sample.length - 1) / 2)],
-    low: sample[0],
-    high: sample[sample.length - 1],
-    offers,
-    reliability: sample.length < 3 ? 'Very low' : offers < 10 ? 'Low' : offers < 40 ? 'Medium' : 'High',
-  }
-}
+export const exchangeUrl = (league: string) => `${TRADE_ORIGIN}/trade2/exchange/poe2/${encodeURIComponent(league)}`
 
 export function formatAmount(value: number): string {
   if (value >= 100) return Math.round(value).toLocaleString('en-US')
