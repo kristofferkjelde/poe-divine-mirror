@@ -8,7 +8,7 @@
 
 Divine Mirror is a small overlay for Path of Exile 2. It shows the item under your cursor next to what you have equipped, stat by stat, and tells you whether it's an upgrade.
 
-**Website:** [poe-divine-mirror.vercel.app](https://poe-divine-mirror.vercel.app/)
+**Website:** [poe-divine-mirror.com](https://www.poe-divine-mirror.com/)
 
 > **Tip:** add your build under **Settings → Build** so the upgrade score cares about the stats your build actually uses. Without one, it uses sensible general weights (life, resistances, damage and so on).
 
