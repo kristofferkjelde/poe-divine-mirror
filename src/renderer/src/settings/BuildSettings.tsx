@@ -1,6 +1,7 @@
 import { useActionState, useState } from 'react'
 import { PROFILE_VERSION, profileWeights, stageTitle, type BuildProfile } from '../../../shared/build/profile'
 import { GEAR_SLOT_IDS, GEAR_SLOTS } from '../../../shared/gear'
+import type { StageFileResult } from '../../../shared/ipc'
 import { setSettingsState } from './settingsStore'
 
 export function BuildSettings({ build }: { build: BuildProfile | null }) {
@@ -62,8 +63,8 @@ export function BuildSettings({ build }: { build: BuildProfile | null }) {
 
 function StageFiles({ build }: { build: BuildProfile }) {
   const [error, setError] = useState<string | null>(null)
+  const [report, setReport] = useState<StageFileResult[] | null>(null)
   const [pending, setPending] = useState(false)
-  const planned = build.itemSets?.filter(({ id }) => build.stageGear?.[id]).map(({ title }) => title) ?? []
 
   const add = async (input: HTMLInputElement) => {
     const files = [...(input.files ?? [])]
@@ -75,6 +76,7 @@ function StageFiles({ build }: { build: BuildProfile }) {
     )
     setPending(false)
     setError(response.ok ? null : response.error)
+    setReport(response.ok ? response.report : null)
     if (response.ok) setSettingsState(response.state)
   }
 
@@ -87,7 +89,6 @@ function StageFiles({ build }: { build: BuildProfile }) {
             Mobalytics often leaves a stage's gear out of the Path of Building code. On the build page, click Download
             Build File and add the zip (or single .build files) here to compare against exactly those items.
           </small>
-          {planned.length > 0 && <small className="stage-gear">From .build files: {planned.join(' · ')}</small>}
         </span>
         <label className="hotkey-button" aria-disabled={pending}>
           {pending ? 'Adding…' : 'Add build files'}
@@ -101,7 +102,37 @@ function StageFiles({ build }: { build: BuildProfile }) {
           />
         </label>
       </div>
+      {report && (
+        <ul className="stage-files" data-kind="report" aria-label="Files just added">
+          <li className="stage-files-title">Just added</li>
+          {report.map(({ file, stage, items, error: problem }, index) => (
+            <li key={`${file}-${index}`} data-state={problem ? 'failed' : 'added'}>
+              <span className="stage-files-mark" aria-hidden>
+                {problem ? '✕' : '✓'}
+              </span>
+              <span>{file}</span>
+              <small>{problem ?? `Added to ${stage} · ${items} ${items === 1 ? 'item' : 'items'}`}</small>
+            </li>
+          ))}
+        </ul>
+      )}
       {error && <p className="hotkey-status">{error}</p>}
+      <ul className="stage-files" aria-label="Where each stage's gear comes from">
+        <li className="stage-files-title">Gear per stage</li>
+        {build.itemSets?.map(({ id, title }) => {
+          const gear = build.stageGear?.[id]
+          const count = gear ? Object.keys(gear).length : 0
+          return (
+            <li key={id} data-state={gear ? 'file' : 'code'}>
+              <span className="stage-files-mark" aria-hidden>
+                {gear ? '✓' : '–'}
+              </span>
+              <span>{title}</span>
+              <small>{gear ? `From a .build file · ${count} ${count === 1 ? 'item' : 'items'}` : 'From the Path of Building code'}</small>
+            </li>
+          )
+        })}
+      </ul>
     </>
   )
 }

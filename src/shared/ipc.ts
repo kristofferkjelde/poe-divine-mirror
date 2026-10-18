@@ -39,6 +39,15 @@ export interface SettingsState {
 export type SetHotkeyResult = { ok: true } | { ok: false; error: string }
 export type SettingsResponse = { ok: true; state: SettingsState } | { ok: false; error: string }
 
+export interface StageFileResult {
+  file: string
+  stage?: string
+  items?: number
+  error?: string
+}
+
+export type AddStagesResponse = { ok: true; state: SettingsState; report: StageFileResult[] } | { ok: false; error: string }
+
 export interface OverlayApi {
   resize: (height: number) => Promise<void>
   hide: () => Promise<void>
@@ -89,7 +98,7 @@ export interface SettingsApi {
   setLocked: (locked: boolean) => Promise<SettingsState>
   setRecording: (recording: boolean) => Promise<void>
   importBuild: (input: string) => Promise<SettingsResponse>
-  addBuildStages: (files: BuildFile[]) => Promise<SettingsResponse>
+  addBuildStages: (files: BuildFile[]) => Promise<AddStagesResponse>
   removeBuild: () => Promise<SettingsState>
   addCharacter: (name: string) => Promise<SettingsState>
   renameCharacter: (id: string, name: string) => Promise<SettingsState>

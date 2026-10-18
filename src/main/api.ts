@@ -133,8 +133,9 @@ export function settingsHandlers({
     addBuildStages: async (files) => {
       if (!isBuildFiles(files)) return { ok: false, error: 'Choose one or more .build files or a zip of them' }
       try {
-        await builds.set(addStages(builds.current, stagesFromFiles(files)))
-        return { ok: true, state: state() }
+        const { profile, report } = addStages(builds.current, stagesFromFiles(files))
+        await builds.set(profile)
+        return { ok: true, state: state(), report }
       } catch (error) {
         return toResult(error, 'Could not read those .build files')
       }
