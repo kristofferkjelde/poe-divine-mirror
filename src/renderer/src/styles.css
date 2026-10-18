@@ -2106,3 +2106,213 @@ label.hotkey-button[aria-disabled='true'] {
 .settings-reset[data-confirm='true'] {
   color: var(--delta-down);
 }
+
+.ember-slot strong[data-rarity='currency'] {
+  color: var(--rarity-currency);
+}
+.currency-stack {
+  position: relative;
+  display: inline-block;
+}
+.currency-stack b {
+  position: absolute;
+  left: 2px;
+  top: 0;
+  font: 700 14px var(--font-poe);
+  color: #fff;
+  text-shadow:
+    0 0 3px #000,
+    0 1px 1px #000;
+}
+.currency-name,
+.ember-slot strong.currency-name {
+  color: var(--rarity-currency);
+}
+.ember-slot strong.currency-name[data-rarity='gem'] {
+  color: var(--rarity-gem);
+}
+.currency-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.currency-ratio {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 72px;
+  max-width: 120px;
+  text-align: center;
+  color: var(--ink-dim);
+}
+.currency-ratio .ember-message {
+  font-size: 12px;
+}
+.currency-ratio {
+  min-height: 92px;
+  align-content: center;
+}
+.currency-loading {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  animation: currency-appear 0.2s ease-out 0.15s both;
+}
+.currency-loading small {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.currency-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--frame-lo);
+  border-top-color: var(--accent);
+  border-right-color: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--aura);
+  animation: currency-spin 0.9s linear infinite;
+}
+@keyframes currency-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes currency-appear {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .currency-spinner {
+    animation: ember-breathe 1.6s ease-in-out infinite;
+  }
+}
+.currency-arrows {
+  font-style: normal;
+  font-size: 20px;
+  color: var(--accent);
+  text-shadow: 0 0 8px var(--aura);
+}
+.currency-ratio .ember-value {
+  font-size: 22px;
+}
+.ember-slot.currency-target {
+  position: relative;
+  font: inherit;
+  color: inherit;
+  cursor: ns-resize;
+}
+.ember-slot.currency-target:hover {
+  border-color: var(--frame-mid);
+}
+.currency-wheel {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--frame-mid);
+}
+.currency-target:hover .currency-wheel {
+  color: var(--accent-ink);
+}
+.currency-hint {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.currency-grid-panel {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--frame-lo);
+  background: var(--input);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9);
+}
+.currency-group-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.currency-group-tabs button {
+  flex: 1;
+  padding: 4px 6px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: 600 10px var(--heading);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.currency-group-tabs button[aria-selected='true'] {
+  color: var(--accent-ink);
+  border-bottom-color: var(--accent);
+}
+.currency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.currency-grid button {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  border: 1px solid var(--frame-lo);
+  background: linear-gradient(180deg, var(--well-top), var(--well-mid));
+  color: var(--ink-dim);
+  font: 11px var(--font-poe);
+  cursor: pointer;
+}
+.currency-grid button img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px #000);
+}
+.currency-grid button span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.currency-grid button:hover,
+.currency-grid button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 12px var(--row-on);
+}
+.currency-ledger {
+  display: grid;
+  margin: 0;
+}
+.currency-ledger > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  background: var(--row);
+}
+.currency-ledger > div:nth-child(even) {
+  background: var(--row-alt);
+}
+.currency-ledger dt {
+  color: var(--ink-dim);
+}
+.currency-ledger dd {
+  margin: 0;
+  color: var(--ink);
+}
+.currency-league {
+  color: var(--ink-faint);
+}
+.ember-tabs > span:empty {
+  visibility: hidden;
+}

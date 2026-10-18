@@ -184,11 +184,7 @@ function EstimateBody({ evaluate, searching, wait }: EstimateProps) {
       <strong className="ember-value">
         <Amount price={value.value} icons={result.icons} />
       </strong>
-      <span className="ember-embers" aria-hidden>
-        {Array.from({ length: EMBERS }, (_, index) => (
-          <i key={index} style={{ left: `${8 + index * 10}%`, animationDelay: `${(index * 0.37) % 2.4}s` }} />
-        ))}
-      </span>
+      <Embers />
       <span className="ember-range">
         <Amount price={value.low} icons={result.icons} /> – <Amount price={value.high} icons={result.icons} />
       </span>
@@ -221,7 +217,17 @@ function Amount({ price, icons }: { price: Price; icons: CurrencyIcons }) {
 
 const PIPS: Record<Reliability, number> = { 'Very low': 1, Low: 2, Medium: 3, High: 4 }
 
-function Pips({ reliability }: { reliability: Reliability }) {
+export function Embers() {
+  return (
+    <span className="ember-embers" aria-hidden>
+      {Array.from({ length: EMBERS }, (_, index) => (
+        <i key={index} style={{ left: `${8 + index * 10}%`, animationDelay: `${(index * 0.37) % 2.4}s` }} />
+      ))}
+    </span>
+  )
+}
+
+export function Pips({ reliability }: { reliability: Reliability }) {
   return (
     <span className="ember-pips" title={`Reliability ${reliability.toLowerCase()}`} aria-label={`Reliability ${reliability}`}>
       {[1, 2, 3, 4].map((pip) => (

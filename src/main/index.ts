@@ -17,6 +17,7 @@ import { mayNavigate } from './pageReader'
 import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
+import { MarketClient } from './market'
 import { TradeClient } from './trade'
 import { Updates } from './updates'
 import { trayTooltip, updateMenuItem } from './updateStatus'
@@ -44,19 +45,24 @@ function start(): void {
   const gear = new GearStore(characters)
   const builds = new BuildStore(characters)
   const trade = new TradeClient()
+  const market = new MarketClient(trade)
 
   const pushPreferences = () =>
     overlay.send('preferences', {
       hotkeys: store.current.hotkeys,
       locked: store.current.overlayLocked,
       theme: store.current.theme,
+      currencyTarget: store.current.currencyTarget,
     })
   const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current, character: characters.active })
   overlay.onReady(() => {
     pushPreferences()
     pushGear()
   })
-  store.watch((settings) => [settings.hotkeys, settings.overlayLocked, settings.theme], pushPreferences)
+  store.watch(
+    (settings) => [settings.hotkeys, settings.overlayLocked, settings.theme, settings.currencyTarget],
+    pushPreferences,
+  )
   gear.onChange(pushGear)
   builds.onChange(pushGear)
   characters.onChange(pushGear)
@@ -91,7 +97,7 @@ function start(): void {
     Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
   )
   const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, characters, hotkeys, trade }))
-  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, characters, hotkeys, trade, overlay, settingsWindow }))
+  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, characters, hotkeys, trade, market, overlay, settingsWindow }))
 
   const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))

@@ -4,6 +4,7 @@ import { isGearSlot } from '../shared/gear'
 import type { ParsedItem } from '../shared/item/types'
 import type { BuildFile, OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
 import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
+import { isExchangeTarget } from '../shared/trade/exchange'
 import { TRADE_ORIGIN } from '../shared/trade/price'
 import { addStages, chooseItemSet, importBuild, stagesFromFiles } from './buildImport'
 import type { BuildStore } from './buildStore'
@@ -15,6 +16,7 @@ import type { Overlay } from './overlay'
 import { readPageState } from './pageReader'
 import type { SettingsStore } from './settingsStore'
 import type { SettingsWindow } from './settingsWindow'
+import { MARKET_PAGE, type MarketClient } from './market'
 import type { TradeClient } from './trade'
 
 const DOWNLOAD_TIMEOUT_MS = 15_000
@@ -27,6 +29,7 @@ interface Services {
   characters: CharacterStore
   hotkeys: Hotkeys
   trade: TradeClient
+  market: MarketClient
   overlay: Overlay
   settingsWindow: SettingsWindow
 }
@@ -45,7 +48,7 @@ const isBuildFiles = (value: unknown): value is BuildFile[] =>
 
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
-export function overlayHandlers({ store, gear, characters, trade, overlay, settingsWindow }: Services): Handlers<OverlayApi> {
+export function overlayHandlers({ store, gear, characters, trade, market, overlay, settingsWindow }: Services): Handlers<OverlayApi> {
   return {
     resize: (height) => {
       if (isFiniteNumber(height)) overlay.resize(height)
@@ -64,8 +67,16 @@ export function overlayHandlers({ store, gear, characters, trade, overlay, setti
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>
       typeof id === 'string' ? trade.search(id, edit, store.current.league) : { ok: false, error: 'Nothing to search for' },
+    currencyWorth: (text, target) =>
+      typeof text === 'string' && isExchangeTarget(target)
+        ? market.worth(text, target, store.current.league)
+        : { ok: false, error: 'No currency to price' },
+    exchangeCatalog: () => trade.catalog().catch(() => []),
+    setCurrencyTarget: async (target) => {
+      if (isExchangeTarget(target)) await store.update({ currencyTarget: target })
+    },
     openTrade: (url) => {
-      if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
+      if (typeof url === 'string' && (url.startsWith(`${TRADE_ORIGIN}/trade2/`) || url === MARKET_PAGE)) void shell.openExternal(url)
     },
     rendered: (height) => {
       if (isFiniteNumber(height)) overlay.rendered(height)

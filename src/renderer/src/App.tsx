@@ -3,6 +3,7 @@ import { PROFILE_VERSION, stageTitle } from '../../shared/build/profile'
 import { GEAR_SLOTS, gearSlotsFor } from '../../shared/gear'
 import { SLOT_LABELS } from '../../shared/item/slots'
 import { ComparisonView } from './components/ComparisonView'
+import { CurrencyView } from './components/CurrencyView'
 import { DecisionCard } from './components/DecisionCard'
 import { EvaluateView } from './components/EvaluateView'
 import { GearHint } from './components/GearHint'
@@ -35,7 +36,7 @@ export function App() {
 
 function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' }> }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const { item, evaluate, comparison, buildComparison, equippedTo, build, hotkeys } = state
+  const { item, evaluate, comparison, buildComparison, equippedTo, build, hotkeys, worth } = state
   const comparable = gearSlotsFor(item.slot).length > 0
   const decided = Boolean(comparison || buildComparison)
   const weightsNote = !build
@@ -43,6 +44,8 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
     : build.version !== PROFILE_VERSION
       ? `Scored for ${build.name} (outdated: re-import it in Settings)`
       : `Scored for ${[build.name, stageTitle(build)].filter(Boolean).join(' · ')}`
+
+  if (worth) return <CurrencyView item={item} text={state.text} worth={worth} />
 
   if (evaluate.status !== 'closed') {
     return (

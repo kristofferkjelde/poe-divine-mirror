@@ -2,21 +2,66 @@ export const IMAGE_ORIGIN = 'https://web.poecdn.com'
 
 export type CurrencyIcons = Record<string, string>
 
+export interface CurrencyEntry {
+  id: string
+  text?: string
+  image?: string
+}
+
+export interface ExchangeGroup {
+  id: string
+  label: string
+  entries: CurrencyEntry[]
+}
+
 interface StaticEntry {
   id?: unknown
+  text?: unknown
   image?: unknown
 }
 
-export function currencyIcons(body: unknown): CurrencyIcons {
-  const groups = (body as { result?: Array<{ entries?: StaticEntry[] }> } | null)?.result
-  if (!Array.isArray(groups)) return {}
+interface StaticGroup {
+  id?: unknown
+  label?: unknown
+  entries?: StaticEntry[]
+}
+
+export function exchangeGroups(body: unknown): ExchangeGroup[] {
+  const groups = (body as { result?: StaticGroup[] } | null)?.result
+  if (!Array.isArray(groups)) return []
+  return groups.flatMap((group) => {
+    if (typeof group?.id !== 'string' || !Array.isArray(group.entries)) return []
+    const entries = group.entries.flatMap(({ id, text, image }) => {
+      if (typeof id !== 'string') return []
+      const url = typeof image === 'string' ? toImageUrl(image) : undefined
+      return [{ id, ...(typeof text === 'string' && { text }), ...(url && { image: url }) }]
+    })
+    return [{ id: group.id, label: typeof group.label === 'string' && group.label ? group.label : group.id, entries }]
+  })
+}
+
+export const currencyEntries = (body: unknown): CurrencyEntry[] =>
+  exchangeGroups(body).flatMap((group) => group.entries)
+
+export function iconsOf(entries: CurrencyEntry[]): CurrencyIcons {
   const icons: CurrencyIcons = {}
-  for (const { id, image } of groups.flatMap((group) => group.entries ?? [])) {
-    if (typeof id !== 'string' || typeof image !== 'string' || id in icons) continue
-    const url = toImageUrl(image)
-    if (url) icons[id] = url
-  }
+  for (const { id, image } of entries) if (image && !(id in icons)) icons[id] = image
   return icons
+}
+
+export const currencyIcons = (body: unknown): CurrencyIcons => iconsOf(currencyEntries(body))
+
+export function findEntry(
+  groups: ExchangeGroup[],
+  names: string[],
+): { group: ExchangeGroup; entry: CurrencyEntry } | undefined {
+  for (const name of names.map((value) => value.toLowerCase())) {
+    for (const group of groups) {
+      const entry = group.entries.find(({ text }) => text?.toLowerCase() === name)
+      if (entry) return { group, entry }
+    }
+  }
+  return undefined
 }
 
 function toImageUrl(image: string): string | undefined {
