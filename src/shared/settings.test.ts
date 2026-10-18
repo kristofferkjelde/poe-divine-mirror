@@ -17,5 +17,7 @@ describe('settings', () => {
     expect(normalizeSettings({ currencyTarget: 'iron-rune' }).currencyTarget).toBe('iron-rune')
     expect(normalizeSettings({ currencyTarget: 'Not an id!' }).currencyTarget).toBe('chaos')
     expect(normalizeSettings(null).currencyTarget).toBe('chaos')
+    expect(normalizeSettings({ currencyFlipped: true }).currencyFlipped).toBe(true)
+    expect(normalizeSettings({ currencyFlipped: 'yes' }).currencyFlipped).toBe(false)
   })
 })

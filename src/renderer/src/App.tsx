@@ -45,7 +45,7 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
       ? `Scored for ${build.name} (outdated: re-import it in Settings)`
       : `Scored for ${[build.name, stageTitle(build)].filter(Boolean).join(' · ')}`
 
-  if (worth) return <CurrencyView item={item} text={state.text} worth={worth} />
+  if (worth) return <CurrencyView item={item} text={state.text} worth={worth} flipped={state.currencyFlipped} />
 
   if (evaluate.status !== 'closed') {
     return (

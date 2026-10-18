@@ -70,6 +70,7 @@ let context: OverlayContext = {
   character: { label: 'Character 1', count: 1 },
   theme: DEFAULT_SETTINGS.theme,
   currencyTarget: DEFAULT_SETTINGS.currencyTarget,
+  currencyFlipped: DEFAULT_SETTINGS.currencyFlipped,
 }
 let view: View = { status: 'idle' }
 let comparisons: Comparisons = { comparison: null, buildComparison: null }
@@ -185,6 +186,12 @@ export function showWorthIn(target: ExchangeTarget): void {
   void loadWorth()
   clearTimeout(saveTarget)
   saveTarget = setTimeout(() => void window.overlay.setCurrencyTarget(target), SAVE_TARGET_DELAY_MS)
+}
+
+export function flipWorth(): void {
+  context = { ...context, currencyFlipped: !context.currencyFlipped }
+  render()
+  void window.overlay.setCurrencyFlipped(context.currencyFlipped)
 }
 
 let catalog: Promise<ExchangeGroup[]> | null = null

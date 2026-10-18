@@ -44,6 +44,7 @@ export interface Settings {
   theme: Theme
   uiScale: UiScale
   currencyTarget: ExchangeTarget
+  currencyFlipped: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -58,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'ember',
   uiScale: 100,
   currencyTarget: 'chaos',
+  currencyFlipped: false,
 }
 
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
@@ -90,5 +92,6 @@ export function normalizeSettings(value: unknown): Settings {
     theme: isTheme(input?.theme) ? input.theme : DEFAULT_SETTINGS.theme,
     uiScale: isUiScale(input?.uiScale) ? input.uiScale : DEFAULT_SETTINGS.uiScale,
     currencyTarget: isExchangeTarget(input?.currencyTarget) ? input.currencyTarget : DEFAULT_SETTINGS.currencyTarget,
+    currencyFlipped: input?.currencyFlipped === true,
   }
 }

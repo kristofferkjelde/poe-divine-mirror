@@ -2273,11 +2273,30 @@ label.hotkey-button[aria-disabled='true'] {
     animation: ember-breathe 1.6s ease-in-out infinite;
   }
 }
+.currency-pair[data-flipped='true'] > .currency-mine {
+  order: 3;
+}
+.currency-pair[data-flipped='true'] > .currency-target {
+  order: 1;
+}
+.currency-pair[data-flipped='true'] > .currency-ratio {
+  order: 2;
+}
 .currency-arrows {
-  font-style: normal;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
   font-size: 20px;
+  line-height: 1.2;
   color: var(--accent);
   text-shadow: 0 0 8px var(--aura);
+  cursor: pointer;
+}
+.currency-arrows:hover {
+  border-color: var(--frame-mid);
+  color: var(--accent-ink);
 }
 .currency-ratio .ember-value {
   font-size: 22px;

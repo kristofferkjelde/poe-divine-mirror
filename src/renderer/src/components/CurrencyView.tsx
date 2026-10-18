@@ -4,7 +4,7 @@ import { currencyArt } from '../../../shared/item/art'
 import type { ParsedItem } from '../../../shared/item/types'
 import type { CurrencyEntry, ExchangeGroup } from '../../../shared/trade/currency'
 import { formatAmount, stackSize, type CurrencyWorthResult } from '../../../shared/trade/exchange'
-import { exchangeCatalog, retryWorth, showWorthIn, type WorthState } from '../overlayStore'
+import { exchangeCatalog, flipWorth, retryWorth, showWorthIn, type WorthState } from '../overlayStore'
 import { Pips } from './EvaluateView'
 import { ItemArt } from './ItemArt'
 
@@ -12,11 +12,12 @@ interface Props {
   item: ParsedItem
   text: string
   worth: WorthState
+  flipped: boolean
 }
 
 type Worth = Extract<CurrencyWorthResult, { ok: true }>
 
-export function CurrencyView({ item, text, worth }: Props) {
+export function CurrencyView({ item, text, worth, flipped }: Props) {
   const [picking, setPicking] = useState(false)
   const { target, loading, result } = worth
   const name = item.baseType ?? item.name
@@ -39,8 +40,8 @@ export function CurrencyView({ item, text, worth }: Props) {
         <span />
       </header>
 
-      <div className="currency-pair">
-        <figure className="ember-slot">
+      <div className="currency-pair" data-flipped={flipped}>
+        <figure className="ember-slot currency-mine">
           <figcaption>You have</figcaption>
           <span className="currency-stack">
             <Art src={result?.ok ? result.item.image : undefined} fallback={<ItemArt item={item} />} />
@@ -53,11 +54,12 @@ export function CurrencyView({ item, text, worth }: Props) {
         </figure>
 
         <div className="currency-ratio" data-searching={loading}>
-          <Ratio worth={worth} />
+          <Ratio worth={worth} flipped={flipped} />
         </div>
 
-        <Suspense fallback={<TargetSlot entry={shown ? shown.target : { id: target }} />}>
+        <Suspense fallback={<TargetSlot entry={shown ? shown.target : { id: target }} flipped={flipped} />}>
           <CyclingTarget
+            flipped={flipped}
             current={current}
             fallback={shown ? shown.target : { id: target }}
             exclude={itemId}
@@ -79,9 +81,11 @@ export function CurrencyView({ item, text, worth }: Props) {
         </Suspense>
       )}
 
-      <p className="currency-hint">Scroll over the currency to change it, Shift skips a group, click to see them all</p>
+      <p className="currency-hint">
+        Scroll the currency to change it, Shift skips a group, click it for the list, ⇄ swaps
+      </p>
 
-      {shown && <Ledger worth={shown} stack={stack} />}
+      {shown && <Ledger worth={shown} stack={stack} flipped={flipped} />}
 
       <footer className="ember-links">
         <span className="currency-league">
@@ -104,7 +108,7 @@ function age(updatedAt: number): string {
   return minutes < 1 ? 'prices just now' : `prices ${minutes} min old`
 }
 
-function Ratio({ worth: { loading, result } }: { worth: WorthState }) {
+function Ratio({ worth: { loading, result }, flipped }: { worth: WorthState; flipped: boolean }) {
   if (!result || loading) {
     return (
       <span className="currency-loading" role="status">
@@ -125,17 +129,21 @@ function Ratio({ worth: { loading, result } }: { worth: WorthState }) {
       </>
     )
   }
+  const [from, to] = flipped ? [result.target, result.item] : [result.item, result.target]
   return (
     <>
       <span className="currency-one">1</span>
-      <i className="currency-arrows" aria-hidden>
-        ⇄
-      </i>
-      <strong
-        className="ember-value"
-        title={`1 ${result.item.text ?? result.item.id} is worth this many ${result.target.text ?? result.target.id}`}
+      <button
+        type="button"
+        className="currency-arrows"
+        aria-pressed={flipped}
+        title={`Swap: show what 1 ${to.text ?? to.id} is worth in ${from.text ?? from.id}`}
+        onClick={flipWorth}
       >
-        {formatAmount(result.rate.value)}
+        ⇄
+      </button>
+      <strong className="ember-value" title={`1 ${from.text ?? from.id} is worth this many ${to.text ?? to.id}`}>
+        {formatAmount(flipped ? 1 / result.rate.value : result.rate.value)}
       </strong>
       <Pips reliability={result.rate.reliability} />
     </>
@@ -143,13 +151,14 @@ function Ratio({ worth: { loading, result } }: { worth: WorthState }) {
 }
 
 interface CyclingProps {
+  flipped: boolean
   current: string
   fallback: CurrencyEntry
   exclude: string | undefined
   onOpen: () => void
 }
 
-function CyclingTarget({ current, fallback, exclude, onOpen }: CyclingProps) {
+function CyclingTarget({ flipped, current, fallback, exclude, onOpen }: CyclingProps) {
   const groups = choicesOf(use(exchangeCatalog()), exclude)
   const choices = groups.flatMap((group) => group.entries.map((entry) => ({ group, entry })))
   const index = choices.findIndex(({ entry }) => entry.id === current)
@@ -168,6 +177,7 @@ function CyclingTarget({ current, fallback, exclude, onOpen }: CyclingProps) {
 
   return (
     <TargetSlot
+      flipped={flipped}
       entry={found?.entry ?? fallback}
       place={
         found && `${found.group.label} · ${found.group.entries.indexOf(found.entry) + 1}/${found.group.entries.length}`
@@ -179,13 +189,14 @@ function CyclingTarget({ current, fallback, exclude, onOpen }: CyclingProps) {
 }
 
 interface TargetSlotProps {
+  flipped: boolean
   entry: CurrencyEntry
   place?: string
   onWheel?: (event: WheelEvent) => void
   onClick?: () => void
 }
 
-function TargetSlot({ entry, place, onWheel, onClick }: TargetSlotProps) {
+function TargetSlot({ flipped, entry, place, onWheel, onClick }: TargetSlotProps) {
   return (
     <button
       type="button"
@@ -194,7 +205,7 @@ function TargetSlot({ entry, place, onWheel, onClick }: TargetSlotProps) {
       onClick={onClick}
       title="Scroll to change the currency (Shift skips a group). Click to see them all."
     >
-      <figcaption>Worth in</figcaption>
+      <figcaption>{flipped ? 'Price of' : 'Worth in'}</figcaption>
       <Art src={entry.image ?? currencyArt(entry.id)} />
       <strong className="currency-name">{entry.text ?? entry.id}</strong>
       <small>{place ?? ' '}</small>
@@ -254,7 +265,7 @@ const choicesOf = (groups: ExchangeGroup[], exclude: string | undefined): Exchan
     }))
     .filter((group) => group.entries.length > 0)
 
-function Ledger({ worth, stack }: { worth: Worth; stack: ReturnType<typeof stackSize> }) {
+function Ledger({ worth, stack, flipped }: { worth: Worth; stack: ReturnType<typeof stackSize>; flipped: boolean }) {
   const { rate, item, target } = worth
   return (
     <dl className="currency-ledger">
@@ -275,9 +286,9 @@ function Ledger({ worth, stack }: { worth: Worth; stack: ReturnType<typeof stack
         </div>
       )}
       <div>
-        <dt>1 {target.text ?? target.id} buys</dt>
+        <dt>1 {flipped ? (item.text ?? item.id) : (target.text ?? target.id)} buys</dt>
         <dd>
-          <Amount value={1 / rate.value} entry={item} />
+          {flipped ? <Amount value={rate.value} entry={target} /> : <Amount value={1 / rate.value} entry={item} />}
         </dd>
       </div>
     </dl>
