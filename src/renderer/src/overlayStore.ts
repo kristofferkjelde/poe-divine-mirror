@@ -8,6 +8,7 @@ import type { OverlayContext, OverlayEvent } from '../../shared/ipc'
 import { parseItem } from '../../shared/item/parse'
 import type { ParsedItem } from '../../shared/item/types'
 import { DEFAULT_SETTINGS } from '../../shared/settings'
+import { targetFor, type CurrencyWorthResult, type ExchangeTarget } from '../../shared/trade/exchange'
 import type { PriceCheckResult } from '../../shared/trade/price'
 import {
   toSearchEdit,
@@ -27,9 +28,23 @@ export type EvaluateState =
   | { status: 'unavailable'; error: string }
   | { status: 'ready'; id: string; search: ItemSearch; searching: boolean; result: PriceCheckResult | null }
 
+export interface WorthState {
+  target: ExchangeTarget
+  loading: boolean
+  result: CurrencyWorthResult | null
+}
+
 type View =
   | { status: 'idle' }
-  | { status: 'item'; id: number; text: string; item: ParsedItem; equippedTo?: GearSlot; evaluate: EvaluateState }
+  | {
+      status: 'item'
+      id: number
+      text: string
+      item: ParsedItem
+      equippedTo?: GearSlot
+      evaluate: EvaluateState
+      worth?: WorthState
+    }
   | { status: 'error'; id: number; message: string }
 
 interface Comparisons {
@@ -50,6 +65,7 @@ let context: OverlayContext = {
   locked: false,
   build: null,
   theme: DEFAULT_SETTINGS.theme,
+  currencyTarget: DEFAULT_SETTINGS.currencyTarget,
 }
 let view: View = { status: 'idle' }
 let comparisons: Comparisons = { comparison: null, buildComparison: null }
@@ -82,16 +98,19 @@ function show(event: Extract<OverlayEvent, { kind: 'item' }>): View {
   const id = nextId++
   try {
     const item = parseItem(event.text)
-    return { status: 'item', id, text: event.text, item, equippedTo: event.equippedTo, evaluate: { status: 'closed' } }
+    const worth = isCurrency(item) ? { target: targetFor(currencyName(item), context.currencyTarget), loading: true, result: null } : undefined
+    return { status: 'item', id, text: event.text, item, equippedTo: event.equippedTo, evaluate: { status: 'closed' }, worth }
   } catch (error) {
     return { status: 'error', id, message: error instanceof UserFacingError ? error.message : 'Could not read that item' }
   }
 }
 
 window.overlay.on('preferences', (preferences) => {
+  const targetChanged = preferences.currencyTarget !== context.currencyTarget
   context = { ...context, ...preferences }
   document.documentElement.dataset.theme = preferences.theme
   render()
+  if (targetChanged) void loadWorth()
 })
 
 window.overlay.on('gear', (gear) => {
@@ -103,8 +122,9 @@ window.overlay.on('gear', (gear) => {
 function handleEvent(event: OverlayEvent) {
   if (event.kind === 'item') {
     setView(show(event))
-    if (event.mode === 'price') void openEvaluate()
-  } else if (event.mode === 'price' && event.overlayVisible && view.status === 'item') {
+    if (view.status === 'item' && view.worth) void loadWorth()
+    else if (event.mode === 'price') void openEvaluate()
+  } else if (event.mode === 'price' && event.overlayVisible && view.status === 'item' && !view.worth) {
     void openEvaluate()
   } else {
     setView({ status: 'error', id: nextId++, message: MISSED_ITEM })
@@ -137,8 +157,33 @@ function editSearch(update: (search: ItemSearch) => ItemSearch) {
   setEvaluate(view.id, (evaluate) => (evaluate.status === 'ready' ? { ...evaluate, search: update(evaluate.search) } : evaluate))
 }
 
+export const isCurrency = (item: ParsedItem) => item.rarity === 'Currency'
+
+const currencyName = (item: ParsedItem) => item.baseType ?? item.name
+
+async function loadWorth(again = false): Promise<void> {
+  if (view.status !== 'item' || !view.worth) return
+  const { id, text, item } = view
+  const target = targetFor(currencyName(item), context.currencyTarget)
+  if (!again && !view.worth.loading && view.worth.target === target && view.worth.result) return
+  setView({ ...view, worth: { ...view.worth, target, loading: true } })
+  const result = await window.overlay.currencyWorth(text, target)
+  if (view.status !== 'item' || view.id !== id || view.worth?.target !== target) return
+  setView({ ...view, worth: { target, loading: false, result } })
+}
+
+export const retryWorth = (): Promise<void> => loadWorth(true)
+
+export function showWorthIn(target: ExchangeTarget): void {
+  if (target === context.currencyTarget) return
+  context = { ...context, currencyTarget: target }
+  render()
+  void loadWorth()
+  void window.overlay.setCurrencyTarget(target)
+}
+
 export async function openEvaluate(): Promise<void> {
-  if (view.status !== 'item' || view.evaluate.status !== 'closed') return
+  if (view.status !== 'item' || view.evaluate.status !== 'closed' || view.worth) return
   const { id, text } = view
   setEvaluate(id, () => ({ status: 'preparing' }))
   const prepared = await window.overlay.prepareSearch(text)

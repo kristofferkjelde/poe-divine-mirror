@@ -3,6 +3,7 @@ import type { Gear, GearSlot } from './gear'
 import type { ParsedItem } from './item/types'
 import type { HotkeyAction, Settings, Theme, UiScale } from './settings'
 import type { PrepareResult, PriceCheckResult } from './trade/price'
+import type { CurrencyWorthResult, ExchangeTarget } from './trade/exchange'
 import type { SearchEdit } from './trade/query'
 
 export type OverlayEvent =
@@ -15,11 +16,12 @@ export interface OverlayContext {
   locked: boolean
   build: BuildProfile | null
   theme: Theme
+  currencyTarget: ExchangeTarget
 }
 
 export interface OverlayMessages {
   event: OverlayEvent
-  preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme'>
+  preferences: Pick<OverlayContext, 'hotkeys' | 'locked' | 'theme' | 'currencyTarget'>
   gear: Pick<OverlayContext, 'gear' | 'build'>
   revealed: null
 }
@@ -42,6 +44,8 @@ export interface OverlayApi {
   clearGear: () => Promise<void>
   prepareSearch: (text: string) => Promise<PrepareResult>
   runSearch: (id: string, edit: SearchEdit) => Promise<PriceCheckResult>
+  currencyWorth: (text: string, target: ExchangeTarget) => Promise<CurrencyWorthResult>
+  setCurrencyTarget: (target: ExchangeTarget) => Promise<void>
   openTrade: (url: string) => Promise<void>
   ready: () => Promise<void>
   rendered: (height: number) => Promise<void>
@@ -88,6 +92,7 @@ export interface SettingsApi {
   setLeague: (league: string | null) => Promise<SettingsState>
   setTheme: (theme: Theme) => Promise<SettingsState>
   setUiScale: (scale: UiScale) => Promise<SettingsState>
+  setCurrencyTarget: (target: ExchangeTarget) => Promise<SettingsState>
 }
 
 export interface OverlayBridge extends OverlayApi {
@@ -103,6 +108,8 @@ const OVERLAY_METHODS: Record<keyof OverlayApi, true> = {
   clearGear: true,
   prepareSearch: true,
   runSearch: true,
+  currencyWorth: true,
+  setCurrencyTarget: true,
   openTrade: true,
   ready: true,
   rendered: true,
@@ -130,6 +137,7 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setLeague: true,
   setTheme: true,
   setUiScale: true,
+  setCurrencyTarget: true,
 }
 
 const TOOLTIP_METHODS: Record<keyof TooltipApi, true> = {

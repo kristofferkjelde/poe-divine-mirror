@@ -37,6 +37,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover an item you're **wearing** and press **Alt+Shift+Z** | It's saved as your equipped item for that slot (do this once per slot) |
 | Hover any other item and press **Alt+Z** | It pops up in the middle of the screen next to the item you wear and your build's item, with a verdict (such as **Equip it** or **Keep yours**) and every stat that changes |
 | Hover an item and press **Ctrl+Alt+Z** | The popup shows an Evaluate view: tick the stats that matter, search the official trade site and see what similar items sell for |
+| Hover currency (a Divine Orb, a rune, an omen…) and press **Alt+Z** or **Ctrl+Alt+Z** | The popup shows what it's worth on the trade site's currency exchange, each and for your whole stack |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
 | Drag the popup by its top banner or bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, change the hotkeys (click one and press the new keys), pick a theme (Ember, Mana or Iron) or make everything bigger with **UI size** (100%, 110% or 120%) |
@@ -80,6 +81,10 @@ Press **Ctrl+Alt+Z** on an item, or click **⚖ Evaluate price** at the bottom o
 - The **Listings** tab shows your own item on top, then the cheapest listings with item level, quality, seller and when they were listed. Hover a listing to see the full item in a tooltip under the popup.
 
 The first search runs automatically with sensible defaults. Weapons are matched on DPS and armour on its defences, so their local mods start unticked. Normal items are priced as crafting bases by item level. Uniques are searched by name. Pick another league under **Settings → Trade**. The trade site limits how often anyone can search, so if you search a lot in a row, the popup asks you to wait a few seconds.
+
+**What is my currency worth?**
+
+Hover any currency the trade site's currency exchange lists (orbs, runes, omens, essences, soul cores and so on) and press **Alt+Z** or **Ctrl+Alt+Z**. The popup shows what one is worth, with the range and how reliable it is, plus what your stack and a full stack are worth. Click **Chaos**, **Exalted** or **Divine** under **Show in** to switch the currency it's priced in. The app remembers your pick, and you can also set it under **Settings → Trade**. **Open currency exchange ↗** opens the same search in your browser.
 
 **Reading the popup**
 
@@ -158,7 +163,7 @@ Windows releases are built from this repository by [GitHub Actions](.github/work
 
 ## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It connects to the internet only for these: a price check sends searches to the official Path of Exile trade site, importing a build fetches the link you paste, showing an item loads its picture (item art from GitHub, currency icons from the trade site's image server), and the update check asks GitHub for the latest Divine Mirror release when the app starts and every few hours. Your settings, saved gear and build stay on your PC.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It connects to the internet only for these: a price check sends searches to the official Path of Exile trade site (hovering currency asks its currency exchange), importing a build fetches the link you paste, showing an item loads its picture (item art from GitHub, currency icons from the trade site's image server), and the update check asks GitHub for the latest Divine Mirror release when the app starts and every few hours. Your settings, saved gear and build stay on your PC.
 
 ## License
 

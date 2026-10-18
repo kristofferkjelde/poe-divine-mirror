@@ -4,6 +4,7 @@ import { isGearSlot } from '../shared/gear'
 import type { ParsedItem } from '../shared/item/types'
 import type { BuildFile, OverlayApi, SettingsApi, SettingsState } from '../shared/ipc'
 import { isHotkeyAction, isTheme, isUiScale } from '../shared/settings'
+import { isExchangeTarget } from '../shared/trade/exchange'
 import { TRADE_ORIGIN } from '../shared/trade/price'
 import { addStages, chooseItemSet, importBuild, stagesFromFiles } from './buildImport'
 import type { BuildStore } from './buildStore'
@@ -59,6 +60,13 @@ export function overlayHandlers({ store, gear, trade, overlay, settingsWindow }:
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>
       typeof id === 'string' ? trade.search(id, edit, store.current.league) : { ok: false, error: 'Nothing to search for' },
+    currencyWorth: (text, target) =>
+      typeof text === 'string' && isExchangeTarget(target)
+        ? trade.worth(text, target, store.current.league)
+        : { ok: false, error: 'No currency to price' },
+    setCurrencyTarget: async (target) => {
+      if (isExchangeTarget(target)) await store.update({ currencyTarget: target })
+    },
     openTrade: (url) => {
       if (typeof url === 'string' && url.startsWith(`${TRADE_ORIGIN}/trade2/`)) void shell.openExternal(url)
     },
@@ -141,6 +149,8 @@ export function settingsHandlers({ store, builds, hotkeys, trade }: Pick<Service
       then(store.update({ league: typeof league === 'string' && league.trim() !== '' ? league : null })),
     setTheme: (theme) => (isTheme(theme) ? then(store.update({ theme })) : Promise.resolve(state())),
     setUiScale: (scale) => (isUiScale(scale) ? then(store.update({ uiScale: scale })) : Promise.resolve(state())),
+    setCurrencyTarget: (target) =>
+      isExchangeTarget(target) ? then(store.update({ currencyTarget: target })) : Promise.resolve(state()),
   }
 }
 

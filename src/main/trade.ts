@@ -15,7 +15,17 @@ import {
   type PriceCheckResult,
 } from '../shared/trade/price'
 import { baseTypeNames, magicBaseType } from '../shared/trade/baseTypes'
-import { currencyIcons, iconsFor } from '../shared/trade/currency'
+import { currencyEntries, currencyId, iconsFor, iconsOf } from '../shared/trade/currency'
+import {
+  EXCHANGE_TARGETS,
+  exchangeQuery,
+  exchangeRate,
+  exchangeUrl,
+  TARGET_NAMES,
+  targetFor,
+  type CurrencyWorthResult,
+  type ExchangeTarget,
+} from '../shared/trade/exchange'
 import { applyEdit, defaultSearch, toTradeQuery, type ItemSearch, type TradeStatGroup } from '../shared/trade/query'
 import { diskBacked, expiring } from './cached'
 
@@ -61,17 +71,18 @@ export class TradeClient {
     ),
     DATA_MAX_AGE_MS,
   )
-  private readonly icons = expiring(
+  private readonly currencies = expiring(
     diskBacked(
-      'trade-currency-icons.json',
+      'trade-currencies.json',
       DATA_MAX_AGE_MS,
-      () => this.request('/api/trade2/data/static').then(currencyIcons),
-      (result) => (Object.keys(result).length > 0 ? null : new TradeError('The trade site sent unexpected currency data')),
+      () => this.request('/api/trade2/data/static').then(currencyEntries),
+      (result) => (result.length > 0 ? null : new TradeError('The trade site sent unexpected currency data')),
     ),
     DATA_MAX_AGE_MS,
   )
   private blockedUntil = 0
   private readonly cache = new Map<string, { at: number; result: PriceCheckResult }>()
+  private readonly worthCache = new Map<string, { at: number; result: CurrencyWorthResult }>()
   private readonly searches = new Map<string, ItemSearch>()
 
   listLeagues(): Promise<string[]> {
@@ -120,12 +131,56 @@ export class TradeClient {
       }
 
       const icons = iconsFor(
-        await this.icons().catch(() => ({})),
+        iconsOf(await this.currencies().catch(() => [])),
         listings.map((listing) => listing.currency),
       )
       const result: PriceCheckResult = { ok: true, league: leagueId, url, total: response.total, listings, icons }
       for (const [key, entry] of this.cache) if (Date.now() - entry.at >= RESULT_CACHE_MS) this.cache.delete(key)
       this.cache.set(cacheKey, { at: Date.now(), result })
+      return result
+    } catch (error) {
+      return {
+        ...toResult(error, 'Could not reach the trade site'),
+        url,
+        ...(error instanceof SlowDownError && { retryAt: error.retryAt }),
+      }
+    }
+  }
+
+  async worth(text: string, preferred: ExchangeTarget, league: string | null): Promise<CurrencyWorthResult> {
+    let url: string | undefined
+    try {
+      const item = parseItem(text)
+      const name = item.baseType ?? item.name
+      const target = targetFor(name, preferred)
+      const entries = await this.currencies()
+      const currency = currencyId(entries, name)
+      if (!currency) throw new TradeError(`The currency exchange does not list ${name}`)
+
+      const leagueId = league ?? pickLeague(await this.leagues())
+      const cacheKey = `${leagueId}\n${currency}\n${target}`
+      const cached = this.worthCache.get(cacheKey)
+      if (cached && Date.now() - cached.at < RESULT_CACHE_MS) return cached.result
+
+      const response = (await this.request(
+        `/api/trade2/exchange/poe2/${encodeURIComponent(leagueId)}`,
+        exchangeQuery(currency, target),
+      )) as { id?: unknown }
+      if (typeof response.id === 'string') url = exchangeUrl(leagueId, response.id)
+      const rate = exchangeRate(response, currency, target)
+      if (!rate) throw new TradeError(`Nobody is selling ${name} for ${TARGET_NAMES[target]}s right now`)
+
+      const result: CurrencyWorthResult = {
+        ok: true,
+        league: leagueId,
+        url: url ?? exchangeUrl(leagueId),
+        currency,
+        target,
+        rate,
+        icons: iconsFor(iconsOf(entries), [currency, ...EXCHANGE_TARGETS]),
+      }
+      for (const [key, entry] of this.worthCache) if (Date.now() - entry.at >= RESULT_CACHE_MS) this.worthCache.delete(key)
+      this.worthCache.set(cacheKey, { at: Date.now(), result })
       return result
     } catch (error) {
       return {

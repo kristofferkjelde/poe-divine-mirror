@@ -47,13 +47,17 @@ function start(): void {
       hotkeys: store.current.hotkeys,
       locked: store.current.overlayLocked,
       theme: store.current.theme,
+      currencyTarget: store.current.currencyTarget,
     })
   const pushGear = () => overlay.send('gear', { gear: gear.current, build: builds.current })
   overlay.onReady(() => {
     pushPreferences()
     pushGear()
   })
-  store.watch((settings) => [settings.hotkeys, settings.overlayLocked, settings.theme], pushPreferences)
+  store.watch(
+    (settings) => [settings.hotkeys, settings.overlayLocked, settings.theme, settings.currencyTarget],
+    pushPreferences,
+  )
   gear.onChange(pushGear)
   builds.onChange(pushGear)
 
