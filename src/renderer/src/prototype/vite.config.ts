@@ -1,0 +1,15 @@
+import react from '@vitejs/plugin-react'
+import { resolve } from 'node:path'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  root: resolve(__dirname, '../..'),
+  base: './',
+  plugins: [react()],
+  build: {
+    assetsInlineLimit: 1_000_000,
+    outDir: resolve(__dirname, '../../../../out/prototype'),
+    emptyOutDir: true,
+    rollupOptions: { input: resolve(__dirname, '../../prototype-currency.html') },
+  },
+})
