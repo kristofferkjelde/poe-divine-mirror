@@ -1,7 +1,7 @@
+import type { Result } from '../errors'
 import type { ParsedItem } from '../item/types'
-import type { CurrencyEntry } from './currency'
+import type { CurrencyEntry, ExchangeGroup } from './currency'
 import type { ExchangeRate } from './market'
-import { TRADE_ORIGIN } from './price'
 
 export type ExchangeTarget = string
 
@@ -28,20 +28,21 @@ export function exchangeNames(item: Pick<ParsedItem, 'name' | 'baseType' | 'prop
 
 export type MarketSource = 'poe2scout' | 'poe.ninja'
 
-export type CurrencyWorthResult =
-  | {
-      ok: true
-      league: string
-      updatedAt: number
-      fetchedAt: number
-      source: MarketSource
-      url: string
-      item: CurrencyEntry
-      group: string
-      target: CurrencyEntry
-      rate: ExchangeRate
-    }
-  | { ok: false; error: string; url?: string }
+export interface CurrencyWorth {
+  league: string
+  updatedAt: number
+  fetchedAt: number
+  source: MarketSource
+  url: string
+  item: CurrencyEntry
+  group: string
+  target: CurrencyEntry
+  rate: ExchangeRate
+}
+
+export type CurrencyWorthResult = Result<CurrencyWorth, { url?: string }>
+
+export type CatalogResult = Result<{ groups: ExchangeGroup[] }>
 
 export interface StackSize {
   count: number
@@ -55,8 +56,6 @@ export function stackSize(text: string): StackSize | undefined {
   const max = match[2] ? Number(match[2].replace(/\D/g, '')) : undefined
   return count > 0 ? { count, ...(max && { max }) } : undefined
 }
-
-export const exchangeUrl = (league: string) => `${TRADE_ORIGIN}/trade2/exchange/poe2/${encodeURIComponent(league)}`
 
 export function formatAmount(value: number): string {
   if (value >= 100) return Math.round(value).toLocaleString('en-US')

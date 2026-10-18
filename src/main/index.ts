@@ -18,7 +18,9 @@ import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
 import { MarketClient } from './market'
-import { TradeClient } from './trade'
+import { ReferenceData } from './referenceData'
+import { TradeSearch } from './trade'
+import { TradeSite } from './tradeSite'
 import { Updates } from './updates'
 import { trayTooltip, updateMenuItem } from './updateStatus'
 
@@ -44,8 +46,10 @@ function start(): void {
   const characters = new CharacterStore()
   const gear = new GearStore(characters)
   const builds = new BuildStore(characters)
-  const trade = new TradeClient()
-  const market = new MarketClient(trade)
+  const site = new TradeSite()
+  const data = new ReferenceData(site)
+  const trade = new TradeSearch(site, data)
+  const market = new MarketClient(data)
 
   const pushPreferences = () =>
     overlay.send('preferences', {
@@ -97,8 +101,8 @@ function start(): void {
     store,
     Object.fromEntries(HOTKEY_ACTIONS.map((action) => [action, () => void capture(action)])) as Record<HotkeyAction, () => void>,
   )
-  const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, characters, hotkeys, trade }))
-  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, characters, hotkeys, trade, market, overlay, settingsWindow }))
+  const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, characters, hotkeys, data }))
+  registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, characters, hotkeys, data, trade, market, overlay, settingsWindow }))
 
   const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))

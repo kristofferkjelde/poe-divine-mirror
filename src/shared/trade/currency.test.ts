@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currencyEntries, currencyIcons, exchangeGroups, findEntry, iconsFor } from './currency'
+import { exchangeGroups, findByName, findEntry, iconsFor, iconsOf } from './currency'
 
 describe('currency icons', () => {
   it('reads the currency images from the trade static data', () => {
@@ -30,11 +30,12 @@ describe('currency icons', () => {
         },
       ],
     }
-    expect(currencyIcons(body)).toEqual({
+    expect(iconsOf(exchangeGroups(body).flatMap((group) => group.entries))).toEqual({
       exalted: 'https://web.poecdn.com/gen/image/abc/CurrencyAddModToRare.png',
       divine: 'https://web.poecdn.com/gen/image/def/CurrencyModValues.png',
     })
-    expect(currencyIcons(null)).toEqual({})
+    expect(() => exchangeGroups(null)).toThrow('The trade site sent unexpected currency data')
+    expect(() => exchangeGroups({ result: [{ label: 'No id' }] })).toThrow()
   })
 
   it('keeps only the icons a result needs', () => {
@@ -44,7 +45,7 @@ describe('currency icons', () => {
   })
 
   it('finds the exchange id of a currency by its name', () => {
-    const entries = currencyEntries({
+    const groups = exchangeGroups({
       result: [
         {
           id: 'Currency',
@@ -59,7 +60,7 @@ describe('currency icons', () => {
         },
       ],
     })
-    expect(entries).toEqual([
+    expect(groups.flatMap((group) => group.entries)).toEqual([
       { id: 'divine', text: 'Divine Orb' },
       { id: 'chaos', text: 'Chaos Orb', image: 'https://web.poecdn.com/c.png' },
       { id: 'iron-rune', text: 'Iron Rune' },
@@ -90,11 +91,12 @@ describe('currency icons', () => {
       ['UncutGems', 'UncutGems'],
       ['Runes', 'Runes'],
     ])
-    expect(findEntry(groups, ['Uncut Skill Gem (Level 19)', 'Uncut Skill Gem'])).toEqual({
+    expect(findByName(groups, ['Uncut Skill Gem (Level 19)', 'Uncut Skill Gem'])).toEqual({
       group: groups[1],
       entry: { id: 'uncut-skill-gem-19', text: 'Uncut Skill Gem (Level 19)' },
     })
-    expect(findEntry(groups, ['iron rune'])?.entry.id).toBe('iron-rune')
-    expect(findEntry(groups, ['Mirror of Kalandra'])).toBeUndefined()
+    expect(findByName(groups, ['iron rune'])?.entry.id).toBe('iron-rune')
+    expect(findByName(groups, ['Mirror of Kalandra'])).toBeUndefined()
+    expect(findEntry(groups, ({ id }) => id === 'divine')?.group.id).toBe('Currency')
   })
 })

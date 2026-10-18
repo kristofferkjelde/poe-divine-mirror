@@ -1,9 +1,10 @@
-import { app, net, protocol } from 'electron'
+import { app, protocol } from 'electron'
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { IMAGE_SCHEME, remoteImage } from '../shared/imageCache'
 import { APP_SCHEME } from './appScheme'
+import { get, HttpError } from './http'
 
 export function registerSchemes(): void {
   protocol.registerSchemesAsPrivileged([
@@ -14,6 +15,17 @@ export function registerSchemes(): void {
 
 export function serveCachedImages(): void {
   const dir = join(app.getPath('userData'), 'image-cache')
+  const downloads = new Map<string, Promise<Buffer>>()
+
+  const download = async (url: string, file: string): Promise<Buffer> => {
+    const bytes = Buffer.from(await (await get(url)).arrayBuffer())
+    const temp = `${file}.tmp`
+    await mkdir(dir, { recursive: true })
+    await writeFile(temp, bytes)
+    await rename(temp, file)
+    return bytes
+  }
+
   protocol.handle(IMAGE_SCHEME, async (request) => {
     const image = remoteImage(request.url)
     if (!image) return new Response(null, { status: 400 })
@@ -22,15 +34,15 @@ export function serveCachedImages(): void {
     try {
       return new Response(await readFile(file), { headers })
     } catch {}
+    let bytes = downloads.get(file)
+    if (!bytes) {
+      bytes = download(image.url, file).finally(() => downloads.delete(file))
+      downloads.set(file, bytes)
+    }
     try {
-      const response = await net.fetch(image.url)
-      if (!response.ok) return new Response(null, { status: response.status })
-      const bytes = Buffer.from(await response.arrayBuffer())
-      await mkdir(dir, { recursive: true })
-      await writeFile(file, bytes)
-      return new Response(bytes, { headers })
-    } catch {
-      return new Response(null, { status: 502 })
+      return new Response(await bytes, { headers })
+    } catch (error) {
+      return new Response(null, { status: error instanceof HttpError ? error.response.status : 502 })
     }
   })
 }

@@ -1,3 +1,4 @@
+import { UserFacingError } from '../errors'
 import type { CurrencyEntry } from './currency'
 import type { Reliability } from './price'
 
@@ -53,14 +54,15 @@ interface Named {
 
 const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
 
-export function parseOverview(body: unknown): MarketOverview | null {
+export function parseOverview(body: unknown): MarketOverview {
   const data = body as {
     core?: { primary?: unknown; rates?: unknown; items?: unknown }
     lines?: unknown
     items?: unknown
   } | null
   const primary = data?.core?.primary
-  if (typeof primary !== 'string' || !Array.isArray(data?.lines)) return null
+  if (typeof primary !== 'string' || !Array.isArray(data?.lines))
+    throw new UserFacingError("poe.ninja's currency market sent unexpected data")
 
   const prices: Record<string, MarketPrice> = { [primary]: { value: 1 } }
   const rates = data.core?.rates
@@ -99,6 +101,15 @@ export interface ResponseTimes {
   lastModified: string | null
   date: string | null
   age: string | null
+}
+
+export function responseTimes(headers: { get: (name: string) => string | null }): ResponseTimes {
+  const prefix = headers.get('x-source-date') === null ? '' : 'x-source-'
+  return {
+    lastModified: headers.get(`${prefix}last-modified`),
+    date: headers.get(`${prefix}date`),
+    age: headers.get(`${prefix}age`),
+  }
 }
 
 export function snapshotTime({ lastModified, date, age }: ResponseTimes, now: number): number {

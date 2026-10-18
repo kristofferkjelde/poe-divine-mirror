@@ -1,3 +1,4 @@
+import { UserFacingError, type Result } from '../errors'
 import type { ParsedItem } from '../item/types'
 import type { CurrencyIcons } from './currency'
 import { toListedItem, type TradeItem } from './listedItem'
@@ -16,11 +17,23 @@ export interface Listing extends Price {
   item?: ParsedItem
 }
 
-export type PriceCheckResult =
-  | { ok: true; league: string; url: string; total: number; listings: Listing[]; icons: CurrencyIcons }
-  | { ok: false; error: string; url?: string; retryAt?: number }
+export interface PriceCheck {
+  league: string
+  url: string
+  total: number
+  listings: Listing[]
+  icons: CurrencyIcons
+}
 
-export type PrepareResult = { ok: true; id: string; search: ItemSearch } | { ok: false; error: string }
+export type PriceCheckResult = Result<PriceCheck, { url?: string; retryAt?: number }>
+
+export type PrepareResult = Result<{ id: string; search: ItemSearch }>
+
+export interface SearchResponse {
+  id: string
+  result: string[]
+  total: number
+}
 
 export type Reliability = 'Very low' | 'Low' | 'Medium' | 'High'
 
@@ -93,8 +106,17 @@ function qualityOf(item: FetchedResult['item']): number | undefined {
   return match ? Number(match[0]) : undefined
 }
 
+export function parseSearch(body: unknown): SearchResponse {
+  const data = body as { id?: unknown; result?: unknown; total?: unknown } | null
+  const ids = data?.result
+  if (typeof data?.id !== 'string' || !Array.isArray(ids) || !ids.every((id) => typeof id === 'string'))
+    throw new UserFacingError('The trade site sent unexpected search results')
+  return { id: data.id, result: ids, total: typeof data.total === 'number' ? data.total : ids.length }
+}
+
 export function parseListings(body: unknown): Listing[] {
-  const results = (body as { result?: Array<FetchedResult | null> } | null)?.result ?? []
+  const results = (body as { result?: Array<FetchedResult | null> } | null)?.result
+  if (!Array.isArray(results)) throw new UserFacingError('The trade site sent unexpected listings')
   return results.flatMap((result) => {
     const price = result?.listing?.price
     if (!price || typeof price.amount !== 'number' || typeof price.currency !== 'string') return []
@@ -115,9 +137,11 @@ export function pickLeague(leagues: string[]): string {
 }
 
 export function leagueIds(body: unknown): string[] {
-  return ((body as { result?: Array<{ id?: unknown; realm?: unknown }> } | null)?.result ?? [])
-    .filter((league) => typeof league.id === 'string' && (league.realm === undefined || league.realm === 'poe2'))
-    .map((league) => league.id as string)
+  const ids = ((body as { result?: Array<{ id?: unknown; realm?: unknown } | null> } | null)?.result ?? [])
+    .filter((league) => typeof league?.id === 'string' && (league.realm === undefined || league.realm === 'poe2'))
+    .map((league) => league?.id as string)
+  if (ids.length === 0) throw new UserFacingError('The trade site sent unexpected league data')
+  return ids
 }
 
 export function rateLimitWait(limits: string | null, state: string | null): number {

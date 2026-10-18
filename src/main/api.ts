@@ -1,4 +1,4 @@
-import { net, shell } from 'electron'
+import { shell } from 'electron'
 import { toResult } from '../shared/errors'
 import { isGearSlot } from '../shared/gear'
 import type { ParsedItem } from '../shared/item/types'
@@ -16,10 +16,11 @@ import type { Overlay } from './overlay'
 import { readPageState } from './pageReader'
 import type { SettingsStore } from './settingsStore'
 import type { SettingsWindow } from './settingsWindow'
+import { getText } from './http'
 import { MARKET_PAGES, type MarketClient } from './market'
-import type { TradeClient } from './trade'
+import type { ReferenceData } from './referenceData'
+import type { TradeSearch } from './trade'
 
-const DOWNLOAD_TIMEOUT_MS = 15_000
 const MAX_WEIGHT = 1000
 
 interface Services {
@@ -28,7 +29,8 @@ interface Services {
   builds: BuildStore
   characters: CharacterStore
   hotkeys: Hotkeys
-  trade: TradeClient
+  data: ReferenceData
+  trade: TradeSearch
   market: MarketClient
   overlay: Overlay
   settingsWindow: SettingsWindow
@@ -67,11 +69,11 @@ export function overlayHandlers({ store, gear, characters, trade, market, overla
       typeof text === 'string' ? trade.prepare(text) : { ok: false, error: 'No item to price' },
     runSearch: (id, edit) =>
       typeof id === 'string' ? trade.search(id, edit, store.current.league) : { ok: false, error: 'Nothing to search for' },
-    currencyWorth: (text, target, fresh) =>
+    currencyWorth: (text, target, refresh) =>
       typeof text === 'string' && isExchangeTarget(target)
-        ? market.worth(text, target, store.current.league, fresh === true)
+        ? market.worth(text, target, store.current.league, refresh === true)
         : { ok: false, error: 'No currency to price' },
-    exchangeCatalog: () => trade.catalog().catch(() => []),
+    exchangeCatalog: () => market.catalog(),
     setCurrencyTarget: async (target) => {
       if (isExchangeTarget(target)) await store.update({ currencyTarget: target })
     },
@@ -100,8 +102,8 @@ export function settingsHandlers({
   builds,
   characters,
   hotkeys,
-  trade,
-}: Pick<Services, 'store' | 'builds' | 'characters' | 'hotkeys' | 'trade'>): Handlers<SettingsApi> {
+  data,
+}: Pick<Services, 'store' | 'builds' | 'characters' | 'hotkeys' | 'data'>): Handlers<SettingsApi> {
   const state = (): SettingsState => ({
     settings: store.current,
     unavailable: hotkeys.unavailableActions,
@@ -127,7 +129,7 @@ export function settingsHandlers({
     importBuild: async (input) => {
       if (typeof input !== 'string' || input.trim() === '') return { ok: false, error: 'Paste a build code or link first' }
       try {
-        await builds.set(await importBuild(input, download, readPageState))
+        await builds.set(await importBuild(input, getText, readPageState))
         return { ok: true, state: state() }
       } catch (error) {
         return toResult(error, 'Could not read that build')
@@ -168,16 +170,14 @@ export function settingsHandlers({
       if (builds.current) await builds.set({ ...builds.current, custom: {} })
       return state()
     },
-    listLeagues: () => trade.listLeagues().catch(() => []),
+    listLeagues: () =>
+      data.leagues().then(
+        (leagues) => ({ ok: true, leagues }),
+        (error: unknown) => toResult(error, 'Could not reach the trade site'),
+      ),
     setLeague: (league) =>
       then(store.update({ league: typeof league === 'string' && league.trim() !== '' ? league : null })),
     setTheme: (theme) => (isTheme(theme) ? then(store.update({ theme })) : Promise.resolve(state())),
     setUiScale: (scale) => (isUiScale(scale) ? then(store.update({ uiScale: scale })) : Promise.resolve(state())),
   }
-}
-
-async function download(url: string): Promise<string> {
-  const response = await net.fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  return response.text()
 }

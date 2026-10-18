@@ -2,8 +2,15 @@ import { Suspense, use } from 'react'
 import type { Settings } from '../../../shared/settings'
 import { setSettingsState } from './settingsStore'
 
+const LEAGUES_RETRY_MS = 30_000
+
 let leagues: Promise<string[]> | null = null
-const loadLeagues = () => (leagues ??= window.settings.listLeagues())
+const loadLeagues = () =>
+  (leagues ??= window.settings.listLeagues().then((result) => {
+    if (result.ok) return result.leagues
+    setTimeout(() => (leagues = null), LEAGUES_RETRY_MS)
+    return []
+  }))
 
 export function TradeSettings({ settings }: { settings: Settings }) {
   return (
