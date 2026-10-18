@@ -56,7 +56,10 @@ interface SavedClipboard {
 
 async function saveClipboard(): Promise<SavedClipboard> {
   const text = await clipboard.readText()
-  const items = await clipboard.read().then(snapshot, () => [])
+  const items = await clipboard
+    .read()
+    .then(snapshot)
+    .catch(() => [])
   return { text, items }
 }
 
@@ -71,9 +74,10 @@ async function snapshot(items: ClipboardItem[]): Promise<ClipboardItem[]> {
           ),
         ),
       )
-      return new ClipboardItem(Object.fromEntries(entries.flat()))
+      const data = entries.flat()
+      return data.length > 0 ? [new ClipboardItem(Object.fromEntries(data))] : []
     }),
-  ).then((saved) => saved.filter((item) => item.types.length > 0))
+  ).then((saved) => saved.flat())
 }
 
 async function restoreClipboard({ text, items }: SavedClipboard): Promise<void> {
