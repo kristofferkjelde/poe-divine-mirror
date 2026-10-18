@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { DEFAULT_SETTINGS } from '../../../shared/settings'
 import { Panel } from '../components/Panel'
 import '../styles.css'
-import * as Takes from './CurrencyTakes'
-import { ITEMS } from './fixtures'
+import * as Takes from './AnyTakes'
+import { HOVERED as ITEMS } from './catalog'
 import { PrototypeSwitcher, useVariant } from './PrototypeSwitcher'
 import './prototype.css'
 
@@ -13,7 +13,7 @@ const VARIANTS = { A: Takes.nameA, B: Takes.nameB, C: Takes.nameC }
 const COMPONENTS = { A: Takes.VariantA, B: Takes.VariantB, C: Takes.VariantC }
 const THEMES = ['ember', 'mana', 'iron'] as const
 
-let itemKey = 'divine'
+let itemKey = 'gem'
 let theme: (typeof THEMES)[number] = 'ember'
 const listeners = new Set<() => void>()
 const subscribe = (listener: () => void) => {
@@ -43,7 +43,7 @@ function Prototype() {
         <select value={key} onChange={(event) => set(() => (itemKey = event.target.value))} aria-label="Hovered currency">
           {Object.entries(ITEMS).map(([id, held]) => (
             <option key={id} value={id}>
-              {held.name}
+              {held.currency.name}
             </option>
           ))}
         </select>
