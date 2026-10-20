@@ -40,6 +40,8 @@ export interface Settings {
   hotkeys: Record<HotkeyAction, string>
   overlayPosition: Point | null
   overlayLocked: boolean
+  topBar: boolean
+  topBarPosition: Point | null
   league: string | null
   theme: Theme
   uiScale: UiScale
@@ -55,6 +57,8 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   overlayPosition: null,
   overlayLocked: false,
+  topBar: true,
+  topBarPosition: null,
   league: null,
   theme: 'ember',
   uiScale: 100,
@@ -88,6 +92,8 @@ export function normalizeSettings(value: unknown): Settings {
     ) as Settings['hotkeys'],
     overlayPosition: isPoint(input?.overlayPosition) ? input.overlayPosition : null,
     overlayLocked: input?.overlayLocked === true,
+    topBar: input?.topBar !== false,
+    topBarPosition: isPoint(input?.topBarPosition) ? input.topBarPosition : null,
     league: typeof input?.league === 'string' && input.league.trim() !== '' ? input.league : null,
     theme: isTheme(input?.theme) ? input.theme : DEFAULT_SETTINGS.theme,
     uiScale: isUiScale(input?.uiScale) ? input.uiScale : DEFAULT_SETTINGS.uiScale,

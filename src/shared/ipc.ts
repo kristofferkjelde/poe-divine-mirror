@@ -74,6 +74,29 @@ export interface OverlayApi {
   hideTooltip: () => Promise<void>
 }
 
+export interface TopBarState {
+  theme: Theme
+  locked: boolean
+  characters: CharacterList
+}
+
+export interface TopBarApi {
+  ready: () => Promise<void>
+  rendered: (width: number, height: number) => Promise<void>
+  startDrag: () => Promise<void>
+  endDrag: () => Promise<void>
+  openSettings: () => Promise<void>
+  setTheme: (theme: Theme) => Promise<void>
+  setLocked: (locked: boolean) => Promise<void>
+  selectCharacter: (id: string) => Promise<void>
+  hide: () => Promise<void>
+  quit: () => Promise<void>
+}
+
+export interface TopBarBridge extends TopBarApi {
+  onState: (listener: (state: TopBarState) => void) => () => void
+}
+
 export interface TooltipApi {
   ready: () => Promise<void>
   rendered: (id: number, height: number) => Promise<void>
@@ -114,6 +137,11 @@ export interface SettingsApi {
   setLeague: (league: string | null) => Promise<SettingsState>
   setTheme: (theme: Theme) => Promise<SettingsState>
   setUiScale: (scale: UiScale) => Promise<SettingsState>
+  setTopBar: (shown: boolean) => Promise<SettingsState>
+}
+
+export interface SettingsBridge extends SettingsApi {
+  onChanged: (listener: () => void) => () => void
 }
 
 export interface OverlayBridge extends OverlayApi {
@@ -165,6 +193,20 @@ const SETTINGS_METHODS: Record<keyof SettingsApi, true> = {
   setLeague: true,
   setTheme: true,
   setUiScale: true,
+  setTopBar: true,
+}
+
+const TOP_BAR_METHODS: Record<keyof TopBarApi, true> = {
+  ready: true,
+  rendered: true,
+  startDrag: true,
+  endDrag: true,
+  openSettings: true,
+  setTheme: true,
+  setLocked: true,
+  selectCharacter: true,
+  hide: true,
+  quit: true,
 }
 
 const TOOLTIP_METHODS: Record<keyof TooltipApi, true> = {
@@ -176,6 +218,7 @@ export const API_METHODS = {
   overlay: Object.keys(OVERLAY_METHODS),
   settings: Object.keys(SETTINGS_METHODS),
   tooltip: Object.keys(TOOLTIP_METHODS),
+  topBar: Object.keys(TOP_BAR_METHODS),
 }
 
 export type ApiScope = keyof typeof API_METHODS
@@ -183,6 +226,9 @@ export type ApiScope = keyof typeof API_METHODS
 export const SETTINGS_ARGUMENT = '--divine-mirror-settings'
 export const TOOLTIP_ARGUMENT = '--divine-mirror-tooltip'
 export const TOOLTIP_CHANNEL = 'tooltip:content'
+export const TOP_BAR_ARGUMENT = '--divine-mirror-top-bar'
+export const TOP_BAR_CHANNEL = 'topBar:state'
+export const SETTINGS_CHANGED_CHANNEL = 'settings:changed'
 
 export const apiChannel = (scope: ApiScope, method: string) => `${scope}:${method}`
 export const messageChannel = (name: keyof OverlayMessages) => `overlay:message:${name}`

@@ -20,7 +20,7 @@ Divine Mirror is a small overlay for Path of Exile 2. It shows the item under yo
 2. Download `Divine-Mirror-Setup-x.y.z.exe` and run it.
 3. Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.
 
-The app starts in the system tray (bottom-right, near the clock). Hover the icon to see your version, and right-click it to quit.
+The app starts in the system tray (bottom-right, near the clock) and shows a small top bar over the top of your screen. Hover the tray icon to see your version, and right-click it to quit.
 
 **Updates:** the app checks for a new release when it starts and every few hours. When one is out you get a notification; click it (or **Update to x.y.z and restart** in the tray menu) once, and the app downloads the update, installs it and starts again by itself. Versions before 0.5.0 can't update themselves, so install 0.5.0 by hand once.
 
@@ -40,6 +40,7 @@ In Path of Exile 2, open **Options → Graphics** and set **Display Mode** to **
 | Hover currency (a Divine Orb, a rune, an omen, an uncut gem…) and press **Alt+Z** or **Ctrl+Alt+Z** | The popup shows what it's worth in any other currency, from the in-game Currency Exchange market, each and for your whole stack |
 | Press **Esc** or click anywhere outside the popup | The popup closes. The game keeps keyboard focus while the popup is open, so you can keep playing and press the hotkey on the next item straight away |
 | Drag the popup by its top banner or bottom bar | It opens there from now on. Click **🔓 Move** in its footer to lock it (**🔒 Locked**), or use **Settings → Overlay** to lock it or center it again |
+| Drag the top bar anywhere on screen | It stays there. Its buttons switch character, pick a theme, lock the popup, open Settings, hide the bar or quit (click quit twice). Turn it back on with **Settings → Overlay → Show top bar** or the tray menu |
 | Right-click the tray icon → **Settings…** (or double-click the icon) | Add your build, change the hotkeys (click one and press the new keys), pick a theme (Ember, Mana or Iron) or make everything bigger with **UI size** (100%, 110% or 120%) |
 | Right-click the tray icon → **Quit** | The app closes |
 
