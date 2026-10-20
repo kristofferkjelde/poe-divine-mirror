@@ -505,6 +505,24 @@ body {
   color: var(--text-muted);
 }
 
+.decision-other {
+  margin-top: 2px;
+  padding: 1px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  border: 1px solid var(--frame-lo);
+}
+.decision-other:hover {
+  border-color: var(--frame-mid);
+}
+.decision-other [data-verdict='upgrade'] {
+  color: var(--delta-up);
+}
+.decision-other [data-verdict='downgrade'] {
+  color: var(--delta-down);
+}
+
 .decision-badge {
   position: absolute;
   bottom: -9px;

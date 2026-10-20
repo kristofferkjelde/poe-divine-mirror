@@ -1,7 +1,9 @@
 import { formatPercent, type ComparisonRow, type Verdict } from '../../../shared/compare/compare'
 import { breakdown, decide, describeChange, shortStat, type Tone } from '../../../shared/compare/decision'
 import type { GearComparison } from '../../../shared/compare/gear'
+import { GEAR_SLOTS, type GearSlot } from '../../../shared/gear'
 import { formatNumber } from '../../../shared/compare/stats'
+import { itemLabel } from '../../../shared/item/label'
 import type { ParsedItem } from '../../../shared/item/types'
 import { ItemArt } from './ItemArt'
 import { VerdictMark } from './VerdictMark'
@@ -10,17 +12,33 @@ const LEDGER_ROWS = 7
 
 const TONE_MARKS: Record<Tone, Verdict> = { good: 'upgrade', bad: 'downgrade', mixed: 'sidegrade' }
 
+export type Side = 'gear' | 'build'
+
 interface Props {
   item: ParsedItem
   gear: GearComparison | null
   build: GearComparison | null
+  gearOther?: GearComparison
+  buildOther?: GearComparison
+  onShow: (side: Side, slot: GearSlot) => void
   weightsNote: string
   equipHotkey: string
   detailsOpen: boolean
   onToggleDetails: () => void
 }
 
-export function DecisionCard({ item, gear, build, weightsNote, equipHotkey, detailsOpen, onToggleDetails }: Props) {
+export function DecisionCard({
+  item,
+  gear,
+  build,
+  gearOther,
+  buildOther,
+  onShow,
+  weightsNote,
+  equipHotkey,
+  detailsOpen,
+  onToggleDetails,
+}: Props) {
   const decision = decide(gear, build)
   const focus = gear ?? build
   if (!decision || !focus) return null
@@ -37,9 +55,29 @@ export function DecisionCard({ item, gear, build, weightsNote, equipHotkey, deta
         <span>Build</span>
       </header>
       <div className="decision-slots">
-        {gear ? <Slot item={gear.equipped} caption="You wear" result={gear} /> : <EmptySlot caption="You wear" hint={`Hover yours and press ${equipHotkey}`} />}
+        {gear ? (
+          <Slot
+            item={gear.equipped}
+            caption={gearOther ? `Your ${GEAR_SLOTS[gear.slot].label}` : 'You wear'}
+            result={gear}
+            other={gearOther}
+            onShow={(slot) => onShow('gear', slot)}
+          />
+        ) : (
+          <EmptySlot caption="You wear" hint={`Hover yours and press ${equipHotkey}`} />
+        )}
         <Slot item={item} caption="This item" highlight />
-        {build ? <Slot item={build.equipped} caption="Your build" result={build} /> : <EmptySlot caption="Your build" hint="Add your build in Settings" />}
+        {build ? (
+          <Slot
+            item={build.equipped}
+            caption={buildOther ? `Build ${GEAR_SLOTS[build.slot].label}` : 'Your build'}
+            result={build}
+            other={buildOther}
+            onShow={(slot) => onShow('build', slot)}
+          />
+        ) : (
+          <EmptySlot caption="Your build" hint="Add your build in Settings" />
+        )}
       </div>
       <div className="decision-verdict">
         <strong>
@@ -90,16 +128,28 @@ interface SlotProps {
   item: ParsedItem
   caption: string
   result?: GearComparison
+  other?: GearComparison
+  onShow?: (slot: GearSlot) => void
   highlight?: boolean
 }
 
-function Slot({ item, caption, result, highlight = false }: SlotProps) {
+function Slot({ item, caption, result, other, onShow, highlight = false }: SlotProps) {
   return (
     <figure className="item-slot-frame decision-slot" data-highlight={highlight} data-verdict={result?.comparison.verdict}>
       <figcaption>{caption}</figcaption>
       <ItemArt item={item} />
       <strong data-rarity={item.rarity.toLowerCase()}>{item.name}</strong>
       {item.baseType && item.baseType !== item.name && <small>{item.baseType}</small>}
+      {other && (
+        <button
+          type="button"
+          className="panel-link decision-other"
+          title={`Compare with ${itemLabel(other.equipped)} (${GEAR_SLOTS[other.slot].label}) instead`}
+          onClick={() => onShow?.(other.slot)}
+        >
+          ⇄ {GEAR_SLOTS[other.slot].label} <span data-verdict={other.comparison.verdict}>{score(other)}</span>
+        </button>
+      )}
       {result && <span className="decision-badge">{score(result)}</span>}
       {highlight && <span className="decision-flare" aria-hidden />}
     </figure>

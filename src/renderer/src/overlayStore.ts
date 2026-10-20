@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { flushSync } from 'react-dom'
 import { rulesForProfile } from '../../shared/build/profile'
-import { compareWithGear, parseGear, type GearComparison } from '../../shared/compare/gear'
+import { compareEachSlot, parseGear, type GearComparison } from '../../shared/compare/gear'
 import { UserFacingError } from '../../shared/errors'
 import type { GearSlot } from '../../shared/gear'
 import type { OverlayContext, OverlayEvent } from '../../shared/ipc'
@@ -51,8 +51,8 @@ type View =
   | { status: 'error'; id: number; message: string }
 
 interface Comparisons {
-  comparison: GearComparison | null
-  buildComparison: GearComparison | null
+  comparisons: GearComparison[]
+  buildComparisons: GearComparison[]
 }
 
 export type OverlayState = OverlayContext &
@@ -73,17 +73,17 @@ let context: OverlayContext = {
   currencyFlipped: DEFAULT_SETTINGS.currencyFlipped,
 }
 let view: View = { status: 'idle' }
-let comparisons: Comparisons = { comparison: null, buildComparison: null }
+let comparisons: Comparisons = { comparisons: [], buildComparisons: [] }
 let state: OverlayState = { ...context, ...view }
 let nextId = 1
 const listeners = new Set<() => void>()
 
 function compare(): Comparisons {
-  if (view.status !== 'item' || view.equippedTo) return { comparison: null, buildComparison: null }
+  if (view.status !== 'item' || view.equippedTo) return { comparisons: [], buildComparisons: [] }
   const rules = rulesForProfile(context.build)
   return {
-    comparison: compareWithGear(view.item, parseGear(context.gear), rules),
-    buildComparison: context.build ? compareWithGear(view.item, context.build.items, rules) : null,
+    comparisons: compareEachSlot(view.item, parseGear(context.gear), rules),
+    buildComparisons: context.build ? compareEachSlot(view.item, context.build.items, rules) : [],
   }
 }
 
