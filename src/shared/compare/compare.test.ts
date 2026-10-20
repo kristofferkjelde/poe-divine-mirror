@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseItem } from '../item/parse'
 import { compareItems, formatPercent } from './compare'
-import { chooseEquipSlot, compareWithGear } from './gear'
+import { chooseEquipSlot, compareEachSlot, compareWithGear } from './gear'
 import { extractStats } from './stats'
 
 const fixture = (name: string) =>
@@ -162,6 +162,21 @@ describe('gear', () => {
     const result = compareWithGear(candidate, { ring1: strong, ring2: weak })
     expect(result?.slot).toBe('ring2')
     expect(result?.comparison.verdict).toBe('upgrade')
+  })
+
+  it('compares a ring against both rings, the one it would replace first', () => {
+    const results = compareEachSlot(candidate, { ring1: strong, ring2: weak })
+    expect(results.map((result) => [result.slot, result.comparison.verdict])).toEqual([
+      ['ring2', 'upgrade'],
+      ['ring1', 'downgrade'],
+    ])
+    expect(compareEachSlot(candidate, { ring2: weak }).map((result) => result.slot)).toEqual(['ring2'])
+  })
+
+  it('compares one of your own rings against itself first', () => {
+    const results = compareEachSlot(strong, { ring1: weak, ring2: strong })
+    expect(results.map((result) => result.slot)).toEqual(['ring2', 'ring1'])
+    expect(compareWithGear(strong, { ring1: weak, ring2: strong })?.comparison.rows).toEqual([])
   })
 
   it('returns null when nothing is equipped in that slot', () => {

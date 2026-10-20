@@ -24,19 +24,21 @@ export interface GearComparison {
   comparison: Comparison
 }
 
+export function compareEachSlot(candidate: ParsedItem, gear: ParsedGear, rules?: WeightRule[]): GearComparison[] {
+  const results = gearSlotsFor(candidate.slot).flatMap((slot) => {
+    const equipped = gear[slot]
+    return equipped ? [{ slot, equipped, comparison: compareItems(candidate, equipped, rules) }] : []
+  })
+  const worn = (result: GearComparison) => Number(isSameItem(result.equipped, candidate))
+  return results.sort((a, b) => worn(b) - worn(a) || b.comparison.score - a.comparison.score)
+}
+
 export function compareWithGear(
   candidate: ParsedItem,
   gear: ParsedGear,
   rules?: WeightRule[],
 ): GearComparison | null {
-  let best: GearComparison | null = null
-  for (const slot of gearSlotsFor(candidate.slot)) {
-    const equipped = gear[slot]
-    if (!equipped) continue
-    const comparison = compareItems(candidate, equipped, rules)
-    if (!best || comparison.score > best.comparison.score) best = { slot, equipped, comparison }
-  }
-  return best
+  return compareEachSlot(candidate, gear, rules)[0] ?? null
 }
 
 export function chooseEquipSlot(item: ParsedItem, gear: ParsedGear, rules?: WeightRule[]): GearSlot | undefined {

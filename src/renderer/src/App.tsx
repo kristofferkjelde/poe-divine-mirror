@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { PROFILE_VERSION, stageTitle } from '../../shared/build/profile'
-import { GEAR_SLOTS, gearSlotsFor } from '../../shared/gear'
+import type { GearComparison } from '../../shared/compare/gear'
+import { GEAR_SLOTS, gearSlotsFor, type GearSlot } from '../../shared/gear'
 import { SLOT_LABELS } from '../../shared/item/slots'
 import { ComparisonView } from './components/ComparisonView'
 import { CurrencyView } from './components/CurrencyView'
-import { DecisionCard } from './components/DecisionCard'
+import { DecisionCard, type Side } from './components/DecisionCard'
 import { EvaluateView } from './components/EvaluateView'
 import { GearHint } from './components/GearHint'
 import { ItemCard } from './components/ItemCard'
@@ -36,9 +37,14 @@ export function App() {
 
 function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' }> }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const { item, evaluate, comparison, buildComparison, equippedTo, build, hotkeys, worth } = state
-  const comparable = gearSlotsFor(item.slot).length > 0
+  const [shown, setShown] = useState<Partial<Record<Side, GearSlot>>>({})
+  const { item, evaluate, comparisons, buildComparisons, equippedTo, build, hotkeys, worth } = state
+  const comparison = pick(comparisons, shown.gear)
+  const buildComparison = pick(buildComparisons, shown.build)
+  const slots = gearSlotsFor(item.slot)
+  const comparable = slots.length > 0
   const decided = Boolean(comparison || buildComparison)
+  const otherUnsaved = slots.length > 1 && comparisons.length === 1
   const weightsNote = !build
     ? 'General weights. Add your build in Settings.'
     : build.version !== PROFILE_VERSION
@@ -62,6 +68,9 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
             item={item}
             gear={comparison}
             build={buildComparison}
+            gearOther={comparisons.find((result) => result !== comparison)}
+            buildOther={buildComparisons.find((result) => result !== buildComparison)}
+            onShow={(side, slot) => setShown({ ...shown, [side]: slot })}
             weightsNote={weightsNote}
             equipHotkey={hotkeys.equip}
             detailsOpen={detailsOpen}
@@ -73,6 +82,11 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
         {!decided && !equippedTo && comparable && item.slot && (
           <GearHint>
             No equipped {SLOT_LABELS[item.slot].toLowerCase()} saved yet. Hover yours and press {hotkeys.equip}.
+          </GearHint>
+        )}
+        {decided && otherUnsaved && item.slot && (
+          <GearHint>
+            Your other {SLOT_LABELS[item.slot].toLowerCase()} isn't saved yet. Hover it and press {hotkeys.equip}.
           </GearHint>
         )}
         <p className="evaluate-open">
@@ -100,6 +114,9 @@ function ItemWindows({ state }: { state: Extract<OverlayState, { status: 'item' 
     </>
   )
 }
+
+const pick = (results: GearComparison[], slot: GearSlot | undefined): GearComparison | null =>
+  results.find((result) => result.slot === slot) ?? results[0] ?? null
 
 const withSearchedBase = (item: ParsedItem, evaluate: EvaluateState): ParsedItem =>
   !item.baseType && evaluate.status === 'ready' && evaluate.search.type ? { ...item, baseType: evaluate.search.type } : item
