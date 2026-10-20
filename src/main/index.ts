@@ -2,7 +2,7 @@ import { app, globalShortcut, Menu, nativeImage, Notification, session, Tray } f
 import { uIOhook } from 'uiohook-napi'
 import type { OverlayApi } from '../shared/ipc'
 import { HOTKEY_ACTIONS, HOTKEY_LABELS, type HotkeyAction } from '../shared/settings'
-import { overlayHandlers, settingsHandlers } from './api'
+import { overlayHandlers, settingsHandlers, topBarHandlers } from './api'
 import { BuildStore } from './buildStore'
 import { CharacterStore } from './characterStore'
 import { ClientLog } from './clientLog'
@@ -17,6 +17,7 @@ import { mayNavigate } from './pageReader'
 import { ICON_PATH } from './renderer'
 import { SettingsStore } from './settingsStore'
 import { SettingsWindow } from './settingsWindow'
+import { TopBar } from './topBar'
 import { MarketClient } from './market'
 import { ReferenceData } from './referenceData'
 import { TradeSearch } from './trade'
@@ -103,6 +104,10 @@ function start(): void {
   )
   const settingsWindow = new SettingsWindow(hotkeys, store, settingsHandlers({ store, builds, characters, hotkeys, data }))
   registerHandlers<OverlayApi>(overlay.ipc, 'overlay', overlayHandlers({ store, gear, builds, characters, hotkeys, data, trade, market, overlay, settingsWindow }))
+  new TopBar(store, characters, topBarHandlers({ store, characters, settingsWindow }))
+  const settingsChanged = () => settingsWindow.changed()
+  store.watch((settings) => [settings.theme, settings.overlayLocked, settings.topBar], settingsChanged)
+  characters.onChange(settingsChanged)
 
   const updates = new Updates()
   tray = new Tray(nativeImage.createFromPath(ICON_PATH))
@@ -138,6 +143,12 @@ function start(): void {
         { type: 'separator' },
         { label: 'Settings…', click: () => settingsWindow.open() },
         {
+          label: 'Show top bar',
+          type: 'checkbox',
+          checked: settings.topBar,
+          click: (item) => void store.update({ topBar: item.checked }),
+        },
+        {
           label: 'Lock overlay position',
           type: 'checkbox',
           checked: settings.overlayLocked,
@@ -149,7 +160,7 @@ function start(): void {
     )
   }
   refreshTray()
-  store.watch((settings) => [settings.hotkeys, settings.overlayLocked], refreshTray)
+  store.watch((settings) => [settings.hotkeys, settings.overlayLocked, settings.topBar], refreshTray)
   updates.onChange(refreshTray)
   updates.start()
   tray.on('double-click', () => settingsWindow.open())

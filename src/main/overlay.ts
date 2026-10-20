@@ -1,8 +1,9 @@
 import { BrowserWindow, globalShortcut, screen, type Rectangle } from 'electron'
-import { EventType, uIOhook, type UiohookKeyboardEvent, type UiohookMouseEvent, type UiohookWheelEvent } from 'uiohook-napi'
+import { uIOhook } from 'uiohook-napi'
 import { messageChannel, type OverlayEvent, type OverlayMessages } from '../shared/ipc'
 import type { ParsedItem } from '../shared/item/types'
 import { Tooltip } from './tooltip'
+import { followCursor, holdMouseHook } from './mouseHook'
 import { loadRenderer, PRELOAD_PATH } from './renderer'
 import { THEME_BACKGROUNDS } from '../shared/settings'
 import type { SettingsStore } from './settingsStore'
@@ -13,9 +14,6 @@ const ESCAPE = 'Escape'
 const REVEAL_FALLBACK_MS = 150
 const PAINT_FALLBACK_MS = 150
 const HOOK_IDLE_MS = 60_000
-const MOUSE_DRAGGED = 10
-
-type HookEvent = UiohookKeyboardEvent | UiohookMouseEvent | UiohookWheelEvent
 
 export class Overlay {
   private readonly window: BrowserWindow
@@ -25,7 +23,6 @@ export class Overlay {
   private placed: Rectangle | null = null
   private revealTimer: NodeJS.Timeout | undefined
   private paintTimer: NodeJS.Timeout | undefined
-  private hooked = false
   private hookIdle: NodeJS.Timeout | undefined
   private stopDrag: (() => void) | null = null
   private readonly readyListeners = new Set<() => void>()
@@ -159,21 +156,10 @@ export class Overlay {
     if (this.stopDrag || this.store.current.overlayLocked || !this.window.isVisible()) return
     this.hideTooltip()
     this.watchClicks(true)
-    const [x, y] = this.window.getPosition()
-    const start = screen.getCursorScreenPoint()
-    const move = () => {
-      const cursor = screen.getCursorScreenPoint()
-      this.window.setPosition(x + cursor.x - start.x, y + cursor.y - start.y)
-    }
-    const follow = (event: HookEvent) => {
-      if (event.type === EventType.EVENT_MOUSE_MOVED || (event.type as number) === MOUSE_DRAGGED) move()
-      else if (event.type === EventType.EVENT_MOUSE_RELEASED) this.endDrag()
-    }
-    uIOhook.on('input', follow)
+    const stop = followCursor(this.window, () => this.endDrag())
     this.stopDrag = () => {
-      uIOhook.off('input', follow)
       this.stopDrag = null
-      move()
+      stop()
     }
   }
 
@@ -195,14 +181,7 @@ export class Overlay {
 
   private watchClicks(on: boolean): void {
     if (on) clearTimeout(this.hookIdle)
-    if (on === this.hooked) return
-    try {
-      if (on) uIOhook.start()
-      else uIOhook.stop()
-      this.hooked = on
-    } catch (error) {
-      console.error('Could not watch mouse clicks', error)
-    }
+    holdMouseHook('overlay', on)
   }
 
   private contains({ x, y }: { x: number; y: number }): boolean {

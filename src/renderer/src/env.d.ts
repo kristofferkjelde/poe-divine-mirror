@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { OverlayBridge, SettingsApi, TooltipBridge } from '../../shared/ipc'
+import type { OverlayBridge, SettingsBridge, TooltipBridge, TopBarBridge } from '../../shared/ipc'
 
 declare module 'react' {
   interface CSSProperties {
@@ -11,7 +11,8 @@ declare module 'react' {
 declare global {
   interface Window {
     overlay: OverlayBridge
-    settings: SettingsApi
+    settings: SettingsBridge
     tooltip: TooltipBridge
+    topBar: TopBarBridge
   }
 }

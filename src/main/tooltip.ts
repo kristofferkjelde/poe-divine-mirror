@@ -26,7 +26,7 @@ export class Tooltip {
     )
     store.watch(
       (settings) => settings.theme,
-      (theme) => this.window?.setBackgroundColor(THEME_BACKGROUNDS[theme]),
+      () => this.window?.close(),
     )
   }
 

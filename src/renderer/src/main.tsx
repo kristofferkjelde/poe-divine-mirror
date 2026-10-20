@@ -12,7 +12,9 @@ const View =
     ? (await import('./settings/SettingsApp')).SettingsApp
     : view === 'tooltip'
       ? (await import('./TooltipApp')).TooltipApp
-      : (await import('./App')).App
+      : view === 'top-bar'
+        ? (await import('./topBar/TopBarApp')).TopBarApp
+        : (await import('./App')).App
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

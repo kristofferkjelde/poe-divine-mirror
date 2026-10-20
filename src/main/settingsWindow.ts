@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { THEME_BACKGROUNDS } from '../shared/settings'
-import { SETTINGS_ARGUMENT, type SettingsApi } from '../shared/ipc'
+import { SETTINGS_ARGUMENT, SETTINGS_CHANGED_CHANNEL, type SettingsApi } from '../shared/ipc'
 import type { Hotkeys } from './hotkeys'
 import { registerHandlers, type Handlers } from './ipc'
 import type { SettingsStore } from './settingsStore'
@@ -23,6 +23,10 @@ export class SettingsWindow {
 
   private get scale(): number {
     return this.store.current.uiScale / 100
+  }
+
+  changed(): void {
+    this.window?.webContents.send(SETTINGS_CHANGED_CHANNEL)
   }
 
   open(): void {

@@ -11,7 +11,9 @@ export function setSettingsState(next: SettingsState): void {
   listeners.forEach((listener) => listener())
 }
 
-window.addEventListener('focus', () => void window.settings.get().then(setSettingsState))
+const refresh = () => void window.settings.get().then(setSettingsState)
+window.addEventListener('focus', refresh)
+window.settings.onChanged(refresh)
 
 function subscribe(listener: () => void) {
   listeners.add(listener)

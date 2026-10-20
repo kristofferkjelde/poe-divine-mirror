@@ -6,6 +6,18 @@ export function OverlaySettings({ settings }: { settings: Settings }) {
     <>
       <label className="settings-row">
         <span>
+          Show top bar
+          <small>A small bar over the game with Settings, theme, character and quit. Drag it anywhere.</small>
+        </span>
+        <input
+          type="checkbox"
+          className="settings-toggle"
+          checked={settings.topBar}
+          onChange={async (event) => setSettingsState(await window.settings.setTopBar(event.target.checked))}
+        />
+      </label>
+      <label className="settings-row">
+        <span>
           Lock position
           <small>When unlocked, drag the panel anywhere in game and it stays there.</small>
         </span>

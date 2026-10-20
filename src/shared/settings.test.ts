@@ -20,4 +20,13 @@ describe('settings', () => {
     expect(normalizeSettings({ currencyFlipped: true }).currencyFlipped).toBe(true)
     expect(normalizeSettings({ currencyFlipped: 'yes' }).currencyFlipped).toBe(false)
   })
+
+  it('shows the top bar unless it was turned off, and keeps where it was dragged', () => {
+    expect(normalizeSettings(null)).toMatchObject({ topBar: true, topBarPosition: null })
+    expect(normalizeSettings({ topBar: false, topBarPosition: { x: 40, y: 0 } })).toMatchObject({
+      topBar: false,
+      topBarPosition: { x: 40, y: 0 },
+    })
+    expect(normalizeSettings({ topBarPosition: { x: 'left' } }).topBarPosition).toBeNull()
+  })
 })

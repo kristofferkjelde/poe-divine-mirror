@@ -1,4 +1,4 @@
-import { shell } from 'electron'
+import { app, shell } from 'electron'
 import { toResult } from '../shared/errors'
 import { isGearSlot } from '../shared/gear'
 import type { ParsedItem } from '../shared/item/types'
@@ -13,6 +13,7 @@ import type { GearStore } from './gearStore'
 import type { Hotkeys } from './hotkeys'
 import type { Handlers } from './ipc'
 import type { Overlay } from './overlay'
+import type { TopBarActions } from './topBar'
 import { readPageState } from './pageReader'
 import type { SettingsStore } from './settingsStore'
 import type { SettingsWindow } from './settingsWindow'
@@ -94,6 +95,25 @@ export function overlayHandlers({ store, gear, characters, trade, market, overla
       if (typeof item === 'object' && item !== null) overlay.showTooltip(item as ParsedItem)
     },
     hideTooltip: () => overlay.hideTooltip(),
+  }
+}
+
+export function topBarHandlers({
+  store,
+  characters,
+  settingsWindow,
+}: Pick<Services, 'store' | 'characters' | 'settingsWindow'>): Handlers<TopBarActions> {
+  return {
+    openSettings: () => settingsWindow.open(),
+    setTheme: async (theme) => {
+      if (isTheme(theme)) await store.update({ theme })
+    },
+    setLocked: (locked) => store.update({ overlayLocked: locked === true }),
+    selectCharacter: async (id) => {
+      if (typeof id === 'string') await characters.select(id)
+    },
+    hide: () => store.update({ topBar: false }),
+    quit: () => app.quit(),
   }
 }
 
@@ -179,5 +199,6 @@ export function settingsHandlers({
       then(store.update({ league: typeof league === 'string' && league.trim() !== '' ? league : null })),
     setTheme: (theme) => (isTheme(theme) ? then(store.update({ theme })) : Promise.resolve(state())),
     setUiScale: (scale) => (isUiScale(scale) ? then(store.update({ uiScale: scale })) : Promise.resolve(state())),
+    setTopBar: (shown) => then(store.update({ topBar: shown === true })),
   }
 }
